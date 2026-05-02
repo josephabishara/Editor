@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="EditorDataLayer/EditorDataLayer.csproj" />
+  <Project Path="EditorEntitiesLayer/EditorEntitiesLayer.csproj" />
+  <Project Path="EditorLogicLayer/EditorLogicLayer.csproj" />
+  <Project Path="EditorRepositoryLayer/EditorRepositoryLayer.csproj" />
+  <Project Path="EditorViewModelLayer/EditorViewModelLayer.csproj" />
+  <Project Path="EditorWeb/EditorWeb.csproj" />
+</Solution>

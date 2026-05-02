@@ -1,0 +1,64 @@
+﻿@model EditorViewModelLayer.WebsiteViewModel.WebsiteDTO
+@{
+    ViewData["Title"] = "Website Details";
+}
+
+<div class="container mt-4" style="max-width: 680px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold">Website Details</h4>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4 text-muted">Website Name</dt>
+                <dd class="col-sm-8 fw-semibold">@Model.WebsiteName</dd>
+
+                <dt class="col-sm-4 text-muted">URL</dt>
+                <dd class="col-sm-8">
+                    <a href="@Model.URL" target="_blank">@Model.URL</a>
+                </dd>
+
+                <dt class="col-sm-4 text-muted">Media Tier</dt>
+                <dd class="col-sm-8">
+                    @if (!string.IsNullOrEmpty(Model.MediaTier))
+                    {
+                        <span class="badge bg-secondary">@Model.MediaTier</span>
+                    }
+                    else
+                    {
+
+                        <span class="text-muted">—</span>
+                    }
+                </dd>
+
+                <dt class="col-sm-4 text-muted">Frequency</dt>
+                <dd class="col-sm-8">@(Model.Frequency ?? "—")</dd>
+
+                <dt class="col-sm-4 text-muted">Reach</dt>
+                <dd class="col-sm-8">@(Model.Reach ?? "—")</dd>
+
+                <dt class="col-sm-4 text-muted">Distribution</dt>
+                <dd class="col-sm-8">@(Model.Distribution ?? "—")</dd>
+
+                <dt class="col-sm-4 text-muted">Language</dt>
+                <dd class="col-sm-8">@(Model.Language ?? "—")</dd>
+
+                <dt class="col-sm-4 text-muted">Unit Price</dt>
+                <dd class="col-sm-8 fw-semibold text-success">@Model.UnitPrice.ToString("C")</dd>
+            </dl>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">Edit</a>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger btn-sm">Delete</a>
+            }
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-auto">Back to List</a>
+        </div>
+    </div>
+</div>

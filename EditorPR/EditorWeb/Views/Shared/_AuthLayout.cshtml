@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Page</title>
+    <link href="~/css/Login.css" rel="stylesheet" />
+    <link rel="shortcut icon" href="~/icon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+</head>
+<body>
+    <div class="wrapper">
+       
+                @RenderBody()
+            
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/login.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+        

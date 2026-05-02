@@ -1,0 +1,39 @@
+﻿@model EditorViewModelLayer.WebsiteViewModel.WebsiteDTO
+@{
+    ViewData["Title"] = "Delete Website";
+}
+
+<div class="container mt-4" style="max-width: 560px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold text-danger">Delete Website</h4>
+    </div>
+
+    <div class="card border-danger shadow-sm">
+        <div class="card-body">
+            <div class="alert alert-warning">
+                Are you sure you want to delete <strong>@Model.WebsiteName</strong>?
+                This action cannot be undone.
+            </div>
+
+            <dl class="row small mb-0">
+                <dt class="col-sm-4 text-muted">Name</dt>
+                <dd class="col-sm-8">@Model.WebsiteName</dd>
+
+                <dt class="col-sm-4 text-muted">URL</dt>
+                <dd class="col-sm-8">@Model.URL</dd>
+
+                <dt class="col-sm-4 text-muted">Unit Price</dt>
+                <dd class="col-sm-8">@Model.UnitPrice.ToString("C")</dd>
+            </dl>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
+</div>

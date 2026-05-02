@@ -1,0 +1,249 @@
+﻿using EditorLogicLayer.Client;
+using EditorViewModelLayer.ClientViewModel;
+using EditorViewModelLayer.General;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace EditorWeb.Controllers
+{
+    [Authorize(Roles = "Admin,Manager")]
+    public class ClientController : Controller
+    {
+        private readonly IClientService _clientService;
+       
+        public ClientController(IClientService clientService)
+            => _clientService = clientService;
+
+        // ══════════════════════════════════════════════════════════════════════
+        // CLIENT CRUD
+        // ══════════════════════════════════════════════════════════════════════
+
+        // GET: /Client
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> Index()
+        {
+            var clients = await _clientService.GetAllAsync();
+            return View(clients);
+        }
+
+        // GET: /Client/Details/5
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> Details(int id)
+        {
+            var client = await _clientService.GetWithAssistantsAsync(id);
+            if (client == null) return NotFound();
+            return View(client);
+        }
+
+        // GET: /Client/Create
+        [HttpGet]
+        public IActionResult Create() => View(new ClientDTO());
+
+        // POST: /Client/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ClientDTO model , IFormFile? photoFile)
+        {
+            if (!ModelState.IsValid) return View(model);
+            if (photoFile != null && photoFile.Length > 0)
+            {
+                model.PhotoFile = new UploadFileDTO
+                {
+                    FileName = photoFile.FileName,
+                    FileStream = photoFile.OpenReadStream(),
+                    ContentType = photoFile.ContentType,
+                    Length = photoFile.Length
+                };
+            }
+            var (success, message) = await _clientService.CreateAsync(model);
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, message);
+                return View(model);
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        // GET: /Client/Edit/5
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+            return View(client);
+        }
+
+        // POST: /Client/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, ClientDTO model)
+        {
+            if (id != model.Id) return BadRequest();
+            if (!ModelState.IsValid) return View(model);
+
+            var (success, message) = await _clientService.UpdateAsync(model);
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, message);
+                return View(model);
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        // GET: /Client/Delete/5
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+            return View(client);
+        }
+
+        // POST: /Client/Delete/5
+        [HttpPost, ActionName("Delete")]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var (success, message) = await _clientService.DeleteAsync(id);
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(nameof(Index));
+        }
+        // ══════════════════════════════════════════════════════════════════════
+        // PHOTO
+        // ══════════════════════════════════════════════════════════════════════
+
+        // GET: /Client/ChangePhoto/5
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> ChangePhoto(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+            return View(client); // passes ClientDTO — view shows current photo + upload form
+        }
+
+        // POST: /Client/ChangePhoto/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> ChangePhoto(int id, IFormFile? photoFile)
+        {
+            try
+            {
+                if (photoFile == null || photoFile.Length == 0)
+                {
+                    ModelState.AddModelError("photoFile", "Please select a photo to upload.");
+                    // Reload client to redisplay the current photo in the view
+                    var client = await _clientService.GetByIdAsync(id);
+                    return View(client);
+                }
+
+                var uploadDto = new UploadFileDTO
+                {
+                    FileName = photoFile.FileName,
+                    FileStream = photoFile.OpenReadStream(),
+                    ContentType = photoFile.ContentType,
+                    Length = photoFile.Length
+                };
+
+                var (success, message) = await _clientService.ChangePhotoAsync(id, uploadDto);
+                if (!success)
+                {
+                    ModelState.AddModelError("photoFile", message);
+                    var client = await _clientService.GetByIdAsync(id);
+                    return View(client);
+                }
+                TempData["Success"] = message;
+            }
+            catch (Exception ex)
+            {
+                return Content(ex.Message);
+            }
+            
+           
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        // ══════════════════════════════════════════════════════════════════════
+        // ASSISTANT CRUD (nested under Client)
+        // ══════════════════════════════════════════════════════════════════════
+
+        // GET: /Client/CreateAssistant?clientId=5
+        [HttpGet]
+        public async Task<IActionResult> CreateAssistant(int clientId)
+        {
+            var client = await _clientService.GetByIdAsync(clientId);
+            if (client == null) return NotFound();
+
+            return View(new AssistantDTO
+            {
+                ClientId = clientId,
+                ClientName = client.Name
+            });
+        }
+
+        // POST: /Client/CreateAssistant
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAssistant(AssistantDTO model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var (success, message) = await _clientService.CreateAssistantAsync(model); // FIXED: was _assistantService (null)
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, message);
+                return View(model);
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction(nameof(Details), new { id = model.ClientId });
+        }
+
+        // GET: /Client/EditAssistant/5
+        [HttpGet]
+        public async Task<IActionResult> EditAssistant(int id)
+        {
+            var assistant = await _clientService.GetAssistantByIdAsync(id); // FIXED: was _assistantService (null)
+            if (assistant == null) return NotFound();
+            return View(assistant);
+        }
+
+        // POST: /Client/EditAssistant/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditAssistant(int id, AssistantDTO model)
+        {
+            if (id != model.Id) return BadRequest();
+            if (!ModelState.IsValid) return View(model);
+
+            var (success, message) = await _clientService.UpdateAssistantAsync(model); // FIXED: was _assistantService (null)
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, message);
+                return View(model);
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction(nameof(Details), new { id = model.ClientId });
+        }
+
+        // POST: /Client/DeleteAssistant
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAssistant(int id, int clientId)
+        {
+            var (success, message) = await _clientService.DeleteAssistantAsync(id); // FIXED: was _assistantService (null)
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(nameof(Details), new { id = clientId });
+        }
+    }
+}
