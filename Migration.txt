@@ -1,0 +1,24 @@
+Add-Migration InitialCreatedb -context ApplicationDbContext -project EditorDataLayer -StartupProject EditorWeb
+
+Add-Migration AddClientAndAssistant -context ApplicationDbContext -project EditorDataLayer -StartupProject EditorWeb
+
+Add-Migration AddWebsiteCustomerCategories -context ApplicationDbContext -project EditorDataLayer -StartupProject EditorWeb
+
+
+Add-Migration AddPublication -context ApplicationDbContext -project EditorDataLayer -StartupProject EditorWeb
+
+Add-Migration AddChannelCRUD -context ApplicationDbContext -project EditorDataLayer -StartupProject EditorWeb
+
+Add-Migration AddWriterCRUD -context ApplicationDbContext -project EditorDataLayer -StartupProject EditorWeb
+
+Update-Database -project EditorDataLayer -StartupProject EditorWeb
+
+
+UserController.cs
+
+
+
+802798
+758173
+
+607431

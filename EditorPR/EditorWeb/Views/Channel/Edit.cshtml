@@ -1,0 +1,89 @@
+@model EditorViewModelLayer.ChannelViewModel.ChannelDTO
+@{
+    ViewData["Title"] = "Edit Channel";
+}
+
+<div class="container mt-4" style="max-width: 680px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold">Edit Channel</h4>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="row g-3">
+
+                    <div class="col-12">
+                        <label asp-for="ChannelName" class="form-label fw-semibold"></label>
+                        <input asp-for="ChannelName" class="form-control" />
+                        <span asp-validation-for="ChannelName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="MediaTier" class="form-label fw-semibold"></label>
+                        <select asp-for="MediaTier" class="form-select">
+                            <option value="">-- Select Tier --</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ChannelLanguage" class="form-label fw-semibold"></label>
+                        <select asp-for="ChannelLanguage" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option value="Arabic">Arabic</option>
+                            <option value="English">English</option>
+                            <option value="French">French</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ChannelReach" class="form-label fw-semibold"></label>
+                        <input asp-for="ChannelReach" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Distribution" class="form-label fw-semibold"></label>
+                        <input asp-for="Distribution" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="UnitPrice" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="UnitPrice" class="form-control" type="number" step="0.01" min="0" />
+                        </div>
+                        <span asp-validation-for="UnitPrice" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="UnitCurrency" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="UnitCurrency" class="form-control" type="number" step="0.01" min="0" />
+                        </div>
+                        <span asp-validation-for="UnitCurrency" class="text-danger small"></span>
+                    </div>
+
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-warning px-4">Update</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

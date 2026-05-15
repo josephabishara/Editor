@@ -1,0 +1,113 @@
+@model EditorViewModelLayer.PublicationViewModel.PublicationDTO
+@{
+    ViewData["Title"] = "Edit Publication";
+}
+
+<div class="container mt-4" style="max-width: 720px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold">Edit Publication</h4>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="row g-3">
+
+                    <div class="col-12">
+                        <label asp-for="PublicationName" class="form-label fw-semibold"></label>
+                        <input asp-for="PublicationName" class="form-control" />
+                        <span asp-validation-for="PublicationName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="URL" class="form-label fw-semibold"></label>
+                        <input asp-for="URL" class="form-control" />
+                        <span asp-validation-for="URL" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="MediaType" class="form-label fw-semibold"></label>
+                        <select asp-for="MediaType" class="form-select">
+                            <option value="">-- Select Type --</option>
+                            <option value="newspaper">Newspaper</option>
+                            <option value="magazine">Magazine</option>
+                            <option value="journal">Journal</option>
+                            <option value="newsletter">Newsletter</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="MediaTier" class="form-label fw-semibold"></label>
+                        <select asp-for="MediaTier" class="form-select">
+                            <option value="">-- Select Tier --</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Frequency" class="form-label fw-semibold"></label>
+                        <select asp-for="Frequency" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Language" class="form-label fw-semibold"></label>
+                        <select asp-for="Language" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option value="Arabic">Arabic</option>
+                            <option value="English">English</option>
+                            <option value="French">French</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Reach" class="form-label fw-semibold"></label>
+                        <input asp-for="Reach" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Distribution" class="form-label fw-semibold"></label>
+                        <input asp-for="Distribution" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Circulation" class="form-label fw-semibold"></label>
+                        <input asp-for="Circulation" class="form-control" type="number" min="0" />
+                        <span asp-validation-for="Circulation" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="CmPrice" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="CmPrice" class="form-control" type="number" step="0.01" min="0" />
+                        </div>
+                        <span asp-validation-for="CmPrice" class="text-danger small"></span>
+                    </div>
+
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-warning px-4">Update</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

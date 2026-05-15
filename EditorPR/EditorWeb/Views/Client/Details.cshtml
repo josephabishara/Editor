@@ -63,7 +63,7 @@
                 <div class="col-md-4">
                   
                        
-                    <img src="~/@Model.Photo" class="rounded-circle border shadow-sm"
+                    <img src="@Model.Photo" class="rounded-circle border shadow-sm"
                          style="width:120px;height:120px;object-fit:cover;" />
 
                     
@@ -73,12 +73,73 @@
             </div>
         </div>
         <div class="card-footer d-flex gap-2">
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">Edit Client</a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-success btn-sm"><i class="fa fa-edit"></i></a>
             @if (User.IsInRole("Admin"))
             {
-                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger btn-sm">Delete Client</a>
-                <a asp-action="ChangePhoto" asp-route-id="@Model.Id" class="btn btn-outline-info btn-sm">Change Photo</a>
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-dark btn-sm"><i class="fa fa-trash"></i></a>
+                <a asp-action="ChangePhoto" asp-route-id="@Model.Id" class="btn btn-outline-info btn-sm"> <i class="fa fa-image"></i> </a>
             }
+        </div>
+    </div>
+
+    @* ── Website Categories ──────────────────────────────────────────────── *@
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0 fw-semibold">Website Media Tiers</h5>
+        <a asp-action="EditCategories" asp-route-id="@Model.Id"
+           class="btn btn-sm btn-outline-secondary">Edit Tiers</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover table-striped mb-0 align-middle">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Website</th>
+                        <th>URL</th>
+                        <th>Media Tier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.WebsiteCategories.Any())
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3 small">
+                                No website categories yet.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var cat in Model.WebsiteCategories)
+                    {
+                        <tr>
+                            <td class="fw-semibold small">@cat.WebsiteName</td>
+                            <td class="small">
+                                <a href="@cat.WebsiteURL" target="_blank"
+                                   class="text-decoration-none text-truncate d-inline-block"
+                                   style="max-width:240px;">
+                                    @cat.WebsiteURL
+                                </a>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(cat.MediaTier))
+                                {
+                                    var color = cat.MediaTier switch
+                                    {
+                                        "A" or "Tier 1" => "bg-success",
+                                        "B" or "Tier 2" => "bg-warning text-dark",
+                                        "C" or "Tier 3" => "bg-secondary",
+                                        _ => "bg-info text-dark"
+                                    };
+                                    <span class="badge @color">@cat.MediaTier</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -112,7 +173,7 @@
                     @foreach (var a in Model.AssistantList)
                     {
                         <tr>
-                            <td>@a.Id</td>
+                            <td><img src="@a.Photo" width="35" class="rounded-circle border shadow-sm" /></td>
                             <td>@a.Name</td>
                             <td>@a.Email</td>
                             <td>@a.Username</td>
@@ -123,7 +184,8 @@
                             </td>
                             <td>
                                 <a asp-action="EditAssistant" asp-route-id="@a.Id"
-                                   class="btn btn-sm btn-outline-warning me-1">Edit</a>
+                                   class="btn btn-sm btn-outline-success me-1"><i class="fa fa-edit"></i></a>
+
                                 @if (User.IsInRole("Admin"))
                                 {
                                     <form asp-action="DeleteAssistant" method="post" class="d-inline"
@@ -131,8 +193,9 @@
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@a.Id" />
                                         <input type="hidden" name="clientId" value="@Model.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-dark"><i class="fa fa-trash"></i></button>
                                     </form>
+                                    <a asp-action="ChangeAssistantPhoto" asp-route-id="@a.Id" class="btn btn-outline-info btn-sm">  <i class="fa fa-image"></i> </a>
                                 }
                             </td>
                         </tr>

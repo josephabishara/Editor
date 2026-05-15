@@ -1,0 +1,107 @@
+@model IEnumerable<EditorViewModelLayer.PublicationViewModel.PublicationDTO>
+@{
+    ViewData["Title"] = "Publications";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-semibold">  <i class="	fa fa-globe"></i> Publication</h4>
+        <div class="d-flex gap-2">
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a asp-action="Create" class="btn btn-dark btn-sm">+ Add Publication</a>
+                <a asp-action="Import" class="btn btn-outline-success btn-sm"> <i class="fa fa-cloud-upload"></i> Import from Excel</a>
+            }
+            <a asp-action="ExportToExcel" class="btn btn-success btn-sm"> <i class="fa fa-cloud-download"></i> Export to Excel</a>
+        </div>
+    </div>
+    
+    <br />
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-primary">
+                    <tr>
+                        <th>#</th>
+                        <th>Publication Name</th>
+                        <th>Media Type</th>
+                        <th>Media Tier</th>
+                        <th>Frequency</th>
+                        <th>Language</th>
+                        <th>Circulation</th>
+                        <th>CM Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">No publications found.</td>
+                        </tr>
+                    }
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td>@p.Id</td>
+                            <td class="fw-semibold">@p.PublicationName</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(p.MediaType))
+                                {
+                                    <span class="badge bg-info text-white">@p.MediaType</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(p.MediaTier))
+                                {
+                                    var tierColor = p.MediaTier switch
+                                    {
+                                        "A" => "bg-success",
+                                        "B" => "bg-warning text-dark",
+                                        "C" => "bg-secondary",
+                                        _ => "bg-secondary"
+                                    };
+                                    <span class="badge @tierColor">Tier @p.MediaTier</span>
+                                }
+                            </td>
+                            <td>@(p.Frequency ?? "—")</td>
+                            <td>@(p.Language ?? "—")</td>
+                            <td>@(p.Circulation.HasValue ? p.Circulation.Value.ToString("N0") : "—")</td>
+                            <td class="fw-semibold">@p.CmPrice.ToString("C")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@p.Id"
+                                   class="btn btn-sm btn-outline-info me-1"><i class="fa fa-eye"></i></a>
+                                @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@p.Id"
+                                       class="btn btn-sm btn-outline-success me-1"><i class="fa fa-edit"></i></a>
+                                }
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <a asp-action="Delete" asp-route-id="@p.Id"
+                                       class="btn btn-sm btn-outline-dark"><i class="fa fa-trash"></i></a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -61,5 +61,7 @@ namespace EditorViewModelLayer.ClientViewModel
 
         // Assistants list (read-only, shown in Details)
         public List<AssistantDTO> AssistantList { get; set; } = new();
+
+        public List<WebsiteCustomerCategoryDTO> WebsiteCategories { get; set; } = new();
     }
 }

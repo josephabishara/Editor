@@ -1,0 +1,82 @@
+@model EditorViewModelLayer.PublicationViewModel.PublicationDTO
+@{
+    ViewData["Title"] = "Publication Details";
+}
+
+<div class="container mt-4" style="max-width: 700px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold">Publication Details</h4>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white fw-semibold d-flex justify-content-between align-items-center">
+            <span>@Model.PublicationName</span>
+            @if (!string.IsNullOrEmpty(Model.MediaTier))
+            {
+                var tierColor = Model.MediaTier switch {
+                    "A" => "bg-success",
+                    "B" => "bg-warning text-dark",
+                    "C" => "bg-secondary",
+                    _   => "bg-secondary"
+                };
+                <span class="badge @tierColor">Tier @Model.MediaTier</span>
+            }
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5 text-muted">URL</dt>
+                        <dd class="col-sm-7">
+                            <a href="@Model.URL" target="_blank" class="text-break">@Model.URL</a>
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Media Type</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.MediaType))
+                            {
+                                <span class="badge bg-info text-dark text-capitalize">@Model.MediaType</span>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Frequency</dt>
+                        <dd class="col-sm-7 text-capitalize">@(Model.Frequency ?? "—")</dd>
+
+                        <dt class="col-sm-5 text-muted">Language</dt>
+                        <dd class="col-sm-7">@(Model.Language ?? "—")</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5 text-muted">Reach</dt>
+                        <dd class="col-sm-7">@(Model.Reach ?? "—")</dd>
+
+                        <dt class="col-sm-5 text-muted">Distribution</dt>
+                        <dd class="col-sm-7">@(Model.Distribution ?? "—")</dd>
+
+                        <dt class="col-sm-5 text-muted">Circulation</dt>
+                        <dd class="col-sm-7">
+                            @(Model.Circulation.HasValue ? Model.Circulation.Value.ToString("N0") : "—")
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">CM Price</dt>
+                        <dd class="col-sm-7 fw-semibold text-success">@Model.CmPrice.ToString("C")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">Edit</a>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger btn-sm">Delete</a>
+            }
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-auto">Back to List</a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,32 @@
+﻿@model EditorViewModelLayer.WriterViewModel.WriterDTO
+@{
+    ViewData["Title"] = "Writer Details";
+}
+
+<div class="container mt-4" style="max-width: 680px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold">Website Details</h4>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4 text-muted">Writer Name</dt>
+                <dd class="col-sm-8 fw-semibold">@Model.WriterName</dd>
+
+            </dl>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">Edit</a>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger btn-sm">Delete</a>
+            }
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-auto">Back to List</a>
+        </div>
+    </div>
+</div>

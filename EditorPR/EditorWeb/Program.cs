@@ -1,8 +1,11 @@
 using EditorDataLayer.Data;
 using EditorEntitiesLayer.Entities;
 using EditorLogicLayer.Auth;
+using EditorLogicLayer.Channel;
 using EditorLogicLayer.Client;
+using EditorLogicLayer.Publication;
 using EditorLogicLayer.Website;
+using EditorLogicLayer.Writer;
 using EditorRepositoryLayer.IRepositories;
 using EditorRepositoryLayer.Repositories;
 using Microsoft.AspNetCore.Identity;
@@ -40,14 +43,23 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // ──  Repositories Injection ───────────────────────────────────────────────────
 builder.Services.AddScoped<IWebsiteRepository, WebsiteRepository>();
+builder.Services.AddScoped<IWriterRepository, WriterRepository>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IAssistantRepository, AssistantRepository>();
+builder.Services.AddScoped<IPublicationRepository, PublicationRepository>();
+builder.Services.AddScoped<IChannelRepository, ChannelRepository>();
+builder.Services.AddScoped<IWebsiteCustomerCategoryRepository, WebsiteCustomerCategoryRepository>();
+
 
 // ──    Services Injection    ───────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>(); 
 builder.Services.AddScoped<IWebsiteService, WebsiteService>();
+builder.Services.AddScoped<IWriterService, WriterService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IAssistantService, AssistantService>();
+builder.Services.AddScoped<IPublicationService, PublicationService>();
+builder.Services.AddScoped<IChannelService, ChannelService>();
+
 
 
 // ── 5. MVC ────────────────────────────────────────────────────────────────────

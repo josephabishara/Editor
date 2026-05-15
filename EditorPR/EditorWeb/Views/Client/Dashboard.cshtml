@@ -1,0 +1,146 @@
+﻿@model EditorViewModelLayer.ClientViewModel.ClientDTO
+@{
+    ViewData["Title"] = "Client Details";
+}
+
+<div class="container mt-4">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold">Client Details</h4>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Client Info -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fw-semibold bg-primary text-white d-flex justify-content-between">
+            <span>@Model.Name</span>
+            <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-secondary")">@Model.Status</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5 text-muted">Email</dt>
+                        <dd class="col-sm-7">@Model.Email</dd>
+
+                        <dt class="col-sm-5 text-muted">Website</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.Website))
+                            {
+                                <a href="@Model.Website" target="_blank">@Model.Website</a>
+                            }
+                            else
+                            {
+
+                                <span class="text-muted">—</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5 text-muted">Contact</dt>
+                        <dd class="col-sm-7">@(Model.Contact ?? "—")</dd>
+
+                        <dt class="col-sm-5 text-muted">News/Day Limit</dt>
+                        <dd class="col-sm-7">@Model.ManagersLimitedNewsDays</dd>
+
+                        <dt class="col-sm-5 text-muted">Notes</dt>
+                        <dd class="col-sm-7">@(Model.Notes ?? "—")</dd>
+                    </dl>
+                </div>
+                <div class="col-md-4">
+
+                  
+                    <img src="@Model.Photo" class="rounded-circle border shadow-sm"
+                         style="width:120px;height:120px;object-fit:cover;" />
+
+                    
+
+                     
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-success btn-sm"><i class="fa fa-edit"></i></a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-dark btn-sm"><i class="fa fa-trash"></i></a>
+                <a asp-action="ChangePhoto" asp-route-id="@Model.Id" class="btn btn-outline-info btn-sm"> <i class="fa fa-image"></i> </a>
+            }
+        </div>
+    </div>
+
+    <!-- Assistants -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0 fw-semibold">Assistants</h5>
+        <a asp-action="CreateAssistant" asp-route-clientId="@Model.Id"
+           class="btn btn-sm btn-primary">+ Add Assistant</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Username</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.AssistantList.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">No assistants yet.</td>
+                        </tr>
+                    }
+                    @foreach (var a in Model.AssistantList)
+                    {
+                        <tr>
+                            <td><img src="@a.Photo" width="35" class="rounded-circle border shadow-sm" /></td>
+                            <td>@a.Name</td>
+                            <td>@a.Email</td>
+                            <td>@a.Username</td>
+                            <td>
+                                <span class="badge @(a.Status == "Active" ? "bg-success" : "bg-secondary")">
+                                    @a.Status
+                                </span>
+                            </td>
+                            <td>
+                                <a asp-action="EditAssistant" asp-route-id="@a.Id"
+                                   class="btn btn-sm btn-outline-success me-1"><i class="fa fa-edit"></i></a>
+
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <form asp-action="DeleteAssistant" method="post" class="d-inline"
+                                          onsubmit="return confirm('Delete this assistant?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@a.Id" />
+                                        <input type="hidden" name="clientId" value="@Model.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-dark"><i class="fa fa-trash"></i></button>
+                                    </form>
+                                    <a asp-action="ChangeAssistantPhoto" asp-route-id="@a.Id" class="btn btn-outline-info btn-sm">  <i class="fa fa-image"></i> </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

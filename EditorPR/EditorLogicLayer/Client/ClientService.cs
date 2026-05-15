@@ -14,17 +14,23 @@ namespace EditorLogicLayer.Client
         private readonly IAssistantRepository _assistantRepo; 
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
+        private readonly IWebsiteCustomerCategoryRepository _categoryRepo;
+        private readonly IWebsiteRepository _websiteRepo;
 
         public ClientService(
             IClientRepository clientRepo,
             IAssistantRepository assistantRepo, 
             UserManager<ApplicationUser> userManager,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IWebsiteCustomerCategoryRepository categoryRepo,
+            IWebsiteRepository websiteRepo)
         {
             _clientRepo = clientRepo;
             _assistantRepo = assistantRepo;
             _userManager = userManager;
             _env = env;
+            _categoryRepo = categoryRepo;
+            _websiteRepo = websiteRepo;
         }
 
         // ── Client CRUD ────────────────────────────────────────────────────────
@@ -48,6 +54,9 @@ namespace EditorLogicLayer.Client
 
             var dto = MapToDTO(client);
             dto.AssistantList = client.AssistantList.Select(MapAssistantToDTO).ToList();
+            dto.WebsiteCategories = (await _categoryRepo.GetByClientIdAsync(id))
+                                      .Select(MapCategoryToDTO).ToList();
+
             return dto;
         }
 
@@ -86,6 +95,20 @@ namespace EditorLogicLayer.Client
             entity.CreatedAt = DateTime.UtcNow; // BUG 3: was entity.CreatedAt — field is CreatedDate per BaseEntity
 
             await _clientRepo.AddAsync(entity);
+
+            // 3. Auto-generate WebsiteCustomerCategory rows from ALL active websites
+            //    Each row inherits the website's current MediaTier as default
+            var websites = await _websiteRepo.GetActiveWebsitesAsync();
+            var categories = websites.Select(w => new WebsiteCustomerCategory
+            {
+                CustomerId = entity.Id,
+                WebsiteId = w.Id,
+                MediaTier = w.MediaTier  // default from website — editable later
+            }).ToList();
+
+            if (categories.Any())
+                await _categoryRepo.AddRangeAsync(categories);
+
             return (true, "Client created successfully.");
         }
 
@@ -159,6 +182,38 @@ namespace EditorLogicLayer.Client
             await _clientRepo.UpdateAsync(existing);
             return (true, "Client deleted successfully.");
         }
+
+        // ── Website Categories ─────────────────────────────────────────────────
+
+        public async Task<IEnumerable<WebsiteCustomerCategoryDTO>> GetClientCategoriesAsync(int clientId)
+        {
+            var categories = await _categoryRepo.GetByClientIdAsync(clientId);
+            return categories.Select(MapCategoryToDTO);
+        }
+
+        public async Task<(bool Success, string Message)> UpdateClientCategoriesAsync(UpdateClientCategoriesDTO model)
+        {
+            var existing = await _categoryRepo.GetByClientIdAsync(model.CustomerId);
+            var existingDict = existing.ToDictionary(c => c.Id);
+
+            var toUpdate = new List<WebsiteCustomerCategory>();
+
+            foreach (var dto in model.Categories)
+            {
+                if (existingDict.TryGetValue(dto.Id, out var category))
+                {
+                    category.MediaTier = dto.MediaTier;
+                    toUpdate.Add(category);
+                }
+            }
+
+            if (toUpdate.Any())
+                await _categoryRepo.UpdateRangeAsync(toUpdate);
+
+            return (true, "Website categories updated successfully.");
+        }
+
+
 
         // ── Assistant CRUD ─────────────────────────────────────────────────────
         // BUG 1: All methods below were missing — now implemented here in ClientService
@@ -357,7 +412,68 @@ namespace EditorLogicLayer.Client
                 return (null, $"Failed to save photo: {ex.Message}");
             }
         }
-         
+        public async Task<(bool Success, string Message)> ChangeAssistantPhotoAsync(int assistantid, UploadFileDTO photo)
+        {
+            var existing = await _assistantRepo.GetByIdAsync(assistantid);
+            if (existing == null)
+                return (false, "Assistant not found.");
+
+            var (savedPath, error) = await SaveAssistantPhotoAsync(photo);
+            if (savedPath == null)
+                return (false, error!);
+
+            // Delete old photo file from disk if it exists
+            if (!string.IsNullOrEmpty(existing.Photo))
+            {
+                var oldFullPath = Path.Combine(_env.WebRootPath, existing.Photo.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(oldFullPath))
+                    System.IO.File.Delete(oldFullPath);
+            }
+
+            existing.Photo = savedPath;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await _assistantRepo.UpdateAsync(existing);
+            return (true, "Photo updated successfully.");
+        }
+
+         private async Task<(string? Path, string? Error)> SaveAssistantPhotoAsync(UploadFileDTO photo)
+        {
+            try
+            {
+                if (photo == null || photo.Length == 0)
+                    return (null, "Please select a photo.");
+
+                if (photo.Length > MaxFileSizeBytes)
+                    return (null, "Photo must be smaller than 2 MB.");
+
+                var extension = Path.GetExtension(photo.FileName).ToLowerInvariant();
+                if (!AllowedExtensions.Contains(extension))
+                    return (null, "Only JPG, PNG, GIF, and WebP files are allowed.");
+
+                if (!AllowedContentTypes.Contains(photo.ContentType.ToLowerInvariant()))
+                    return (null, "Invalid file type.");
+
+                // BUG FIXED: was Directory.GetCurrentDirectory() + "wwwroot" — unreliable in IIS/Azure
+                // Must use IWebHostEnvironment.WebRootPath which always resolves correctly
+                var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "assistants");
+                Directory.CreateDirectory(uploadsFolder); // creates folder if it doesn't exist
+
+                var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+                var fullPath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(fullPath, FileMode.Create))
+                    await photo.FileStream.CopyToAsync(fileStream);
+
+                // Return web-accessible relative path
+                return ($"/uploads/assistants/{uniqueFileName}", null);
+            }
+            catch (Exception ex)
+            {
+                // BUG FIXED: was no try/catch — any IO error crashed the entire request
+                return (null, $"Failed to save photo: {ex.Message}");
+            }
+        }
         // ── Mappers ────────────────────────────────────────────────────────────
 
         private static ClientDTO MapToDTO(EditorEntitiesLayer.Entities.Client c) => new()
@@ -406,5 +522,16 @@ namespace EditorLogicLayer.Client
             Status = a.Status,
             ApplicationUserId = a.ApplicationUserId
         };
+
+        private static WebsiteCustomerCategoryDTO MapCategoryToDTO(WebsiteCustomerCategory c) => new()
+        {
+            Id = c.Id,
+            CustomerId = c.CustomerId,
+            WebsiteId = c.WebsiteId,
+            WebsiteName = c.Website?.WebsiteName ?? string.Empty,
+            WebsiteURL = c.Website?.URL ?? string.Empty,
+            MediaTier = c.MediaTier
+        };
+
     }
 }

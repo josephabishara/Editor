@@ -1,0 +1,76 @@
+﻿@model IEnumerable<EditorViewModelLayer.ClientViewModel.ClientDTO>
+@{
+    ViewData["Title"] = "Clients";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-2">
+            <h4 class="mb-0 fw-semibold">  <i class="fa fa-building"></i> Clients</h4>
+        </div>
+        <div class="col-6">
+        </div>
+        <div class="col-2">
+            <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Add Client</a>
+
+        </div>
+        <div class="col-2">
+            <a asp-action="Index" class="btn btn-primary btn-sm"><i class="fa fa-building"></i> Manage</a>
+
+        </div>
+    </div>
+<br />
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+
+    <div class="row">
+
+            
+        @if (!Model.Any())
+        {
+                        
+            <div class="text-center text-muted py-4">No clients found.</div>
+                        
+        }
+        @foreach (var c in Model)
+        {
+                      
+            <div class="col-md-3">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <span class="badge @(c.Status == "Active" ? "bg-success" : "bg-secondary")">
+                            @c.Status
+                        </span> | @c.Name
+                    </div>
+                    <img class="card-img-top" src="@c.Photo" alt="@c.Name">
+
+                    <div class="card-body p-3">
+
+                           
+                       
+                        <a asp-action="dashboard" asp-route-id="@c.Id"
+                           class="btn btn-lg btn-outline-primary  me-1" style="width: 100%;"><i class="fa fa-dashboard"></i></a>
+                       
+
+                           
+                    </div>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>

@@ -1,0 +1,56 @@
+@model EditorViewModelLayer.ChannelViewModel.ChannelDTO
+@{
+    ViewData["Title"] = "Channel Details";
+}
+
+<div class="container mt-4" style="max-width: 680px;">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <h4 class="mb-0 fw-semibold">Channel Details</h4>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white fw-semibold d-flex justify-content-between align-items-center">
+            <span>@Model.ChannelName</span>
+            @if (!string.IsNullOrEmpty(Model.MediaTier))
+            {
+                var color = Model.MediaTier switch {
+                    "A" => "bg-success",
+                    "B" => "bg-warning text-dark",
+                    "C" => "bg-secondary",
+                    _   => "bg-secondary"
+                };
+                <span class="badge @color">Tier @Model.MediaTier</span>
+            }
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4 text-muted">Reach</dt>
+                <dd class="col-sm-8">@(Model.ChannelReach    ?? "—")</dd>
+
+                <dt class="col-sm-4 text-muted">Distribution</dt>
+                <dd class="col-sm-8">@(Model.Distribution    ?? "—")</dd>
+
+                <dt class="col-sm-4 text-muted">Language</dt>
+                <dd class="col-sm-8">@(Model.ChannelLanguage ?? "—")</dd>
+
+                <dt class="col-sm-4 text-muted">Unit Price</dt>
+                <dd class="col-sm-8 fw-semibold text-success">@Model.UnitPrice.ToString("N2")</dd>
+
+                <dt class="col-sm-4 text-muted">Unit Currency</dt>
+                <dd class="col-sm-8 fw-semibold text-success">@Model.UnitCurrency.ToString("N2")</dd>
+            </dl>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">Edit</a>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger btn-sm">Delete</a>
+            }
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-auto">Back to List</a>
+        </div>
+    </div>
+</div>

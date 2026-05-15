@@ -12,9 +12,12 @@ namespace EditorDataLayer.Data
         }
 
         public DbSet<Websites> Websites { get; set; }
-
+        public DbSet<Publication> Publications { get; set; }
+        public DbSet<Channel> Channels { get; set; }
         public DbSet<Client> Clients { get; set; }
+        public DbSet<Writer> Writers { get; set; }
         public DbSet<Assistant> Assistants { get; set; }
+        public DbSet<WebsiteCustomerCategory> WebsiteCustomerCategories { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

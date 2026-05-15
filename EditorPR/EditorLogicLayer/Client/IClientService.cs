@@ -15,6 +15,7 @@ namespace EditorLogicLayer.Client
 
         // ── Photo ──────────────────────────────────────────────────────────────
         Task<(bool Success, string Message)> ChangePhotoAsync(int clientId, UploadFileDTO photo);
+        Task<(bool Success, string Message)> ChangeAssistantPhotoAsync(int assistantId, UploadFileDTO photo);
 
         // ── Assistant CRUD ─────────────────────────────────────────────────────
 
@@ -24,6 +25,10 @@ namespace EditorLogicLayer.Client
         Task<(bool Success, string Message)> UpdateAssistantAsync(AssistantDTO model);
         Task<(bool Success, string Message)> DeleteAssistantAsync(int id);
 
+
+        // ── Website Categories ─────────────────────────────────────────────────
+        Task<IEnumerable<WebsiteCustomerCategoryDTO>> GetClientCategoriesAsync(int clientId);
+        Task<(bool Success, string Message)> UpdateClientCategoriesAsync(UpdateClientCategoriesDTO model);
 
 
     }

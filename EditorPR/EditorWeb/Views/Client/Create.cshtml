@@ -11,7 +11,7 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <form asp-action="Create" method="post">
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
@@ -20,7 +20,7 @@
                         <label class="form-label fw-semibold">Profile Photo <span class="text-muted fw-normal small">(optional)</span></label>
                         <div class="d-flex align-items-center gap-3">
                             <img id="photoPreview"
-                                 src="/images/default-avatar.png"
+                                 src="/uploads/clients/default-company.png"
                                  class="rounded-circle border"
                                  style="width:80px;height:80px;object-fit:cover;"
                                  alt="Preview" />
@@ -35,10 +35,16 @@
                             </div>
                         </div>
                     </div>
+                 
                     <div class="col-md-6">
                         <label asp-for="Name" class="form-label fw-semibold"></label>
                         <input asp-for="Name" class="form-control" />
                         <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Username" class="form-label fw-semibold"></label>
+                        <input asp-for="Username" class="form-control"  type="text" />
+                        <span asp-validation-for="Username" class="text-danger small"></span>
                     </div>
 
                     <div class="col-md-6">
@@ -97,8 +103,18 @@
     </div>
 </div>
 
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        function previewPhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => document.getElementById('photoPreview').src = e.target.result;
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
 }

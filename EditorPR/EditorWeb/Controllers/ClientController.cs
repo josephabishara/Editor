@@ -26,11 +26,26 @@ namespace EditorWeb.Controllers
             var clients = await _clientService.GetAllAsync();
             return View(clients);
         }
-
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> All()
+        {
+            var clients = await _clientService.GetAllAsync();
+            return View(clients);
+        }
         // GET: /Client/Details/5
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,Auditor")]
         public async Task<IActionResult> Details(int id)
+        {
+            var client = await _clientService.GetWithAssistantsAsync(id);
+            if (client == null) return NotFound();
+            return View(client);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> Dashboard(int id)
         {
             var client = await _clientService.GetWithAssistantsAsync(id);
             if (client == null) return NotFound();
@@ -116,6 +131,45 @@ namespace EditorWeb.Controllers
             TempData[success ? "Success" : "Error"] = message;
             return RedirectToAction(nameof(Index));
         }
+
+        // GET: /Client/EditCategories/5
+        [HttpGet]
+        public async Task<IActionResult> EditCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+
+            var categories = await _clientService.GetClientCategoriesAsync(id);
+
+            var model = new UpdateClientCategoriesDTO
+            {
+                CustomerId = id,
+                Categories = categories.ToList()
+            };
+
+            ViewBag.ClientName = client.Name;
+            return View(model);
+        }
+
+        // POST: /Client/EditCategories
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditCategories(UpdateClientCategoriesDTO model)
+        {
+            var (success, message) = await _clientService.UpdateClientCategoriesAsync(model);
+            if (!success)
+            {
+                TempData["Error"] = message;
+                return RedirectToAction(nameof(EditCategories), new { id = model.CustomerId });
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction(nameof(Details), new { id = model.CustomerId });
+        }
+
+
+
+
         // ══════════════════════════════════════════════════════════════════════
         // PHOTO
         // ══════════════════════════════════════════════════════════════════════
@@ -171,6 +225,61 @@ namespace EditorWeb.Controllers
            
             return RedirectToAction(nameof(Details), new { id });
         }
+
+        // GET: /Client/ChangePhoto/5
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> ChangeAssistantPhoto(int id)
+        {
+            var assistant = await _clientService.GetAssistantByIdAsync(id);
+            if (assistant == null) return NotFound();
+            return View(assistant); // passes ClientDTO — view shows current photo + upload form
+        }
+
+        // POST: /Client/ChangePhoto/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> ChangeAssistantPhoto(int id, IFormFile? photoFile)
+        {
+            try
+            {
+                if (photoFile == null || photoFile.Length == 0)
+                {
+                    ModelState.AddModelError("photoFile", "Please select a photo to upload.");
+                    // Reload client to redisplay the current photo in the view
+                    var client = await _clientService.GetByIdAsync(id);
+                    return View(client);
+                }
+
+                var uploadDto = new UploadFileDTO
+                {
+                    FileName = photoFile.FileName,
+                    FileStream = photoFile.OpenReadStream(),
+                    ContentType = photoFile.ContentType,
+                    Length = photoFile.Length
+                };
+
+                var (success, message) = await _clientService.ChangeAssistantPhotoAsync(id, uploadDto);
+                if (!success)
+                {
+                    ModelState.AddModelError("photoFile", message);
+                    var assistant = await _clientService.GetAssistantByIdAsync(id); 
+                    if (assistant == null) return NotFound();
+                    var client = await _clientService.GetByIdAsync(assistant.ClientId);
+                    return View(client);
+                }
+                TempData["Success"] = message;
+            }
+            catch (Exception ex)
+            {
+                return Content(ex.Message);
+            }
+
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         // ══════════════════════════════════════════════════════════════════════
         // ASSISTANT CRUD (nested under Client)
         // ══════════════════════════════════════════════════════════════════════
@@ -196,7 +305,7 @@ namespace EditorWeb.Controllers
         {
             if (!ModelState.IsValid) return View(model);
 
-            var (success, message) = await _clientService.CreateAssistantAsync(model); // FIXED: was _assistantService (null)
+            var (success, message) = await _clientService.CreateAssistantAsync(model); 
             if (!success)
             {
                 ModelState.AddModelError(string.Empty, message);
@@ -211,7 +320,7 @@ namespace EditorWeb.Controllers
         [HttpGet]
         public async Task<IActionResult> EditAssistant(int id)
         {
-            var assistant = await _clientService.GetAssistantByIdAsync(id); // FIXED: was _assistantService (null)
+            var assistant = await _clientService.GetAssistantByIdAsync(id);  
             if (assistant == null) return NotFound();
             return View(assistant);
         }

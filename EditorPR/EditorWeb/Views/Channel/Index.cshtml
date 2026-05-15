@@ -1,0 +1,100 @@
+@model IEnumerable<EditorViewModelLayer.ChannelViewModel.ChannelDTO>
+@{
+    ViewData["Title"] = "Channels";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-semibold">  <i class="	fa fa-globe"></i> Channels</h4>
+        <div class="d-flex gap-2">
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a asp-action="Create" class="btn btn-dark btn-sm">+ Add Channel</a>
+                <a asp-action="Import" class="btn btn-outline-success btn-sm"><i class="fa fa-cloud-upload"></i>  Import Excel</a>
+               
+            }
+            <a asp-action="ExportToExcel" class="btn btn-success btn-sm">  <i class="fa fa-cloud-download"></i> Export Excel</a>
+        </div>
+    </div>
+    <br />
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-primary">
+                    <tr>
+                        <th>#</th>
+                        <th>Channel Name</th>
+                        <th>Media Tier</th>
+                        <th>Reach</th>
+                        <th>Distribution</th>
+                        <th>Language</th>
+                        <th>Unit Price</th>
+                        <th>Unit Currency</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">No channels found.</td>
+                        </tr>
+                    }
+                    @foreach (var c in Model)
+                    {
+                        <tr>
+                            <td>@c.Id</td>
+                            <td class="fw-semibold">@c.ChannelName</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(c.MediaTier))
+                                {
+                                    var color = c.MediaTier switch {
+                                        "A" => "bg-success",
+                                        "B" => "bg-warning text-dark",
+                                        "C" => "bg-secondary",
+                                        _   => "bg-secondary"
+                                    };
+                                    <span class="badge @color">Tier @c.MediaTier</span>
+                                }
+                            </td>
+                            <td>@(c.ChannelReach    ?? "—")</td>
+                            <td>@(c.Distribution    ?? "—")</td>
+                            <td>@(c.ChannelLanguage ?? "—")</td>
+                            <td class="fw-semibold">@c.UnitPrice.ToString("N2")</td>
+                            <td class="fw-semibold">@c.UnitCurrency.ToString("N2")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@c.Id"
+                                   class="btn btn-sm btn-outline-info me-1"><i class="fa fa-eye"></i></a>
+                                @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@c.Id"
+                                       class="btn btn-sm btn-outline-success me-1"><i class="fa fa-edit"></i></a>
+                                }
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <a asp-action="Delete" asp-route-id="@c.Id"
+                                       class="btn btn-sm btn-outline-dark"><i class="fa fa-trash"></i></a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
