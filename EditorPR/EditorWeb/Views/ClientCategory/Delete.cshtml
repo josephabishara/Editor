@@ -1,0 +1,18 @@
+﻿@model EditorViewModelLayer.ClientViewModel.ClientCategoryDTO
+@{
+    ViewData["Title"] = "Delete Category";
+}
+
+<h2>Delete Category</h2>
+<hr />
+<div class="alert alert-warning">
+    Are you sure you want to delete <strong>@Model.CategoryName</strong>?
+    It has <strong>@Model.ArticleCount</strong> article(s) and
+    <strong>@Model.SubCategories.Count()</strong> sub-category(ies).
+</div>
+<form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="clientId" value="@Model.ClientId" />
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    <a asp-action="Index" asp-route-clientId="@Model.ClientId" class="btn btn-secondary">Cancel</a>
+</form>

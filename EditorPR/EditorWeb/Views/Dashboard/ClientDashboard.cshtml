@@ -1,0 +1,98 @@
+﻿@model EditorViewModelLayer.ClientViewModel.ClientDashboardDTO
+
+@{
+    ViewData["Title"] = "Client Dashboard";
+}
+<style>
+    body {
+        background-color: #f5f7fb;
+    }
+
+    .card {
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .kpi {
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .btn-block {
+        width: 100%;
+    }
+
+</style>
+
+<div class="container  my-4">
+    <div class="row bg-white g-3 mb-4 p-3">
+        
+        <div class="col-md-2">
+            <img src="@Model.Photo" class="rounded-circle border shadow-sm"
+             style="width:120px;height:120px;object-fit:cover;" />
+
+                    
+        </div>
+        <div class="col-md-8">
+        <h2>@Model.Name</h2>
+        <p>@Model.Email</p>
+        <p>@Model.Notes</p>
+
+    </div>
+    </div>
+    
+    <!-- KPI CARDS -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h4> <i class="fa fa-globe"></i> Total Website</h4>
+                <div class="kpi">@Model.Websites</div>
+                <a asp-action="Create" class="btn btn-primary btn-lg btn-block"> See Website</a>
+
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h4> <i class="fa fa-newspaper-o"></i> Total Publication </h4>
+                <div class="kpi">@Model.Publications</div>
+                <a asp-action="Index" asp-controller="ClientNews" asp-route-clientId="@Model.ClientId" class="btn btn-primary btn-lg btn-block"> See Publication</a>
+
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h4> <i class="fa fa-video-camera"></i>  Total Videos</h4>
+                <div class="kpi">@Model.Videos</div>
+                <a asp-action="Create" class="btn btn-primary btn-lg btn-block"> See Videos</a>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h4><i class="fa fa-dollar "></i> Total AD </h4>
+                <div class="kpi">@Model.TotalAD</div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h4><i class="fa fa-money "></i> Total PR</h4>
+                <div class="kpi">@Model.TotalPR</div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h4><i class="fa fa-smile-o "></i> Total Circlation</h4>
+                <div class="kpi">@Model.TotalCirclation</div>
+            </div>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,375 @@
+@model EditorViewModelLayer.NewsViewModel.ClientNewsListDTO
+@using EditorViewModelLayer.NewsViewModel
+@{
+    ViewData["Title"] = "Client News";
+    var clientId   = (int)ViewBag.ClientId;
+
+    var fTitle      = ViewBag.FilterTitle      as string ?? "";
+    var fDateFrom   = ViewBag.FilterDateFrom   as string ?? "";
+    var fDateTo     = ViewBag.FilterDateTo     as string ?? "";
+    var fSourceType = ViewBag.FilterSourceType as string ?? "";
+    var fPublished  = ViewBag.FilterPublished  as bool?;
+    var sourceTypes = ViewBag.SourceTypes      as string[] ?? Array.Empty<string>();
+
+    int     totalAll  = (int)(ViewBag.TotalAll          ?? 0);
+    int     totalPubs = (int)(ViewBag.TotalPublications  ?? 0);
+    int     totalArts = (int)(ViewBag.TotalArticles      ?? 0);
+    int     totalVids = (int)(ViewBag.TotalVideos        ?? 0);
+    decimal totalPR   = (decimal)(ViewBag.TotalPR        ?? 0m);
+    decimal totalAD   = (decimal)(ViewBag.TotalAD        ?? 0m);
+    int     totalPub  = (int)(ViewBag.TotalPublished     ?? 0);
+
+    bool isAdmin = User.IsInRole("Admin");
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
+}
+
+<style>
+    :root {
+        --ink:    #0f1923; --ink-2: #2c3e50; --slate: #5a6a7a;
+        --rule:   #dde3ea; --bg: #f4f6f9;    --surface: #ffffff;
+        --accent: #1a56db; --accent-2: #0e3fa6;
+        --pub:    #1a56db; --art: #0891b2;   --vid: #7c3aed;
+        --green:  #16a34a; --amber: #d97706; --red: #dc2626;
+        --radius: 10px;    --shadow: 0 2px 12px rgba(15,25,35,.08);
+    }
+    body { background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    .cn-header {
+        background: var(--ink); color: #fff; padding: 1.5rem 2rem;
+        border-radius: var(--radius); display: flex; align-items: center;
+        gap: 1.25rem; margin-bottom: 1.5rem;
+    }
+    .cn-header img { width:60px; height:60px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,.25); }
+    .cn-header h1  { font-size:1.4rem; font-weight:700; margin:0; }
+    .cn-header p   { font-size:.85rem; opacity:.65; margin:0; }
+
+    .stat-row  { display:flex; flex-wrap:wrap; gap:.75rem; margin-bottom:1.5rem; }
+    .stat-pill {
+        background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow);
+        padding:.75rem 1.25rem; display:flex; flex-direction:column;
+        min-width:110px; flex:1; cursor:pointer;
+        transition:transform .15s,box-shadow .15s;
+        border-top:3px solid transparent; text-decoration:none; color:inherit;
+    }
+    .stat-pill:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(15,25,35,.13); }
+    .stat-pill .num  { font-size:1.6rem; font-weight:800; color:var(--ink); line-height:1; }
+    .stat-pill .lbl  { font-size:.72rem; color:var(--slate); text-transform:uppercase; letter-spacing:.04em; margin-top:.3rem; }
+    .sp-pub  { border-top-color:var(--pub); }
+    .sp-art  { border-top-color:var(--art); }
+    .sp-vid  { border-top-color:var(--vid); }
+    .sp-pr   { border-top-color:var(--green); }
+    .sp-ad   { border-top-color:var(--amber); }
+    .sp-done { border-top-color:var(--green); }
+    .sp-active { border-top-color:var(--accent); background:#eef2ff; }
+
+    .filter-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.25rem 1.5rem; margin-bottom:1.5rem; }
+    .filter-title { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--slate); margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .filter-grid  { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr auto; gap:.6rem; align-items:end; }
+    @@media(max-width:1200px){ .filter-grid{ grid-template-columns:repeat(4,1fr); } }
+    @@media(max-width:768px) { .filter-grid{ grid-template-columns:1fr 1fr; } }
+    .fg label { display:block; font-size:.72rem; font-weight:600; color:var(--slate); margin-bottom:.3rem; text-transform:uppercase; letter-spacing:.04em; }
+    .fg input,.fg select { width:100%; border:1.5px solid var(--rule); border-radius:7px; padding:.45rem .7rem; font-size:.85rem; color:var(--ink); background:var(--bg); height:38px; transition:border-color .15s; }
+    .fg input:focus,.fg select:focus { outline:none; border-color:var(--accent); background:#fff; }
+    .btn-filter { background:var(--accent); color:#fff; border:none; border-radius:7px; padding:.45rem 1.1rem; font-size:.85rem; font-weight:600; cursor:pointer; height:38px; transition:background .15s; }
+    .btn-filter:hover { background:var(--accent-2); }
+    .btn-reset  { background:none; color:var(--slate); border:1.5px solid var(--rule); border-radius:7px; padding:.45rem .9rem; font-size:.85rem; cursor:pointer; height:38px; text-decoration:none; display:inline-flex; align-items:center; transition:border-color .15s,color .15s; }
+    .btn-reset:hover { border-color:var(--red); color:var(--red); }
+
+    .src-tab { padding:.25rem .75rem; border-radius:20px; font-size:.75rem; font-weight:600; text-decoration:none; color:var(--slate); background:var(--bg); border:1.5px solid var(--rule); transition:all .12s; }
+    .src-tab:hover,.src-tab-active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+    .action-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:.75rem; }
+    .result-count { font-size:.85rem; color:var(--slate); }
+    .result-count strong { color:var(--ink); }
+    .btn-add { background:var(--accent); color:#fff; border-radius:8px; padding:.5rem 1.2rem; font-size:.85rem; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:.4rem; transition:background .15s; }
+    .btn-add:hover { background:var(--accent-2); color:#fff; }
+
+    .news-table-wrap { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .news-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    .news-table thead th { background:var(--ink); color:#fff; padding:.75rem 1rem; text-align:left; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+    .news-table tbody tr { border-bottom:1px solid var(--rule); transition:background .12s; }
+    .news-table tbody tr:hover { background:#f0f4ff; }
+    .news-table tbody tr:last-child { border-bottom:none; }
+    .news-table td { padding:.7rem 1rem; vertical-align:middle; }
+    .news-table td:last-child { text-align:center; white-space:nowrap; }
+
+    .src-badge { display:inline-block; padding:.2rem .55rem; border-radius:20px; font-size:.68rem; font-weight:700; text-transform:uppercase; }
+    .src-pub { background:#dbeafe; color:#1a56db; }
+    .src-art { background:#cffafe; color:#0891b2; }
+    .src-vid { background:#ede9fe; color:#7c3aed; }
+
+    .pub-badge { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:20px; font-size:.68rem; font-weight:700; }
+    .pub-yes { background:#dcfce7; color:#16a34a; }
+    .pub-no  { background:#fef9c3; color:#a16207; }
+
+    .val-pr { color:var(--green); font-weight:700; }
+    .val-ad { color:var(--amber); font-weight:700; }
+    .news-title { font-weight:600; color:var(--ink); max-width:260px; }
+    .news-title small { display:block; font-weight:400; color:var(--slate); font-size:.75rem; }
+
+    .act-btn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:7px; text-decoration:none; font-size:.8rem; border:none; cursor:pointer; transition:filter .12s; }
+    .act-btn:hover { filter:brightness(.88); }
+    .act-view  { background:#e0e7ff; color:#3730a3; }
+    .act-edit  { background:#fef3c7; color:#92400e; }
+    .act-del   { background:#fee2e2; color:#991b1b; }
+    .act-pub   { background:#dcfce7; color:#166534; }
+    .act-unpub { background:#fef9c3; color:#a16207; }
+
+    .toning-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; }
+    .t-pos { background:#16a34a; } .t-neg { background:var(--red); }
+    .t-neu { background:var(--slate); } .t-non { background:var(--rule); }
+
+    .empty-state { text-align:center; padding:4rem 2rem; color:var(--slate); }
+    .empty-state h3 { font-size:1.1rem; color:var(--ink-2); margin-bottom:.5rem; }
+    .alert { border-radius:8px; padding:.75rem 1rem; margin-bottom:1rem; font-size:.85rem; }
+    .alert-success { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+    .alert-danger  { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+</style>
+
+@if (TempData["Success"] != null) { <div class="alert alert-success">✓ @TempData["Success"]</div> }
+@if (TempData["Error"]   != null) { <div class="alert alert-danger">✗ @TempData["Error"]</div> }
+
+@* Client header *@
+<div class="cn-header">
+    <img src="@(Model.ClientPhoto ?? "/uploads/clients/default-company.png")"
+         alt="@Model.ClientName"
+         onerror="this.src='/uploads/clients/default-company.png'" />
+    <div>
+        <h1>@Model.ClientName</h1>
+        <p>News Management</p>
+    </div>
+    <div class="ms-auto">
+        <a href="@Url.Action("ClientDashboard","Dashboard", new { id = clientId })" class="btn-reset">← Dashboard</a>
+    </div>
+</div>
+
+@* Stats *@
+<div class="stat-row">
+    <div class="stat-pill">
+        <span class="num">@totalAll</span><span class="lbl">Total News</span>
+    </div>
+    <a href="@Url.Action("Index", new { clientId, sourceType = "Publication" })"
+       class="stat-pill sp-pub @(fSourceType=="Publication"?"sp-active":"")">
+        <span class="num">@totalPubs</span><span class="lbl">Publications</span>
+    </a>
+    <a href="@Url.Action("Index", new { clientId, sourceType = "Article" })"
+       class="stat-pill sp-art @(fSourceType=="Article"?"sp-active":"")">
+        <span class="num">@totalArts</span><span class="lbl">Articles</span>
+    </a>
+    <a href="@Url.Action("Index", new { clientId, sourceType = "Video" })"
+       class="stat-pill sp-vid @(fSourceType=="Video"?"sp-active":"")">
+        <span class="num">@totalVids</span><span class="lbl">Videos</span>
+    </a>
+    <div class="stat-pill sp-pr">
+        <span class="num">@totalPR.ToString("N0")</span><span class="lbl">Total PR</span>
+    </div>
+    <div class="stat-pill sp-ad">
+        <span class="num">@totalAD.ToString("N0")</span><span class="lbl">Total AD</span>
+    </div>
+    <a href="@Url.Action("Index", new { clientId, published = true })"
+       class="stat-pill sp-done @(fPublished==true?"sp-active":"")">
+        <span class="num">@totalPub</span><span class="lbl">Published</span>
+    </a>
+</div>
+
+@* Filter panel *@
+<div class="filter-card">
+    <div class="filter-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+        </svg>
+        Filter News
+    </div>
+    <form method="get" action="@Url.Action("Index")">
+        <input type="hidden" name="clientId" value="@clientId" />
+        <div class="filter-grid">
+
+            <div class="fg">
+                <label>Title</label>
+                <input type="text" name="title" value="@fTitle" placeholder="Search title…" />
+            </div>
+
+            <div class="fg">
+                <label>Date From</label>
+                <input type="date" name="dateFrom" value="@fDateFrom" />
+            </div>
+
+            <div class="fg">
+                <label>Date To</label>
+                <input type="date" name="dateTo" value="@fDateTo" />
+            </div>
+
+            <div class="fg">
+                <label>Category</label>
+                <select name="categoryId" id="fCategory"
+                        asp-items="Model.CategorySelectList"
+                        onchange="loadFilterSubCats(this.value)">
+                    <option value="0">All Categories</option>
+                </select>
+            </div>
+
+            <div class="fg">
+                <label>Sub Category</label>
+                <select name="subCategoryId" id="fSubCategory" asp-items="Model.SubCategorySelectList">
+                    <option value="0">All Sub-Cats</option>
+                </select>
+            </div>
+
+            <div class="fg">
+                <label>Writer</label>
+                <select name="writerId" asp-items="Model.WriterSelectList">
+                    <option value="0">All Writers</option>
+                </select>
+            </div>
+
+            <div class="fg">
+                <label>Source</label>
+                <select name="publicationId" asp-items="Model.PublicationSelectList">
+                    <option value="0">All Sources</option>
+                </select>
+            </div>
+
+            <div class="fg" style="display:flex;gap:.4rem;">
+                <button type="submit" class="btn-filter">Search</button>
+                <a href="@Url.Action("Index", new { clientId })" class="btn-reset">Reset</a>
+            </div>
+        </div>
+
+        <div style="margin-top:.75rem; display:flex; gap:.4rem; flex-wrap:wrap; align-items:center;">
+            <span style="font-size:.72rem; color:var(--slate);">Type:</span>
+            <a href="@Url.Action("Index", new { clientId })"
+               class="src-tab @(string.IsNullOrEmpty(fSourceType)?"src-tab-active":"")">All</a>
+            @foreach (var st in sourceTypes)
+            {
+                <a href="@Url.Action("Index", new { clientId, sourceType = st })"
+                   class="src-tab @(fSourceType == st ? "src-tab-active" : "")">@st</a>
+            }
+        </div>
+    </form>
+</div>
+
+@* Action bar *@
+<div class="action-bar">
+    <div class="result-count">
+        Showing <strong>@Model.Items.Count()</strong> of <strong>@totalAll</strong> records
+    </div>
+    @if (canEdit)
+    {
+        <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add News</a>
+    }
+</div>
+
+@* Table *@
+<div class="news-table-wrap">
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state">
+            <h3>No news records found</h3>
+            <p>Try adjusting your filters or add new news.</p>
+        </div>
+    }
+    else
+    {
+        <table class="news-table">
+            <thead>
+                <tr>
+                    <th>#</th><th>Date</th><th>Title / Source</th><th>Type</th>
+                    <th>Writer</th><th>PR Value</th><th>AD Value</th>
+                    <th>Toning</th><th>Published</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int row = 1; }
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td style="color:var(--slate);font-size:.78rem;">@row</td>
+                        <td style="white-space:nowrap;color:var(--slate);">@item.Date.ToString("dd MMM yyyy")</td>
+                        <td>
+                            <div class="news-title">
+                                @item.Title
+                                @if (!string.IsNullOrEmpty(item.SourceName))
+                                {
+                                    <small>@item.SourceName</small>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @{
+                                var bc = item.SourceType switch { "Article"=>"src-art","Video"=>"src-vid",_=>"src-pub" };
+                            }
+                            <span class="src-badge @bc">@item.SourceType</span>
+                        </td>
+                        <td style="font-size:.8rem;">@(item.WriterName ?? "—")</td>
+                        <td class="val-pr">@item.PRValue.ToString("N2")</td>
+                        <td class="val-ad">@item.ADValue.ToString("N2")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.Toning) && item.Toning != "None")
+                            {
+                                var dc = item.Toning switch { "Positive"=>"t-pos","Negative"=>"t-neg",_=>"t-neu" };
+                                <span class="toning-dot @dc"></span>@item.Toning
+                            }
+                            else { <snap style="color:var(--slate);">—</snap> }
+                        </td>
+                        <td>
+                            <span class="pub-badge @(item.Publish?"pub-yes":"pub-no")">
+                                @(item.Publish ? "✓ Yes" : "⏳ No")
+                            </span>
+                        </td>
+                        <td>
+                            <a href="@Url.Action("Details", new { id=item.Id })" class="act-btn act-view" title="View">👁</a>
+                            @if (canEdit)
+                            {
+                                <a href="@Url.Action("Edit", new { id=item.Id })" class="act-btn act-edit" title="Edit">✏️</a>
+                            }
+                            @if (isAdmin)
+                            {
+                                @if (item.Publish)
+                                {
+                                    <form method="post" action="@Url.Action("Unpublish")" style="display:inline;"
+                                          onsubmit="return confirm('Unpublish?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="clientId" value="@clientId" />
+                                        <button type="submit" class="act-btn act-unpub" title="Unpublish">📤</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form method="post" action="@Url.Action("Publish")" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="clientId" value="@clientId" />
+                                        <button type="submit" class="act-btn act-pub" title="Publish">📢</button>
+                                    </form>
+                                }
+                                <form method="post" action="@Url.Action("Delete")" style="display:inline;"
+                                      onsubmit="return confirm('Delete this record?')">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <input type="hidden" name="clientId" value="@clientId" />
+                                    <button type="submit" class="act-btn act-del" title="Delete">🗑</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                    row++;
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@section Scripts {
+<script>
+    async function loadFilterSubCats(parentId) {
+        const sel = document.getElementById('fSubCategory');
+        sel.innerHTML = '<option value="0">Loading…</option>';
+        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">All Sub-Cats</option>'; return; }
+        const res  = await fetch(`/ClientNews/GetSubCategories?parentId=${parentId}`);
+        const data = await res.json();
+        sel.innerHTML = '<option value="0">All Sub-Cats</option>';
+        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+    }
+</script>
+}

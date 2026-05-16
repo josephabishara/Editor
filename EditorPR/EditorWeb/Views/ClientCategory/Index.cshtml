@@ -1,0 +1,83 @@
+﻿@model IEnumerable<EditorViewModelLayer.ClientViewModel.ClientCategoryDTO>
+@{
+    ViewData["Title"] = "Customer Categories";
+    int clientId = ViewBag.ClientId;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a asp-action="Details" asp-controller="Client" asp-route-Id="@clientId" class="btn btn-sm btn-outline-secondary">&larr;</a>
+    <h2>Categories</h2>
+    <a asp-action="Create" asp-route-clientId="@clientId" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Category
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>Order</th>
+            <th>Category Name</th>
+            <th>Type</th>
+            <th>Parent</th>
+            <th>Status</th>
+            <th>Articles</th>
+            <th>Sub-categories</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cat in Model)
+        {
+            <tr>
+                <td>@cat.Order</td>
+                <td><strong>@cat.CategoryName</strong></td>
+                <td>@cat.CategoryType</td>
+                <td>@(cat.ParentCategoryName ?? "—")</td>
+                <td>
+                    <span class="badge @(cat.Status == "Active" ? "bg-success" : "bg-secondary")">
+                        @cat.Status
+                    </span>
+                </td>
+                <td>@cat.ArticleCount</td>
+                <td>@cat.SubCategories.Count()</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@cat.Id" class="btn btn-sm btn-outline-info">Details</a>
+                    <a asp-action="Edit" asp-route-id="@cat.Id" class="btn btn-sm btn-outline-warning">Edit</a>
+                    <a asp-action="Create" asp-route-clientId="@clientId" asp-route-parentId="@cat.Id"
+                       class="btn btn-sm btn-outline-primary" title="Add sub-category">+ Sub</a>
+                    <a asp-action="Delete" asp-route-id="@cat.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                </td>
+            </tr>
+            @* Render sub-categories inline *@
+            @foreach (var sub in cat.SubCategories)
+            {
+                <tr class="table-light">
+                    <td class="ps-4">@sub.Order</td>
+                    <td class="ps-4">↳ @sub.CategoryName</td>
+                    <td>@sub.CategoryType</td>
+                    <td>@cat.CategoryName</td>
+                    <td>
+                        <span class="badge @(sub.Status == "Active" ? "bg-success" : "bg-secondary")">
+                            @sub.Status
+                        </span>
+                    </td>
+                    <td>@sub.ArticleCount</td>
+                    <td>—</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@sub.Id" class="btn btn-sm btn-outline-warning">Edit</a>
+                        <a asp-action="Delete" asp-route-id="@sub.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>

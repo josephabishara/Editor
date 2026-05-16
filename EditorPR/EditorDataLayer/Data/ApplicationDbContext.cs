@@ -18,6 +18,12 @@ namespace EditorDataLayer.Data
         public DbSet<Writer> Writers { get; set; }
         public DbSet<Assistant> Assistants { get; set; }
         public DbSet<WebsiteCustomerCategory> WebsiteCustomerCategories { get; set; }
+        public DbSet<PublicationCustomerCategory> PublicationCustomerCategories { get; set; }
+        public DbSet<ChannelCustomerCategory> ChannelCustomerCategories { get; set; }
+        public DbSet<ClientCategories> ClientCategories { get; set; }
+        public DbSet<News> News { get; set; }
+        public DbSet<ClientNews> ClientNews { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -60,6 +66,109 @@ namespace EditorDataLayer.Data
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.HasIndex(e => e.Username).IsUnique();
             });
+
+            // ── PublicationCustomerCategory ───────────────────────────────────────
+            builder.Entity<PublicationCustomerCategory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Client)
+                      .WithMany(c => c.PublicationCategories)
+                      .HasForeignKey(e => e.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Publication)
+                      .WithMany()
+                      .HasForeignKey(e => e.PublicationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ── ChannelCustomerCategory ───────────────────────────────────────────
+            builder.Entity<ChannelCustomerCategory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Client)
+                      .WithMany(c => c.ChannelCategories)
+                      .HasForeignKey(e => e.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Channel)
+                      .WithMany()
+                      .HasForeignKey(e => e.ChannelId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            builder.Entity<ClientCategories>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.CategoryName)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.Property(e => e.CategoryType)
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Status)
+                      .HasMaxLength(50);
+
+                // Self-referencing for parent/child categories
+                entity.HasOne(e => e.Parent)
+                      .WithMany(e => e.Children)
+                      .HasForeignKey(e => e.ParentCategory)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired(false);
+
+                // Belongs to a Client
+                entity.HasOne(e => e.Client)
+                      .WithMany()
+                      .HasForeignKey(e => e.ClientId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            builder.Entity<News>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.SourceType).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.PRValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ADValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ArticleBranding).HasMaxLength(20);
+                entity.Property(e => e.HeadlineBranding).HasMaxLength(20);
+            });
+
+            builder.Entity<ClientNews>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.PRValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ADValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Height).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Width).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ArticleBranding).HasMaxLength(20);
+                entity.Property(e => e.HeadlineBranding).HasMaxLength(20);
+
+                // News master — no cascade on ClientNews side to avoid double-delete
+                entity.HasOne(e => e.News)
+                      .WithMany(n => n.ClientNewsList)
+                      .HasForeignKey(e => e.NewsId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Client)
+                      .WithMany()
+                      .HasForeignKey(e => e.ClientId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Writer)
+                      .WithMany()
+                      .HasForeignKey(e => e.WriterId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
         }
     }
 }

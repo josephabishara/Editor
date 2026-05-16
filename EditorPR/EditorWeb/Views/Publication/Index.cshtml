@@ -41,11 +41,12 @@
                         <th>#</th>
                         <th>Publication Name</th>
                         <th>Media Type</th>
-                        <th>Media Tier</th>
-                        <th>Frequency</th>
-                        <th>Language</th>
-                        <th>Circulation</th>
                         <th>CM Price</th>
+                        <th>Frequency</th>
+                        <th>Media Tier</th>
+                        <th>Circulation</th>
+                        <th>Distribution</th>
+                        <th>Language</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -67,6 +68,8 @@
                                     <span class="badge bg-info text-white">@p.MediaType</span>
                                 }
                             </td>
+                            <td class="fw-semibold">@p.CmPrice.ToString("C")</td>
+                            <td>@(p.Frequency ?? "—")</td>
                             <td>
                                 @if (!string.IsNullOrEmpty(p.MediaTier))
                                 {
@@ -77,13 +80,14 @@
                                         "C" => "bg-secondary",
                                         _ => "bg-secondary"
                                     };
-                                    <span class="badge @tierColor">Tier @p.MediaTier</span>
+                                    <span class="badge @tierColor">@p.MediaTier</span>
                                 }
                             </td>
-                            <td>@(p.Frequency ?? "—")</td>
-                            <td>@(p.Language ?? "—")</td>
                             <td>@(p.Circulation.HasValue ? p.Circulation.Value.ToString("N0") : "—")</td>
-                            <td class="fw-semibold">@p.CmPrice.ToString("C")</td>
+                            <td>@(p.Distribution ?? "—")</td>
+                            <td>@(p.Language ?? "—")</td>
+                           
+                          
                             <td>
                                 <a asp-action="Details" asp-route-id="@p.Id"
                                    class="btn btn-sm btn-outline-info me-1"><i class="fa fa-eye"></i></a>

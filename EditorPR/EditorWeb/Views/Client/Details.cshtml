@@ -6,6 +6,8 @@
 <div class="container mt-4">
     <div class="d-flex align-items-center gap-2 mb-4">
         <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
+        <a asp-action="Index" asp-controller="ClientCategory" asp-route-clientId="@Model.Id"
+           class="btn btn-sm btn-primary">Client Category</a>
         <h4 class="mb-0 fw-semibold">Client Details</h4>
     </div>
 
@@ -82,66 +84,7 @@
         </div>
     </div>
 
-    @* ── Website Categories ──────────────────────────────────────────────── *@
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="mb-0 fw-semibold">Website Media Tiers</h5>
-        <a asp-action="EditCategories" asp-route-id="@Model.Id"
-           class="btn btn-sm btn-outline-secondary">Edit Tiers</a>
-    </div>
-
-    <div class="card shadow-sm mb-4">
-        <div class="card-body p-0">
-            <table class="table table-sm table-hover table-striped mb-0 align-middle">
-                <thead class="table-secondary">
-                    <tr>
-                        <th>Website</th>
-                        <th>URL</th>
-                        <th>Media Tier</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.WebsiteCategories.Any())
-                    {
-                        <tr>
-                            <td colspan="3" class="text-center text-muted py-3 small">
-                                No website categories yet.
-                            </td>
-                        </tr>
-                    }
-                    @foreach (var cat in Model.WebsiteCategories)
-                    {
-                        <tr>
-                            <td class="fw-semibold small">@cat.WebsiteName</td>
-                            <td class="small">
-                                <a href="@cat.WebsiteURL" target="_blank"
-                                   class="text-decoration-none text-truncate d-inline-block"
-                                   style="max-width:240px;">
-                                    @cat.WebsiteURL
-                                </a>
-                            </td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(cat.MediaTier))
-                                {
-                                    var color = cat.MediaTier switch
-                                    {
-                                        "A" or "Tier 1" => "bg-success",
-                                        "B" or "Tier 2" => "bg-warning text-dark",
-                                        "C" or "Tier 3" => "bg-secondary",
-                                        _ => "bg-info text-dark"
-                                    };
-                                    <span class="badge @color">@cat.MediaTier</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted small">—</span>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+   
 
     <!-- Assistants -->
     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -204,4 +147,178 @@
             </table>
         </div>
     </div>
+    <br /> <hr />
+
+    <div class="row">
+        <div class="col-md-4">
+            @* ── Website Categories ──────────────────────────────────────────────── *@
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-semibold">Website Media Tiers</h5>
+                <a asp-action="EditCategories" asp-route-id="@Model.Id"
+                   class="btn btn-sm btn-outline-secondary">Edit Tiers</a>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover table-striped mb-0 align-middle">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Website</th>
+                                <th class=" text-center"> Tier</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.WebsiteCategories.Any())
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3 small">
+                                        No website categories yet.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var cat in Model.WebsiteCategories)
+                            {
+                                <tr>
+                                    <td class="fw-semibold small">@cat.WebsiteName</td>
+                                  
+                                    <td class=" text-center">
+                                        @if (!string.IsNullOrEmpty(cat.MediaTier))
+                                        {
+                                            var color = cat.MediaTier switch
+                                            {
+                                                "A" => "bg-success",
+                                                "B" => "bg-warning text-dark",
+                                                "C" => "bg-secondary",
+                                                _ => "bg-info text-dark"
+                                            };
+                                            <span class="badge @color">@cat.MediaTier</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            @* ── Publication Categories ──────────────────────────────────────────── *@
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-semibold">Publication Media Tiers</h5>
+                <a asp-action="EditPublicationCategories" asp-route-id="@Model.Id"
+                   class="btn btn-sm btn-outline-secondary">Edit Tiers</a>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover table-striped mb-0 align-middle">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Publication</th>
+                              
+                                <th class=" text-center"> Tier</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.PublicationCategories.Any())
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3 small">No publication categories yet.</td>
+                                </tr>
+                            }
+                            @foreach (var cat in Model.PublicationCategories)
+                            {
+                                <tr>
+                                    <td class="fw-semibold small">@cat.PublicationName</td>
+                                    
+                                    <td class=" text-center">
+                                        @{
+                                            var pColor = cat.MediaTier switch
+                                            {
+                                                "A" => "bg-success",
+                                                "B" => "bg-warning text-dark",
+                                                "C" => "bg-secondary",
+                                                _ => "bg-info text-dark"
+                                            };
+                                        }
+                                        @if (!string.IsNullOrEmpty(cat.MediaTier))
+                                        {
+                                            <span class="badge @pColor">@cat.MediaTier</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            @* ── Channel Categories ──────────────────────────────────────────────── *@
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-semibold">Channel Media Tiers</h5>
+                <a asp-action="EditChannelCategories" asp-route-id="@Model.Id"
+                   class="btn btn-sm btn-outline-secondary">Edit Tiers</a>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover table-striped mb-0 align-middle">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Channel</th>
+                                <th class=" text-center"> Tier</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.ChannelCategories.Any())
+                            {
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3 small">No channel categories yet.</td>
+                                </tr>
+                            }
+                            @foreach (var cat in Model.ChannelCategories)
+                            {
+                                <tr>
+                                    <td class="fw-semibold small">@cat.ChannelName</td>
+                                    <td class=" text-center">
+                                        @{
+                                            var cColor = cat.MediaTier switch
+                                            {
+                                                "A" => "bg-success",
+                                                "B" => "bg-warning text-dark",
+                                                "C" => "bg-secondary",
+                                                _ => "bg-info text-dark"
+                                            };
+                                        }
+                                        @if (!string.IsNullOrEmpty(cat.MediaTier))
+                                        {
+                                            <span class="badge @cColor">@cat.MediaTier</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+   
+   
+   
+
 </div>

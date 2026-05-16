@@ -9,8 +9,18 @@ namespace EditorLogicLayer.Website
     public class WebsiteService : IWebsiteService
     {
         private readonly IWebsiteRepository _repo;
+        private readonly IClientRepository _clientRepo;
+        private readonly IWebsiteCustomerCategoryRepository _categoryRepo;
 
-        public WebsiteService(IWebsiteRepository repo) => _repo = repo;
+        public WebsiteService(
+            IWebsiteRepository repo,
+            IClientRepository clientRepo,
+            IWebsiteCustomerCategoryRepository categoryRepo)
+        {
+            _repo = repo;
+            _clientRepo = clientRepo;
+            _categoryRepo = categoryRepo;
+        }
 
         public async Task<IEnumerable<WebsiteDTO>> GetAllAsync()
         {
@@ -24,13 +34,27 @@ namespace EditorLogicLayer.Website
             return website == null ? null : MapToViewModel(website);
         }
 
+        //public async Task<(bool Success, string Message)> CreateAsync(WebsiteDTO model)
+        //{
+        //    var entity = MapToEntity(model);
+        //    await _repo.AddAsync(entity);
+        //    return (true, "Website created successfully.");
+        //}
         public async Task<(bool Success, string Message)> CreateAsync(WebsiteDTO model)
         {
             var entity = MapToEntity(model);
+            entity.IsActive = true;
+            entity.CreatedAt = DateTime.UtcNow;
+            entity.Deleted = 0;
+
             await _repo.AddAsync(entity);
+
+            // Fan-out: create one WebsiteCustomerCategory row per active client,
+            // inheriting this website's MediaTier as the default (editable later).
+            await FanOutToClientsAsync(entity.Id, entity.MediaTier);
+
             return (true, "Website created successfully.");
         }
-
         public async Task<(bool Success, string Message)> UpdateAsync(WebsiteDTO model)
         {
             var existing = await _repo.GetByIdAsync(model.Id);
@@ -207,6 +231,28 @@ namespace EditorLogicLayer.Website
 
             return (true, $"{importedRows.Count} website(s) imported successfully.", importedRows.Count);
         }
+
+        /// <summary>
+        /// For a newly persisted website, creates one <see cref="WebsiteCustomerCategory"/>
+        /// row for every active client, defaulting MediaTier from the website itself.
+        /// Clients that already have a row for this website are skipped (safe to call on
+        /// re-import scenarios, though normally each website is new).
+        /// </summary>
+        private async Task FanOutToClientsAsync(int websiteId, string? mediaTier)
+        {
+            var clients = await _clientRepo.GetActiveClientsAsync();
+            if (!clients.Any()) return;
+
+            var categories = clients.Select(c => new WebsiteCustomerCategory
+            {
+                CustomerId = c.Id,
+                WebsiteId = websiteId,
+                MediaTier = mediaTier   // default from website — editable per-client later
+            }).ToList();
+
+            await _categoryRepo.AddRangeAsync(categories);
+        }
+
         private static WebsiteDTO MapToViewModel(Websites w) => new()
         {
             Id = w.Id,

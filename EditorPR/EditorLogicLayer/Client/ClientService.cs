@@ -11,19 +11,27 @@ namespace EditorLogicLayer.Client
     public class ClientService : IClientService
     {
         private readonly IClientRepository _clientRepo;
-        private readonly IAssistantRepository _assistantRepo; 
+        private readonly IAssistantRepository _assistantRepo;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
         private readonly IWebsiteCustomerCategoryRepository _categoryRepo;
         private readonly IWebsiteRepository _websiteRepo;
+        private readonly IPublicationCustomerCategoryRepository _publicationCategoryRepo;
+        private readonly IChannelCustomerCategoryRepository _channelCategoryRepo;
+        private readonly IPublicationRepository _publicationRepo;
+        private readonly IChannelRepository _channelRepo;
 
         public ClientService(
             IClientRepository clientRepo,
-            IAssistantRepository assistantRepo, 
+            IAssistantRepository assistantRepo,
             UserManager<ApplicationUser> userManager,
             IWebHostEnvironment env,
             IWebsiteCustomerCategoryRepository categoryRepo,
-            IWebsiteRepository websiteRepo)
+            IWebsiteRepository websiteRepo,
+            IPublicationCustomerCategoryRepository publicationCategoryRepo,
+            IChannelCustomerCategoryRepository channelCategoryRepo,
+            IPublicationRepository publicationRepo,
+            IChannelRepository channelRepo)
         {
             _clientRepo = clientRepo;
             _assistantRepo = assistantRepo;
@@ -31,6 +39,10 @@ namespace EditorLogicLayer.Client
             _env = env;
             _categoryRepo = categoryRepo;
             _websiteRepo = websiteRepo;
+            _publicationCategoryRepo = publicationCategoryRepo;
+            _channelCategoryRepo = channelCategoryRepo;
+            _publicationRepo = publicationRepo;
+            _channelRepo = channelRepo;
         }
 
         // ── Client CRUD ────────────────────────────────────────────────────────
@@ -54,9 +66,13 @@ namespace EditorLogicLayer.Client
 
             var dto = MapToDTO(client);
             dto.AssistantList = client.AssistantList.Select(MapAssistantToDTO).ToList();
+
             dto.WebsiteCategories = (await _categoryRepo.GetByClientIdAsync(id))
                                       .Select(MapCategoryToDTO).ToList();
-
+            dto.PublicationCategories = (await _publicationCategoryRepo.GetByClientIdAsync(id))
+                                          .Select(MapPublicationCategoryToDTO).ToList();
+            dto.ChannelCategories = (await _channelCategoryRepo.GetByClientIdAsync(id))
+                                      .Select(MapChannelCategoryToDTO).ToList();
             return dto;
         }
 
@@ -108,6 +124,30 @@ namespace EditorLogicLayer.Client
 
             if (categories.Any())
                 await _categoryRepo.AddRangeAsync(categories);
+
+            // Auto-generate PublicationCustomerCategory rows
+            var publications = await _publicationRepo.GetActivePublicationsAsync();
+            var pubCategories = publications.Select(p => new PublicationCustomerCategory
+            {
+                CustomerId = entity.Id,
+                PublicationId = p.Id,
+                MediaTier = p.MediaTier  // default from publication
+            }).ToList();
+
+            if (pubCategories.Any())
+                await _publicationCategoryRepo.AddRangeAsync(pubCategories);
+
+            // Auto-generate ChannelCustomerCategory rows
+            var channels = await _channelRepo.GetActiveChannelsAsync(); // use whatever your IChannelRepository exposes
+            var chanCategories = channels.Select(c => new ChannelCustomerCategory
+            {
+                CustomerId = entity.Id,
+                ChannelId = c.Id,
+                MediaTier = c.MediaTier  // default from channel
+            }).ToList();
+
+            if (chanCategories.Any())
+                await _channelCategoryRepo.AddRangeAsync(chanCategories);
 
             return (true, "Client created successfully.");
         }
@@ -213,7 +253,59 @@ namespace EditorLogicLayer.Client
             return (true, "Website categories updated successfully.");
         }
 
+        public async Task<IEnumerable<PublicationCustomerCategoryDTO>> GetClientPublicationCategoriesAsync(int clientId)
+        {
+            var categories = await _publicationCategoryRepo.GetByClientIdAsync(clientId);
+            return categories.Select(MapPublicationCategoryToDTO);
+        }
 
+        public async Task<(bool Success, string Message)> UpdateClientPublicationCategoriesAsync(UpdateClientPublicationCategoriesDTO model)
+        {
+            var existing = await _publicationCategoryRepo.GetByClientIdAsync(model.CustomerId);
+            var existingDict = existing.ToDictionary(c => c.Id);
+            var toUpdate = new List<PublicationCustomerCategory>();
+
+            foreach (var dto in model.Categories)
+            {
+                if (existingDict.TryGetValue(dto.Id, out var category))
+                {
+                    category.MediaTier = dto.MediaTier;
+                    toUpdate.Add(category);
+                }
+            }
+
+            if (toUpdate.Any())
+                await _publicationCategoryRepo.UpdateRangeAsync(toUpdate);
+
+            return (true, "Publication categories updated successfully.");
+        }
+
+        public async Task<IEnumerable<ChannelCustomerCategoryDTO>> GetClientChannelCategoriesAsync(int clientId)
+        {
+            var categories = await _channelCategoryRepo.GetByClientIdAsync(clientId);
+            return categories.Select(MapChannelCategoryToDTO);
+        }
+
+        public async Task<(bool Success, string Message)> UpdateClientChannelCategoriesAsync(UpdateClientChannelCategoriesDTO model)
+        {
+            var existing = await _channelCategoryRepo.GetByClientIdAsync(model.CustomerId);
+            var existingDict = existing.ToDictionary(c => c.Id);
+            var toUpdate = new List<ChannelCustomerCategory>();
+
+            foreach (var dto in model.Categories)
+            {
+                if (existingDict.TryGetValue(dto.Id, out var category))
+                {
+                    category.MediaTier = dto.MediaTier;
+                    toUpdate.Add(category);
+                }
+            }
+
+            if (toUpdate.Any())
+                await _channelCategoryRepo.UpdateRangeAsync(toUpdate);
+
+            return (true, "Channel categories updated successfully.");
+        }
 
         // ── Assistant CRUD ─────────────────────────────────────────────────────
         // BUG 1: All methods below were missing — now implemented here in ClientService
@@ -271,7 +363,7 @@ namespace EditorLogicLayer.Client
                 ApplicationUserId = user.Id,
                 IsActive = true, // BUG 6: was missing — caused NullRef when GetActiveClientsAsync filtered it out
                 Deleted = 0,    // BUG 6: was missing
-                CreatedAt  = DateTime.UtcNow // BUG 6: was CreatedAt — field is CreatedDate per BaseEntity
+                CreatedAt = DateTime.UtcNow // BUG 6: was CreatedAt — field is CreatedDate per BaseEntity
             };
 
             await _assistantRepo.AddAsync(entity);
@@ -365,7 +457,7 @@ namespace EditorLogicLayer.Client
             }
 
             existing.Photo = savedPath;
-            existing.UpdatedAt= DateTime.UtcNow;
+            existing.UpdatedAt = DateTime.UtcNow;
 
             await _clientRepo.UpdateAsync(existing);
             return (true, "Photo updated successfully.");
@@ -437,7 +529,7 @@ namespace EditorLogicLayer.Client
             return (true, "Photo updated successfully.");
         }
 
-         private async Task<(string? Path, string? Error)> SaveAssistantPhotoAsync(UploadFileDTO photo)
+        private async Task<(string? Path, string? Error)> SaveAssistantPhotoAsync(UploadFileDTO photo)
         {
             try
             {
@@ -506,8 +598,8 @@ namespace EditorLogicLayer.Client
             Website = dto.Website,
             ManagersLimitedNewsDays = dto.ManagersLimitedNewsDays,
             IsActive = true, // BUG 9: was IsActive — BaseEntity uses Active not IsActive
-            Deleted = 0 ,
-            
+            Deleted = 0,
+
         };
 
         private static AssistantDTO MapAssistantToDTO(Assistant a) => new()
@@ -530,6 +622,24 @@ namespace EditorLogicLayer.Client
             WebsiteId = c.WebsiteId,
             WebsiteName = c.Website?.WebsiteName ?? string.Empty,
             WebsiteURL = c.Website?.URL ?? string.Empty,
+            MediaTier = c.MediaTier
+        };
+
+        private static PublicationCustomerCategoryDTO MapPublicationCategoryToDTO(PublicationCustomerCategory p) => new()
+        {
+            Id = p.Id,
+            CustomerId = p.CustomerId,
+            PublicationId = p.PublicationId,
+            PublicationName = p.Publication?.PublicationName ?? string.Empty,
+            MediaTier = p.MediaTier
+        };
+
+        private static ChannelCustomerCategoryDTO MapChannelCategoryToDTO(ChannelCustomerCategory c) => new()
+        {
+            Id = c.Id,
+            CustomerId = c.CustomerId,
+            ChannelId = c.ChannelId,
+            ChannelName = c.Channel?.ChannelName ?? string.Empty,
             MediaTier = c.MediaTier
         };
 

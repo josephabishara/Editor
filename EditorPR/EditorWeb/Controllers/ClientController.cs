@@ -168,6 +168,73 @@ namespace EditorWeb.Controllers
         }
 
 
+        // GET: /Client/EditPublicationCategories/5
+        [HttpGet]
+        public async Task<IActionResult> EditPublicationCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+
+            var categories = await _clientService.GetClientPublicationCategoriesAsync(id);
+            var model = new UpdateClientPublicationCategoriesDTO
+            {
+                CustomerId = id,
+                Categories = categories.ToList()
+            };
+
+            ViewBag.ClientName = client.Name;
+            return View(model);
+        }
+
+        // POST: /Client/EditPublicationCategories
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditPublicationCategories(UpdateClientPublicationCategoriesDTO model)
+        {
+            var (success, message) = await _clientService.UpdateClientPublicationCategoriesAsync(model);
+            if (!success)
+            {
+                TempData["Error"] = message;
+                return RedirectToAction(nameof(EditPublicationCategories), new { id = model.CustomerId });
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction(nameof(Details), new { id = model.CustomerId });
+        }
+
+        // GET: /Client/EditChannelCategories/5
+        [HttpGet]
+        public async Task<IActionResult> EditChannelCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+
+            var categories = await _clientService.GetClientChannelCategoriesAsync(id);
+            var model = new UpdateClientChannelCategoriesDTO
+            {
+                CustomerId = id,
+                Categories = categories.ToList()
+            };
+
+            ViewBag.ClientName = client.Name;
+            return View(model);
+        }
+
+        // POST: /Client/EditChannelCategories
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditChannelCategories(UpdateClientChannelCategoriesDTO model)
+        {
+            var (success, message) = await _clientService.UpdateClientChannelCategoriesAsync(model);
+            if (!success)
+            {
+                TempData["Error"] = message;
+                return RedirectToAction(nameof(EditChannelCategories), new { id = model.CustomerId });
+            }
+
+            TempData["Success"] = message;
+            return RedirectToAction(nameof(Details), new { id = model.CustomerId });
+        }
 
 
         // ══════════════════════════════════════════════════════════════════════

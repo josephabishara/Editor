@@ -14,11 +14,7 @@ namespace EditorViewModelLayer.PublicationViewModel
         [Display(Name = "Publication Name")]
         public string PublicationName { get; set; } = string.Empty;
 
-        [Required]
-        [Url]
-        [MaxLength(500)]
-        [Display(Name = "URL")]
-        public string URL { get; set; } = string.Empty;
+      
 
         [Display(Name = "Media Type")]
         public string? MediaType { get; set; }   // newspaper, magazine, journal, newsletter
@@ -29,8 +25,7 @@ namespace EditorViewModelLayer.PublicationViewModel
         [Display(Name = "Frequency")]
         public string? Frequency { get; set; }   // daily, weekly, monthly
 
-        [Display(Name = "Reach")]
-        public string? Reach { get; set; }
+
 
         [Display(Name = "Distribution")]
         public string? Distribution { get; set; }

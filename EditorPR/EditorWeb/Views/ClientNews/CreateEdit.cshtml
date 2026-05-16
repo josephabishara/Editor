@@ -1,0 +1,557 @@
+@model EditorViewModelLayer.NewsViewModel.ClientNewsDTO
+@using EditorViewModelLayer.NewsViewModel
+@{
+    bool isEdit = Model.Id > 0;
+    bool isExist = Model.NewsMode == "Existing";
+    ViewData["Title"] = isEdit ? "Edit News" : (isExist ? "Assign Existing News" : "Create News");
+
+    var srcLabel = Model.SourceType switch
+    {
+        "Publication" => "📰 Publication",
+        "Article" => "🌐 Article (Website)",
+        "Video" => "📺 Video (Channel)",
+        _ => Model.SourceType
+    };
+    var siClass = Model.SourceType switch
+    {
+        "Article" => "si-art",
+        "Video" => "si-vid",
+        _ => "si-pub"
+    };
+}
+
+<style>
+    :root {
+        --ink: #0f1923;
+        --ink-2: #2c3e50;
+        --slate: #5a6a7a;
+        --rule: #dde3ea;
+        --bg: #f4f6f9;
+        --surface: #ffffff;
+        --accent: #1a56db;
+        --accent-2: #0e3fa6;
+        --green: #16a34a;
+        --red: #dc2626;
+        --amber: #d97706;
+        --radius: 10px;
+        --shadow: 0 2px 12px rgba(15,25,35,.08);
+    }
+
+    body {
+        background: var(--bg);
+        font-family: 'Segoe UI',system-ui,sans-serif;
+    }
+
+    .form-wrap {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem;
+    }
+
+    .form-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .form-header-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background: #dbeafe;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .form-header h1 {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--ink);
+        margin: 0;
+    }
+
+    .form-header p {
+        font-size: .82rem;
+        color: var(--slate);
+        margin: 0;
+    }
+
+    .exist-banner {
+        background: #ede9fe;
+        border: 1.5px solid #c4b5fd;
+        border-radius: var(--radius);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: flex-start;
+        gap: .75rem;
+    }
+
+        .exist-banner h3 {
+            font-size: .9rem;
+            font-weight: 700;
+            color: #5b21b6;
+            margin: 0 0 .4rem;
+        }
+
+        .exist-banner p {
+            font-size: .8rem;
+            color: #6d28d9;
+            margin: 0;
+        }
+
+    .form-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .form-card-title {
+        font-size: .7rem;
+        font-weight: 700;
+        color: var(--slate);
+        text-transform: uppercase;
+        letter-spacing: .07em;
+        margin-bottom: 1.1rem;
+        padding-bottom: .6rem;
+        border-bottom: 1.5px solid var(--rule);
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .fg-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .fg-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .fg-4 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 1rem;
+    }
+
+    @@media(max-width:768px) {
+        .fg-2, .fg-3, .fg-4 {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @@media(max-width:480px) {
+        .fg-2, .fg-3, .fg-4 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .fg {
+        display: flex;
+        flex-direction: column;
+        gap: .3rem;
+    }
+
+        .fg label {
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--slate);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .fg input, .fg select, .fg textarea {
+            border: 1.5px solid var(--rule);
+            border-radius: 7px;
+            padding: .5rem .75rem;
+            font-size: .88rem;
+            color: var(--ink);
+            background: var(--bg);
+            transition: border-color .15s,background .15s;
+            width: 100%;
+        }
+
+            .fg input:focus, .fg select:focus, .fg textarea:focus {
+                outline: none;
+                border-color: var(--accent);
+                background: #fff;
+            }
+
+        .fg textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+    .field-error {
+        color: var(--red);
+        font-size: .72rem;
+        margin-top: .1rem;
+    }
+
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        padding: .55rem 0;
+    }
+
+        .toggle-row input[type=checkbox] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .toggle-row label {
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--ink-2);
+            cursor: pointer;
+            margin: 0;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+    .form-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: .75rem;
+        padding-top: .75rem;
+    }
+
+    .btn-save {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: .6rem 1.8rem;
+        font-size: .88rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+        .btn-save:hover {
+            background: var(--accent-2);
+        }
+
+    .btn-cancel {
+        background: none;
+        border: 1.5px solid var(--rule);
+        border-radius: 8px;
+        padding: .6rem 1.4rem;
+        font-size: .88rem;
+        color: var(--slate);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+        .btn-cancel:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+    .src-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .25rem .8rem;
+        border-radius: 20px;
+        font-size: .75rem;
+        font-weight: 700;
+    }
+
+    .si-pub {
+        background: #dbeafe;
+        color: #1a56db;
+    }
+
+    .si-art {
+        background: #cffafe;
+        color: #0891b2;
+    }
+
+    .si-vid {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+
+    .val-summary {
+        background: #fee2e2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: .75rem 1rem;
+        margin-bottom: 1rem;
+        font-size: .82rem;
+        color: #991b1b;
+    }
+
+        .val-summary ul {
+            margin: 0;
+            padding-left: 1.25rem;
+        }
+</style>
+
+<div class="form-wrap">
+
+    <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+       style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;margin-bottom:1.25rem;">
+        ← Back to News List
+    </a>
+
+    <div class="form-header">
+        <div class="form-header-icon">@(isEdit ? "✏️" : (isExist ? "🔗" : "✍️"))</div>
+        <div>
+            <h1>@ViewData["Title"]</h1>
+            <p>
+                <span class="src-indicator @siClass">@srcLabel</span>
+                &nbsp;@Model.ClientName
+            </p>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="val-summary">
+            <strong>Please fix the following errors:</strong>
+            <ul>
+                @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <li>@err.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @* Existing news picker *@
+    @if (isExist && !isEdit)
+    {
+        <div class="exist-banner">
+            <div style="font-size:1.4rem;">🔗</div>
+            <div style="flex:1;">
+                <h3>Select Existing News</h3>
+                <p>Pick a news record — data will be copied and you can adjust client-specific fields below.</p>
+                <select id="existingNewsPicker"
+                        asp-items="Model.ExistingNewsSelectList"
+                        onchange="prefillFromNews(this.value)"
+                        style="width:100%;margin-top:.6rem;border:1.5px solid #c4b5fd;border-radius:7px;padding:.45rem .75rem;font-size:.85rem;background:#fff;">
+                    <option value="">— Select a news record —</option>
+                </select>
+            </div>
+        </div>
+    }
+
+    @{
+        string formAction = isEdit
+            ? Url.Action("Edit", new { id = Model.Id })!
+            : (isExist ? Url.Action("CreateFromExisting")! : Url.Action("CreateNew")!);
+    }
+
+    <form method="post" action="@formAction">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ClientId" />
+        <input type="hidden" asp-for="NewsId" />
+        <input type="hidden" asp-for="NewsMode" />
+        <input type="hidden" asp-for="SourceType" />
+        <input type="hidden" asp-for="ExistingNewsId" id="hidExistingNewsId" />
+
+        @* CARD 1: Source & Classification *@
+        <div class="form-card">
+            <div class="form-card-title">📂 Source & Classification</div>
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="publicationId">@Model.SourceType</label>
+                    <select asp-for="publicationId" asp-items="Model.SourceSelectList">
+                        <option value="0">— Select —</option>
+                    </select>
+                    <span asp-validation-for="publicationId" class="field-error"></span>
+                </div>
+
+                <div class="fg">
+                    <label asp-for="CategoryId">Category</label>
+                    <select asp-for="CategoryId"
+                            asp-items="Model.CategorySelectList"
+                            id="categorySelect"
+                            onchange="loadSubCats(this.value)">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+
+                <div class="fg">
+                    <label asp-for="SubCategoryId">Sub Category</label>
+                    <select asp-for="SubCategoryId"
+                            asp-items="Model.SubCategorySelectList"
+                            id="subCatSelect">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="fg-2" style="margin-top:1rem;">
+                <div class="fg">
+                    <label asp-for="WriterId">Writer</label>
+                    <select asp-for="WriterId" asp-items="Model.WriterSelectList">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Date">Date</label>
+                    <input asp-for="Date" type="date" />
+                    <span asp-validation-for="Date" class="field-error"></span>
+                </div>
+            </div>
+        </div>
+
+        @* CARD 2: Article Info *@
+        <div class="form-card">
+            <div class="form-card-title">📝 Article Information</div>
+            <div class="fg" style="margin-bottom:1rem;">
+                <label asp-for="Title">Title <span style="color:var(--red);">*</span></label>
+                <input asp-for="Title" placeholder="Enter news title…" />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="Pages">Pages</label>
+                    <input asp-for="Pages" type="number" min="0" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Height">Height (cm)</label>
+                    <input asp-for="Height" type="number" min="0" step="0.01" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Width">Width (cm)</label>
+                    <input asp-for="Width" type="number" min="0" step="0.01" />
+                </div>
+                <div class="fg">
+                    <label>Flags</label>
+                    <div class="toggle-row">
+                        <input asp-for="pictureInArticle" type="checkbox" id="chkPic" />
+                        <label for="chkPic">Picture in Article</label>
+                    </div>
+                    <div class="toggle-row">
+                        <input asp-for="Generation" type="checkbox" id="chkGen" />
+                        <label for="chkGen">Generation</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* CARD 3: Values *@
+        <div class="form-card">
+            <div class="form-card-title">💰 PR / AD Values</div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="PRValue">PR Value</label>
+                    <input asp-for="PRValue" type="number" min="0" step="0.01" />
+                    <span asp-validation-for="PRValue" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="PROption">PR Option</label>
+                    <input asp-for="PROption" placeholder="e.g. Full, Half…" />
+                </div>
+                <div class="fg">
+                    <label asp-for="ADValue">AD Value</label>
+                    <input asp-for="ADValue" type="number" min="0" step="0.01" />
+                    <span asp-validation-for="ADValue" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="ADOption">AD Option</label>
+                    <input asp-for="ADOption" placeholder="e.g. Full, Half…" />
+                </div>
+            </div>
+        </div>
+
+        @* CARD 4: Branding & Analysis *@
+        <div class="form-card">
+            <div class="form-card-title">🎯 Branding & Analysis</div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="ArticleBranding">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="Model.BrandingSelectList"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="HeadlineBranding">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="Model.BrandingSelectList"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Toning">Toning</label>
+                    <select asp-for="Toning" asp-items="Model.ToningSelectList">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Translation">Translation</label>
+                    <select asp-for="Translation" asp-items="Model.TranslationSelectList">
+                        <option value="">— None —</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
+            <button type="submit" class="btn-save">
+                @(isEdit ? "💾 Save Changes" : "✅ Create News")
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        const clientId = @Model.ClientId;
+
+        async function loadSubCats(parentId) {
+            const sel = document.getElementById('subCatSelect');
+            sel.innerHTML = '<option value="0">Loading…</option>';
+            if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
+            const res  = await fetch(`/ClientNews/GetSubCategories?parentId=${parentId}`);
+            const data = await res.json();
+            sel.innerHTML = '<option value="0">— None —</option>';
+            data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+        }
+
+        async function prefillFromNews(newsId) {
+            if (!newsId) return;
+            document.getElementById('hidExistingNewsId').value = newsId;
+            const res  = await fetch(`/ClientNews/PrefillExisting?newsId=${newsId}&clientId=${clientId}`);
+            const data = await res.json();
+            if (!data.success) { alert(data.message); return; }
+
+            const setVal = (name, val) => {
+                const el = document.querySelector(`[name="${name}"]`);
+                if (el) el.value = val ?? '';
+            };
+            setVal('Title',           data.title);
+            setVal('Date',            data.date);
+            setVal('PRValue',         data.prValue);
+            setVal('ADValue',         data.adValue);
+            setVal('PROption',        data.prOption);
+            setVal('ADOption',        data.adOption);
+            setVal('Toning',          data.toning);
+            setVal('Translation',     data.translation);
+            setVal('ArticleBranding', data.articleBranding);
+            setVal('HeadlineBranding',data.headlineBranding);
+
+            const pic = document.getElementById('chkPic');
+            const gen = document.getElementById('chkGen');
+            if (pic) pic.checked = data.pictureInArticle;
+            if (gen) gen.checked = data.generation;
+        }
+    </script>
+}

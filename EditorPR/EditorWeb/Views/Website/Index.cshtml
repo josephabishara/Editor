@@ -42,10 +42,11 @@
                     <tr>
                         <th>#</th>
                         <th>Website Name</th>
-                        <th>URL</th>
+                        <th>Frequency</th>
                         <th>Media Tier</th>
+                        <th>Reach</th>
+                        <th>Distribution</th>
                         <th>Language</th>
-                        <th>Unit Price</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -61,19 +62,16 @@
                         <tr>
                             <td>@item.Id</td>
                             <td>@item.WebsiteName</td>
-                            <td>
-                                <a href="@item.URL" target="_blank" class="text-decoration-none">
-                                    @item.URL
-                                </a>
-                            </td>
+                            <td>@item.Frequency</td>
                             <td>
                                 @if (!string.IsNullOrEmpty(item.MediaTier))
                                 {
                                     <span class="badge bg-secondary">@item.MediaTier</span>
                                 }
                             </td>
+                            <td>@item.Reach</td>
+                            <td>@item.Distribution</td>
                             <td>@item.Language</td>
-                            <td class="fw-semibold">@item.UnitPrice.ToString("C")</td>
                             <td>
                                 <a asp-action="Details" asp-route-id="@item.Id"
                                    class="btn btn-sm btn-outline-info me-1"><i class="fa fa-eye"></i></a>

@@ -30,6 +30,13 @@ namespace EditorLogicLayer.Client
         Task<IEnumerable<WebsiteCustomerCategoryDTO>> GetClientCategoriesAsync(int clientId);
         Task<(bool Success, string Message)> UpdateClientCategoriesAsync(UpdateClientCategoriesDTO model);
 
+        // ── Publication Categories ─────────────────────────────────────────────
+        Task<IEnumerable<PublicationCustomerCategoryDTO>> GetClientPublicationCategoriesAsync(int clientId);
+        Task<(bool Success, string Message)> UpdateClientPublicationCategoriesAsync(UpdateClientPublicationCategoriesDTO model);
+
+        // ── Channel Categories ─────────────────────────────────────────────────
+        Task<IEnumerable<ChannelCustomerCategoryDTO>> GetClientChannelCategoriesAsync(int clientId);
+        Task<(bool Success, string Message)> UpdateClientChannelCategoriesAsync(UpdateClientChannelCategoriesDTO model);
 
     }
 }

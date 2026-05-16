@@ -8,9 +8,18 @@ namespace EditorLogicLayer.Publication
     public class PublicationService : IPublicationService
     {
         private readonly IPublicationRepository _repo;
+        private readonly IClientRepository _clientRepo;
+        private readonly IPublicationCustomerCategoryRepository _categoryRepo;
 
-        public PublicationService(IPublicationRepository repo) => _repo = repo;
-
+        public PublicationService(
+           IPublicationRepository repo,
+           IClientRepository clientRepo,
+           IPublicationCustomerCategoryRepository categoryRepo)
+        {
+            _repo = repo;
+            _clientRepo = clientRepo;
+            _categoryRepo = categoryRepo;
+        }
         public async Task<IEnumerable<PublicationDTO>> GetAllAsync()
         {
             var publications = await _repo.GetActivePublicationsAsync();
@@ -26,13 +35,16 @@ namespace EditorLogicLayer.Publication
         public async Task<(bool Success, string Message)> CreateAsync(PublicationDTO model)
         {
             var entity = MapToEntity(model);
-
-            // ✅ BaseEntity fields — CreatedAt, IsActive, Deleted
             entity.CreatedAt = DateTime.UtcNow;
             entity.IsActive = true;
             entity.Deleted = 0;
 
             await _repo.AddAsync(entity);
+
+            // Fan-out: create one PublicationCustomerCategory row per active client,
+            // inheriting this publication's MediaTier as the default (editable later).
+            await FanOutToClientsAsync(entity.Id, entity.MediaTier);
+
             return (true, "Publication created successfully.");
         }
 
@@ -43,11 +55,9 @@ namespace EditorLogicLayer.Publication
                 return (false, "Publication not found.");
 
             existing.PublicationName = model.PublicationName;
-            existing.URL = model.URL;
             existing.MediaType = model.MediaType;
             existing.MediaTier = model.MediaTier;
             existing.Frequency = model.Frequency;
-            existing.Reach = model.Reach;
             existing.Distribution = model.Distribution;
             existing.Language = model.Language;
             existing.CmPrice = model.CmPrice;
@@ -106,11 +116,9 @@ namespace EditorLogicLayer.Publication
             {
                 ws.Cell(row, 1).Value = w.Id;
                 ws.Cell(row, 2).Value = w.PublicationName;
-                ws.Cell(row, 3).Value = w.URL;
                 ws.Cell(row, 4).Value = w.MediaType ?? "";
                 ws.Cell(row, 5).Value = w.MediaTier ?? "";
                 ws.Cell(row, 6).Value = w.Frequency ?? "";
-                ws.Cell(row, 7).Value = w.Reach ?? "";
                 ws.Cell(row, 8).Value = w.Distribution ?? "";
                 ws.Cell(row, 9).Value = w.Language ?? "";
                 ws.Cell(row, 10).Value = w.CmPrice;
@@ -184,11 +192,9 @@ namespace EditorLogicLayer.Publication
                     toImport.Add(new EditorEntitiesLayer.Entities.Publication
                     {
                         PublicationName = publicationName,
-                        URL = url,
                         MediaType = row.Cell(4).GetString().Trim(),
                         MediaTier = row.Cell(5).GetString().Trim(),
                         Frequency = row.Cell(6).GetString().Trim(),
-                        Reach = row.Cell(7).GetString().Trim(),
                         Distribution = row.Cell(8).GetString().Trim(),
                         Language = row.Cell(9).GetString().Trim(),
                         CmPrice = cmPrice,
@@ -213,16 +219,32 @@ namespace EditorLogicLayer.Publication
             return (true, $"{toImport.Count} publication(s) imported successfully.", toImport.Count);
         }
         // ── Mappers ────────────────────────────────────────────────────────────
+        /// <summary>
+        /// For a newly persisted publication, creates one <see cref="PublicationCustomerCategory"/>
+        /// row for every active client, defaulting MediaTier from the publication itself.
+        /// </summary>
+        private async Task FanOutToClientsAsync(int publicationId, string? mediaTier)
+        {
+            var clients = await _clientRepo.GetActiveClientsAsync();
+            if (!clients.Any()) return;
+
+            var categories = clients.Select(c => new PublicationCustomerCategory
+            {
+                CustomerId = c.Id,
+                PublicationId = publicationId,
+                MediaTier = mediaTier   // default from publication — editable per-client later
+            }).ToList();
+
+            await _categoryRepo.AddRangeAsync(categories);
+        }
 
         private static PublicationDTO MapToDTO(EditorEntitiesLayer.Entities.Publication p) => new()
         {
             Id = p.Id,
             PublicationName = p.PublicationName,
-            URL = p.URL,
             MediaType = p.MediaType,
             MediaTier = p.MediaTier,
             Frequency = p.Frequency,
-            Reach = p.Reach,
             Distribution = p.Distribution,
             Language = p.Language,
             CmPrice = p.CmPrice,
@@ -233,11 +255,9 @@ namespace EditorLogicLayer.Publication
         {
             Id = dto.Id,
             PublicationName = dto.PublicationName,
-            URL = dto.URL,
             MediaType = dto.MediaType,
             MediaTier = dto.MediaTier,
             Frequency = dto.Frequency,
-            Reach = dto.Reach,
             Distribution = dto.Distribution,
             Language = dto.Language,
             CmPrice = dto.CmPrice,

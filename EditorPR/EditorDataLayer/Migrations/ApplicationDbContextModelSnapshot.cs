@@ -281,6 +281,33 @@ namespace EditorDataLayer.Migrations
                     b.ToTable("Channels");
                 });
 
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ChannelCustomerCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChannelId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MediaTier")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("ChannelCustomerCategories");
+                });
+
             modelBuilder.Entity("EditorEntitiesLayer.Entities.Client", b =>
                 {
                     b.Property<int>("Id")
@@ -372,6 +399,284 @@ namespace EditorDataLayer.Migrations
                     b.ToTable("Clients");
                 });
 
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientCategories", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CategoryType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CreateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DeleteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Deleted")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ParentCategory")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("UpdateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("Writed")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("ParentCategory");
+
+                    b.ToTable("ClientCategories");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientNews", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ADOption")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ADValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ArticleBranding")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CreateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DeleteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Deleted")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Generation")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("HeadlineBranding")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Height")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("NewsId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PROption")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("PRValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Pages")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Publish")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SubCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Toning")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Translation")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UpdateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Width")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("Writed")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WriterId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("pictureInArticle")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("publicationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("NewsId");
+
+                    b.HasIndex("WriterId");
+
+                    b.ToTable("ClientNews");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.News", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ADOption")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("ADValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ArticleBranding")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("CreateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DeleteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Deleted")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Generation")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("HeadlineBranding")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PROption")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("PRValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Toning")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Translation")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("UpdateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("Writed")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("pictureInArticle")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("News");
+                });
+
             modelBuilder.Entity("EditorEntitiesLayer.Entities.Publication", b =>
                 {
                     b.Property<int>("Id")
@@ -429,15 +734,6 @@ namespace EditorDataLayer.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("Reach")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("URL")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<int>("UpdateId")
                         .HasColumnType("int");
 
@@ -450,6 +746,33 @@ namespace EditorDataLayer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Publications");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.PublicationCustomerCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MediaTier")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("PublicationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("PublicationId");
+
+                    b.ToTable("PublicationCustomerCategories");
                 });
 
             modelBuilder.Entity("EditorEntitiesLayer.Entities.WebsiteCustomerCategory", b =>
@@ -706,6 +1029,89 @@ namespace EditorDataLayer.Migrations
                     b.Navigation("Client");
                 });
 
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ChannelCustomerCategory", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.Channel", "Channel")
+                        .WithMany()
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.Client", "Client")
+                        .WithMany("ChannelCategories")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientCategories", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.ClientCategories", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentCategory")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientNews", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.News", "News")
+                        .WithMany("ClientNewsList")
+                        .HasForeignKey("NewsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.Writer", "Writer")
+                        .WithMany()
+                        .HasForeignKey("WriterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("News");
+
+                    b.Navigation("Writer");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.PublicationCustomerCategory", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.Client", "Client")
+                        .WithMany("PublicationCategories")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.Publication", "Publication")
+                        .WithMany()
+                        .HasForeignKey("PublicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Publication");
+                });
+
             modelBuilder.Entity("EditorEntitiesLayer.Entities.WebsiteCustomerCategory", b =>
                 {
                     b.HasOne("EditorEntitiesLayer.Entities.Client", "Client")
@@ -780,7 +1186,21 @@ namespace EditorDataLayer.Migrations
                 {
                     b.Navigation("AssistantList");
 
+                    b.Navigation("ChannelCategories");
+
+                    b.Navigation("PublicationCategories");
+
                     b.Navigation("WebsiteCategories");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientCategories", b =>
+                {
+                    b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.News", b =>
+                {
+                    b.Navigation("ClientNewsList");
                 });
 #pragma warning restore 612, 618
         }

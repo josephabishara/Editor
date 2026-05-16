@@ -3,7 +3,7 @@
     ViewData["Title"] = "Add Website";
 }
 
-<div class="container mt-4" style="max-width: 680px;">
+<div class="container mt-4" style="width: 75%;">
     <div class="d-flex align-items-center gap-2 mb-4">
         <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
         <h4 class="mb-0 fw-semibold">Add Website</h4>
@@ -17,16 +17,26 @@
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
                 <div class="row g-3">
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <label asp-for="WebsiteName" class="form-label fw-semibold"></label>
                         <input asp-for="WebsiteName" class="form-control" placeholder="e.g. Al-Ahram" />
                         <span asp-validation-for="WebsiteName" class="text-danger small"></span>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <label asp-for="URL" class="form-label fw-semibold"></label>
                         <input asp-for="URL" class="form-control" placeholder="https://example.com" />
                         <span asp-validation-for="URL" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Frequency" class="form-label fw-semibold"></label>
+                        <select asp-for="Frequency" class="form-select">
+                            <option value="">-- Select Frequency --</option>
+                            <option value="Daily">Daily</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Monthly">Monthly</option>
+                        </select>
                     </div>
 
                     <div class="col-md-6">
@@ -40,29 +50,25 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label asp-for="Frequency" class="form-label fw-semibold"></label>
-                        <select asp-for="Frequency" class="form-select">
-                            <option value="">-- Select --</option>
-                            <option value="Daily">Daily</option>
-                            <option value="Weekly">Weekly</option>
-                            <option value="Monthly">Monthly</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
                         <label asp-for="Reach" class="form-label fw-semibold"></label>
-                        <input asp-for="Reach" class="form-control" placeholder="e.g. National, Regional" />
+                        <input asp-for="Reach" class="form-control" placeholder="Enter Website reach" />
                     </div>
 
                     <div class="col-md-6">
                         <label asp-for="Distribution" class="form-label fw-semibold"></label>
-                        <input asp-for="Distribution" class="form-control" placeholder="e.g. Online, Print" />
+                        <select asp-for="Distribution" class="form-select">
+                            <option value="">-- Select Distribution --</option>
+                            <option value="National">National</option>
+                            <option value="Independent">Independent</option>
+                            <option value="Party">Party</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
 
                     <div class="col-md-6">
                         <label asp-for="Language" class="form-label fw-semibold"></label>
                         <select asp-for="Language" class="form-select">
-                            <option value="">-- Select --</option>
+                            <option value="">-- Select Language --</option>
                             <option value="Arabic">Arabic</option>
                             <option value="English">English</option>
                             <option value="French">French</option>

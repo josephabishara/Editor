@@ -46,6 +46,7 @@ namespace EditorEntitiesLayer.Entities
         // Navigation
         public ICollection<Assistant> AssistantList { get; set; } = new List<Assistant>();
         public ICollection<WebsiteCustomerCategory> WebsiteCategories { get; set; } = new List<WebsiteCustomerCategory>();
-
+        public ICollection<PublicationCustomerCategory> PublicationCategories { get; set; } = new List<PublicationCustomerCategory>();
+        public ICollection<ChannelCustomerCategory> ChannelCategories { get; set; } = new List<ChannelCustomerCategory>();
     }
 }

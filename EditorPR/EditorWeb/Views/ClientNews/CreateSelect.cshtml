@@ -1,0 +1,213 @@
+@{
+    ViewData["Title"] = "Add News";
+    var clientId    = (int)ViewBag.ClientId;
+    var sourceTypes = ViewBag.SourceTypes as string[] ?? new[] { "Publication", "Article", "Video" };
+}
+
+<style>
+    :root {
+        --ink:    #0f1923; --slate: #5a6a7a; --rule: #dde3ea;
+        --bg:     #f4f6f9; --surface: #ffffff;
+        --accent: #1a56db; --accent-2: #0e3fa6;
+        --pub:    #1a56db; --art: #0891b2; --vid: #7c3aed;
+        --radius: 12px;   --shadow: 0 2px 16px rgba(15,25,35,.09);
+    }
+    body { background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    .sel-wrap {
+        max-width: 860px; margin: 2rem auto; padding: 0 1rem;
+    }
+    .sel-back {
+        display: inline-flex; align-items: center; gap: .4rem;
+        color: var(--slate); font-size: .82rem; text-decoration: none;
+        margin-bottom: 1.5rem; transition: color .12s;
+    }
+    .sel-back:hover { color: var(--ink); }
+
+    .sel-title {
+        font-size: 1.5rem; font-weight: 800; color: var(--ink);
+        margin-bottom: .35rem;
+    }
+    .sel-sub {
+        color: var(--slate); font-size: .9rem; margin-bottom: 2rem;
+    }
+
+    /* ── Mode cards ── */
+    .mode-section h2 {
+        font-size: .72rem; font-weight: 700; color: var(--slate);
+        text-transform: uppercase; letter-spacing: .07em;
+        margin-bottom: .85rem;
+    }
+    .mode-cards {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+        margin-bottom: 2.5rem;
+    }
+    .mode-card {
+        background: var(--surface); border-radius: var(--radius);
+        box-shadow: var(--shadow); padding: 1.75rem 1.5rem;
+        border: 2px solid transparent; cursor: pointer;
+        transition: border-color .18s, transform .15s, box-shadow .15s;
+        text-decoration: none; color: inherit; display: block;
+    }
+    .mode-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(15,25,35,.14);
+        color: inherit;
+    }
+    .mode-card .mc-icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; margin-bottom: 1rem;
+    }
+    .mc-new  .mc-icon { background: #dbeafe; }
+    .mc-exist .mc-icon { background: #ede9fe; }
+    .mode-card h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: .35rem; }
+    .mode-card p  { font-size: .82rem; color: var(--slate); margin: 0; line-height: 1.5; }
+    .mode-card .mc-arrow {
+        display: inline-flex; align-items: center; gap: .3rem;
+        color: var(--accent); font-size: .8rem; font-weight: 600;
+        margin-top: .9rem;
+    }
+
+    /* ── Source type selector ── */
+    .src-section h2 {
+        font-size: .72rem; font-weight: 700; color: var(--slate);
+        text-transform: uppercase; letter-spacing: .07em;
+        margin-bottom: .85rem;
+    }
+    .src-cards {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+    }
+    @@media (max-width: 600px) {
+        .mode-cards { grid-template-columns: 1fr; }
+        .src-cards  { grid-template-columns: 1fr; }
+    }
+    .src-card {
+        border-radius: var(--radius); padding: 1.25rem;
+        display: flex; flex-direction: column; gap: .6rem;
+        border: 2px solid var(--rule); background: var(--surface);
+        box-shadow: var(--shadow); transition: all .15s;
+    }
+    .src-card-pub { border-top: 4px solid var(--pub); }
+    .src-card-art { border-top: 4px solid var(--art); }
+    .src-card-vid { border-top: 4px solid var(--vid); }
+    .src-card h4  { font-size: .88rem; font-weight: 700; color: var(--ink); margin: 0; }
+    .src-card p   { font-size: .75rem; color: var(--slate); margin: 0; line-height: 1.4; }
+    .src-card-btns { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .25rem; }
+    .btn-src {
+        padding: .35rem .85rem; border-radius: 7px;
+        font-size: .78rem; font-weight: 600; text-decoration: none;
+        display: inline-flex; align-items: center; gap: .3rem;
+        transition: filter .12s;
+    }
+    .btn-src:hover { filter: brightness(.9); }
+    .btn-pub-new   { background: var(--pub); color: #fff; }
+    .btn-pub-exist { background: #dbeafe; color: var(--pub); }
+    .btn-art-new   { background: var(--art); color: #fff; }
+    .btn-art-exist { background: #cffafe; color: var(--art); }
+    .btn-vid-new   { background: var(--vid); color: #fff; }
+    .btn-vid-exist { background: #ede9fe; color: var(--vid); }
+</style>
+
+<div class="sel-wrap">
+    <a href="@Url.Action("Index", new { clientId })" class="sel-back">
+        ← Back to News List
+    </a>
+    <h1 class="sel-title">Add News</h1>
+    <p class="sel-sub">Choose whether to create a new news record or assign an existing one to this client.</p>
+
+    @* ── Step 1: Mode ── *@
+    <div class="mode-section">
+        <h2>Step 1 — Choose Mode</h2>
+        <div class="mode-cards">
+            <div class="mode-card mc-new" onclick="setMode('New')">
+                <div class="mc-icon">✍️</div>
+                <h3>Create New News</h3>
+                <p>Write a brand-new news record from scratch. A master News entry will be created alongside the client record.</p>
+                <span class="mc-arrow">Select source below ↓</span>
+            </div>
+            <div class="mode-card mc-exist" onclick="setMode('Existing')">
+                <div class="mc-icon">🔗</div>
+                <h3>Use Existing News</h3>
+                <p>Assign a news record that already exists in the system to this client. Data will be copied and can be adjusted.</p>
+                <span class="mc-arrow">Select source below ↓</span>
+            </div>
+        </div>
+    </div>
+
+    @* ── Step 2: Source type ── *@
+    <div class="src-section">
+        <h2>Step 2 — Choose Source Type</h2>
+        <div class="src-cards">
+            <div class="src-card src-card-pub">
+                <h4>📰 Publication</h4>
+                <p>News from a print or digital publication (newspaper, magazine, journal, newsletter).</p>
+                <div class="src-card-btns">
+                    <a id="btn-pub-new"   href="#" class="btn-src btn-pub-new">+ New</a>
+                    <a id="btn-pub-exist" href="#" class="btn-src btn-pub-exist">🔗 Existing</a>
+                </div>
+            </div>
+            <div class="src-card src-card-art">
+                <h4>🌐 Article (Website)</h4>
+                <p>Online article published on a website or digital platform.</p>
+                <div class="src-card-btns">
+                    <a id="btn-art-new"   href="#" class="btn-src btn-art-new">+ New</a>
+                    <a id="btn-art-exist" href="#" class="btn-src btn-art-exist">🔗 Existing</a>
+                </div>
+            </div>
+            <div class="src-card src-card-vid">
+                <h4>📺 Video (Channel)</h4>
+                <p>Video coverage from a TV channel or digital video channel.</p>
+                <div class="src-card-btns">
+                    <a id="btn-vid-new"   href="#" class="btn-src btn-vid-new">+ New</a>
+                    <a id="btn-vid-exist" href="#" class="btn-src btn-vid-exist">🔗 Existing</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var currentMode = 'New';  // default
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.mode-card').forEach(c => {
+            c.style.borderColor = 'transparent';
+        });
+        const idx = mode === 'New' ? 0 : 1;
+        document.querySelectorAll('.mode-card')[idx].style.borderColor = '#1a56db';
+        updateLinks();
+    }
+
+    function updateLinks() {
+        const cid = @clientId;
+        const m   = currentMode;
+
+        const routes = {
+            'pub-new'   : `/ClientNews/CreateNew?clientId=${cid}&sourceType=Publication`,
+            'pub-exist' : `/ClientNews/CreateFromExisting?clientId=${cid}&sourceType=Publication`,
+            'art-new'   : `/ClientNews/CreateNew?clientId=${cid}&sourceType=Article`,
+            'art-exist' : `/ClientNews/CreateFromExisting?clientId=${cid}&sourceType=Article`,
+            'vid-new'   : `/ClientNews/CreateNew?clientId=${cid}&sourceType=Video`,
+            'vid-exist' : `/ClientNews/CreateFromExisting?clientId=${cid}&sourceType=Video`,
+        };
+
+        document.getElementById('btn-pub-new').href   = routes['pub-new'];
+        document.getElementById('btn-pub-exist').href = routes['pub-exist'];
+        document.getElementById('btn-art-new').href   = routes['art-new'];
+        document.getElementById('btn-art-exist').href = routes['art-exist'];
+        document.getElementById('btn-vid-new').href   = routes['vid-new'];
+        document.getElementById('btn-vid-exist').href = routes['vid-exist'];
+
+        // Show/hide new vs existing buttons based on mode
+        ['pub','art','vid'].forEach(t => {
+            document.getElementById(`btn-${t}-new`).style.display   = m === 'New'      ? '' : 'none';
+            document.getElementById(`btn-${t}-exist`).style.display = m === 'Existing' ? '' : 'none';
+        });
+    }
+
+    // Init: default New mode visible
+    setMode('New');
+</script>

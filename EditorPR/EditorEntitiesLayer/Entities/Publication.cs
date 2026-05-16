@@ -12,11 +12,7 @@ namespace EditorEntitiesLayer.Entities
         [Display(Name = "Publication Name")]
         public string PublicationName { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(500)]
-        [Display(Name = "URL")]
-        public string URL { get; set; } = string.Empty;
-
+   
         [MaxLength(50)]
         [Display(Name = "Media Type")]
         public string? MediaType { get; set; }   // newspaper, magazine, journal, newsletter
@@ -29,8 +25,7 @@ namespace EditorEntitiesLayer.Entities
         [Display(Name = "Frequency")]
         public string? Frequency { get; set; }   // daily, weekly, monthly
 
-        [MaxLength(200)]
-        public string? Reach { get; set; }
+     
 
         [MaxLength(200)]
         public string? Distribution { get; set; }

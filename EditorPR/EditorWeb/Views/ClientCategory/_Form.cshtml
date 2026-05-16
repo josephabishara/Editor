@@ -1,0 +1,52 @@
+﻿@using EditorViewModelLayer.ClientViewModel
+@model EditorViewModelLayer.ClientViewModel.ClientCategoryDTO
+
+<div class="row g-3">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ClientId" />
+
+    <div class="col-md-6">
+        <label asp-for="ParentCategory" class="form-label"></label>
+        <select asp-for="ParentCategory" class="form-select">
+            <option value="">— None (Root) —</option>
+            @foreach (var parent in (IEnumerable<ClientCategoryDTO>)ViewBag.ParentCategories)
+            {
+                <option value="@parent.Id">@parent.CategoryName</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="CategoryName" class="form-label"></label>
+        <input asp-for="CategoryName" class="form-control" />
+        <span asp-validation-for="CategoryName" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Status" class="form-label"></label>
+        <select asp-for="Status" class="form-select">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+        </select>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="CategoryType" class="form-label"></label>
+        <select asp-for="CategoryType" class="form-select">
+            <option value="">— Select Type —</option>
+            <option>News</option>
+            <option>Article</option>
+            <option>Press Release</option>
+            <option>Interview</option>
+        </select>
+    </div>
+
+  
+
+   
+    <div class="col-md-4">
+        <label asp-for="Order" class="form-label"></label>
+        <input asp-for="Order" type="number" class="form-control text-center" />
+        <span asp-validation-for="Order" class="text-danger"></span>
+    </div>
+</div>

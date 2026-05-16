@@ -1,0 +1,298 @@
+@model EditorViewModelLayer.NewsViewModel.ClientNewsDTO
+@{
+    ViewData["Title"] = "News Details";
+    bool isAdmin = User.IsInRole("Admin");
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
+
+    var srcClass = Model.SourceType switch {
+        "Article" => "si-art", "Video" => "si-vid", _ => "si-pub"
+    };
+    var srcLabel = Model.SourceType switch {
+        "Article" => "🌐 Article", "Video" => "📺 Video", _ => "📰 Publication"
+    };
+}
+
+<style>
+    :root {
+        --ink:    #0f1923; --ink-2: #2c3e50; --slate: #5a6a7a;
+        --rule:   #dde3ea; --bg: #f4f6f9; --surface: #fff;
+        --accent: #1a56db; --green: #16a34a; --red: #dc2626; --amber: #d97706;
+        --radius: 10px;   --shadow: 0 2px 12px rgba(15,25,35,.08);
+    }
+    body { background: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; }
+    .det-wrap { max-width: 860px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+    .det-header {
+        background: var(--ink); color: #fff;
+        border-radius: var(--radius); padding: 1.5rem 1.75rem;
+        margin-bottom: 1.25rem; position: relative;
+    }
+    .det-header h1  { font-size: 1.2rem; font-weight: 800; margin: 0 0 .3rem; line-height: 1.3; }
+    .det-header .meta { font-size: .8rem; opacity: .65; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .pub-status {
+        position: absolute; top: 1.25rem; right: 1.5rem;
+        padding: .3rem .9rem; border-radius: 20px;
+        font-size: .72rem; font-weight: 700;
+    }
+    .pub-yes { background: #dcfce7; color: #166534; }
+    .pub-no  { background: #fef9c3; color: #a16207; }
+
+    .src-indicator {
+        display: inline-flex; align-items: center; gap: .3rem;
+        padding: .2rem .65rem; border-radius: 20px; font-size: .72rem; font-weight: 700;
+    }
+    .si-pub { background: #dbeafe; color: #1a56db; }
+    .si-art { background: #cffafe; color: #0891b2; }
+    .si-vid { background: #ede9fe; color: #7c3aed; }
+
+    .det-card {
+        background: var(--surface); border-radius: var(--radius);
+        box-shadow: var(--shadow); padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+    }
+    .det-card-title {
+        font-size: .7rem; font-weight: 700; color: var(--slate);
+        text-transform: uppercase; letter-spacing: .07em;
+        margin-bottom: 1rem; padding-bottom: .6rem; border-bottom: 1.5px solid var(--rule);
+    }
+    .det-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem;
+    }
+    @@media (max-width: 640px) { .det-grid { grid-template-columns: 1fr 1fr; } }
+    .det-field { display: flex; flex-direction: column; gap: .2rem; }
+    .det-field .lbl {
+        font-size: .68rem; font-weight: 700; color: var(--slate);
+        text-transform: uppercase; letter-spacing: .04em;
+    }
+    .det-field .val {
+        font-size: .88rem; color: var(--ink);
+    }
+    .det-field .val.mono { font-family: monospace; }
+    .val-pr { color: var(--green); font-weight: 700; }
+    .val-ad { color: var(--amber); font-weight: 700; }
+    .val-nil { color: var(--slate); font-style: italic; }
+
+    .badge-yn {
+        display: inline-flex; align-items: center; gap: .25rem;
+        padding: .18rem .5rem; border-radius: 5px; font-size: .75rem; font-weight: 700;
+    }
+    .badge-y { background: #dcfce7; color: #166534; }
+    .badge-n { background: #f3f4f6; color: var(--slate); }
+
+    .toning-badge {
+        display: inline-flex; align-items: center; gap: .35rem;
+        padding: .2rem .65rem; border-radius: 20px; font-size: .78rem; font-weight: 700;
+    }
+    .t-pos { background: #dcfce7; color: #166534; }
+    .t-neg { background: #fee2e2; color: #991b1b; }
+    .t-neu { background: #f3f4f6; color: var(--slate); }
+
+    /* Action bar */
+    .det-actions {
+        display: flex; gap: .75rem; flex-wrap: wrap;
+        margin-top: 1.25rem;
+    }
+    .btn-act {
+        padding: .55rem 1.3rem; border-radius: 8px;
+        font-size: .85rem; font-weight: 600; cursor: pointer;
+        text-decoration: none; display: inline-flex; align-items: center; gap: .4rem;
+        transition: filter .12s;
+    }
+    .btn-act:hover { filter: brightness(.9); }
+    .btn-edit   { background: #fef3c7; color: #92400e; }
+    .btn-pub    { background: #dcfce7; color: #166534; border: none; }
+    .btn-unpub  { background: #fef9c3; color: #a16207; border: none; }
+    .btn-del    { background: #fee2e2; color: #991b1b; border: none; }
+    .btn-back   { background: var(--bg); color: var(--slate);
+                  border: 1.5px solid var(--rule); }
+</style>
+
+<div class="det-wrap">
+
+    <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+       style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
+        ← Back to News List
+    </a>
+
+    @* Header *@
+    <div class="det-header">
+        <span class="pub-status @(Model.Publish ? "pub-yes" : "pub-no")">
+            @(Model.Publish ? "✓ Published" : "⏳ Not Published")
+        </span>
+        <h1>@Model.Title</h1>
+        <div class="meta">
+            <span>📅 @Model.Date.ToString("dd MMMM yyyy")</span>
+            <span class="src-indicator @srcClass" style="color:rgba(255,255,255,.9);background:rgba(255,255,255,.15);">
+                @srcLabel
+            </span>
+            @if (!string.IsNullOrEmpty(Model.SourceName))
+            {
+                <span>@Model.SourceName</span>
+            }
+            @if (!string.IsNullOrEmpty(Model.WriterName))
+            {
+                <span>✍️ @Model.WriterName</span>
+            }
+        </div>
+    </div>
+
+    @* Classification *@
+    <div class="det-card">
+        <div class="det-card-title">Classification</div>
+        <div class="det-grid">
+            <div class="det-field">
+                <span class="lbl">Source Type</span>
+                <span class="val"><span class="src-indicator @srcClass">@srcLabel</span></span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Category</span>
+                <span class="val @(Model.CategoryId == 0 ? "val-nil" : "")">
+                    @(Model.CategoryId > 0 ? $"ID {Model.CategoryId}" : "—")
+                </span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Sub Category</span>
+                <span class="val @(Model.SubCategoryId == 0 ? "val-nil" : "")">
+                    @(Model.SubCategoryId > 0 ? $"ID {Model.SubCategoryId}" : "—")
+                </span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Writer</span>
+                <span class="val @(string.IsNullOrEmpty(Model.WriterName) ? "val-nil" : "")">
+                    @(string.IsNullOrEmpty(Model.WriterName) ? "—" : Model.WriterName)
+                </span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Pages</span>
+                <span class="val">@(Model.Pages > 0 ? Model.Pages.ToString() : "—")</span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Size (H × W)</span>
+                <span class="val">
+                    @if (Model.Height > 0 || Model.Width > 0)
+                    { @($"{Model.Height:0.##} × {Model.Width:0.##} cm") }
+                    else { <span class="val-nil">—</span> }
+                </span>
+            </div>
+        </div>
+    </div>
+
+    @* Values *@
+    <div class="det-card">
+        <div class="det-card-title">PR / AD Values</div>
+        <div class="det-grid">
+            <div class="det-field">
+                <span class="lbl">PR Value</span>
+                <span class="val val-pr">@Model.PRValue.ToString("N2")</span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">PR Option</span>
+                <span class="val @(string.IsNullOrEmpty(Model.PROption) ? "val-nil" : "")">
+                    @(string.IsNullOrEmpty(Model.PROption) ? "—" : Model.PROption)
+                </span>
+            </div>
+            <div class="det-field"></div>
+            <div class="det-field">
+                <span class="lbl">AD Value</span>
+                <span class="val val-ad">@Model.ADValue.ToString("N2")</span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">AD Option</span>
+                <span class="val @(string.IsNullOrEmpty(Model.ADOption) ? "val-nil" : "")">
+                    @(string.IsNullOrEmpty(Model.ADOption) ? "—" : Model.ADOption)
+                </span>
+            </div>
+        </div>
+    </div>
+
+    @* Branding & Analysis *@
+    <div class="det-card">
+        <div class="det-card-title">Branding & Analysis</div>
+        <div class="det-grid">
+            <div class="det-field">
+                <span class="lbl">Article Branding</span>
+                <span class="val">@Model.ArticleBranding</span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Headline Branding</span>
+                <span class="val">@Model.HeadlineBranding</span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Toning</span>
+                <span class="val">
+                    @if (!string.IsNullOrEmpty(Model.Toning) && Model.Toning != "None")
+                    {
+                        var tc = Model.Toning switch {
+                            "Positive" => "t-pos", "Negative" => "t-neg", _ => "t-neu"
+                        };
+                        <span class="toning-badge @tc">@Model.Toning</span>
+                    }
+                    else { <span class="val-nil">—</span> }
+                </span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Translation</span>
+                <span class="val @(string.IsNullOrEmpty(Model.Translation) ? "val-nil" : "")">
+                    @(string.IsNullOrEmpty(Model.Translation) ? "—" : Model.Translation)
+                </span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Picture in Article</span>
+                <span class="val">
+                    <span class="badge-yn @(Model.pictureInArticle ? "badge-y" : "badge-n")">
+                        @(Model.pictureInArticle ? "✓ Yes" : "No")
+                    </span>
+                </span>
+            </div>
+            <div class="det-field">
+                <span class="lbl">Generation</span>
+                <span class="val">
+                    <span class="badge-yn @(Model.Generation ? "badge-y" : "badge-n")">
+                        @(Model.Generation ? "✓ Yes" : "No")
+                    </span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    @* Action buttons *@
+    <div class="det-actions">
+        <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-act btn-back">
+            ← Back
+        </a>
+        @if (canEdit)
+        {
+            <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn-act btn-edit">
+                ✏️ Edit
+            </a>
+        }
+        @if (isAdmin)
+        {
+            if (Model.Publish)
+            {
+                <form method="post" action="@Url.Action("Unpublish")" style="display:contents;"
+                      onsubmit="return confirm('Unpublish this news?')">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="clientId" value="@Model.ClientId" />
+                    <button type="submit" class="btn-act btn-unpub">📤 Unpublish</button>
+                </form>
+            }
+            else
+            {
+                <form method="post" action="@Url.Action("Publish")" style="display:contents;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="clientId" value="@Model.ClientId" />
+                    <button type="submit" class="btn-act btn-pub">📢 Publish</button>
+                </form>
+            }
+            <form method="post" action="@Url.Action("Delete")" style="display:contents;"
+                  onsubmit="return confirm('Permanently delete this news record?')">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="clientId" value="@Model.ClientId" />
+                <button type="submit" class="btn-act btn-del">🗑 Delete</button>
+            </form>
+        }
+    </div>
+</div>

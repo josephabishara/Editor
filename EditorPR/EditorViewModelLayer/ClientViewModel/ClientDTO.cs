@@ -63,5 +63,7 @@ namespace EditorViewModelLayer.ClientViewModel
         public List<AssistantDTO> AssistantList { get; set; } = new();
 
         public List<WebsiteCustomerCategoryDTO> WebsiteCategories { get; set; } = new();
+        public List<PublicationCustomerCategoryDTO> PublicationCategories { get; set; } = new();
+        public List<ChannelCustomerCategoryDTO> ChannelCategories { get; set; } = new();
     }
 }

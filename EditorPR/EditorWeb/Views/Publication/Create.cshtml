@@ -3,7 +3,7 @@
     ViewData["Title"] = "Add Publication";
 }
 
-<div class="container mt-4" style="max-width: 720px;">
+<div class="container mt-4" style="width: 75%;">
     <div class="d-flex align-items-center gap-2 mb-4">
         <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&larr;</a>
         <h4 class="mb-0 fw-semibold">Add Publication</h4>
@@ -17,17 +17,13 @@
 
                 <div class="row g-3">
 
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <label asp-for="PublicationName" class="form-label fw-semibold"></label>
                         <input asp-for="PublicationName" class="form-control" placeholder="e.g. Al-Ahram Weekly" />
                         <span asp-validation-for="PublicationName" class="text-danger small"></span>
                     </div>
 
-                    <div class="col-12">
-                        <label asp-for="URL" class="form-label fw-semibold"></label>
-                        <input asp-for="URL" class="form-control" placeholder="https://..." />
-                        <span asp-validation-for="URL" class="text-danger small"></span>
-                    </div>
+                  
 
                     <div class="col-md-6">
                         <label asp-for="MediaType" class="form-label fw-semibold"></label>
@@ -41,6 +37,16 @@
                     </div>
 
                     <div class="col-md-6">
+                        <label asp-for="Frequency" class="form-label fw-semibold"></label>
+                        <select asp-for="Frequency" class="form-select">
+                            <option value="">-- Select Frequency --</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
                         <label asp-for="MediaTier" class="form-label fw-semibold"></label>
                         <select asp-for="MediaTier" class="form-select">
                             <option value="">-- Select Tier --</option>
@@ -49,14 +55,30 @@
                             <option value="C">C</option>
                         </select>
                     </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="CmPrice" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="CmPrice" class="form-control" type="number" step="0.01" min="0" />
+                        </div>
+                        <span asp-validation-for="CmPrice" class="text-danger small"></span>
+                    </div>
 
                     <div class="col-md-6">
-                        <label asp-for="Frequency" class="form-label fw-semibold"></label>
-                        <select asp-for="Frequency" class="form-select">
-                            <option value="">-- Select --</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
+                        <label asp-for="Circulation" class="form-label fw-semibold"></label>
+                        <input asp-for="Circulation" class="form-control" type="number" min="0" />
+                        <span asp-validation-for="Circulation" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Distribution" class="form-label fw-semibold"></label>
+                        <select asp-for="Distribution" class="form-select">
+                            <option value="">-- Select Distribution --</option>
+                            <option value="National">National</option>
+                            <option value="Independent">Independent</option>
+                            <option value="Party">Party</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
 
@@ -71,30 +93,7 @@
                         </select>
                     </div>
 
-                    <div class="col-md-6">
-                        <label asp-for="Reach" class="form-label fw-semibold"></label>
-                        <input asp-for="Reach" class="form-control" placeholder="e.g. National, Regional" />
-                    </div>
-
-                    <div class="col-md-6">
-                        <label asp-for="Distribution" class="form-label fw-semibold"></label>
-                        <input asp-for="Distribution" class="form-control" placeholder="e.g. Print, Digital" />
-                    </div>
-
-                    <div class="col-md-6">
-                        <label asp-for="Circulation" class="form-label fw-semibold"></label>
-                        <input asp-for="Circulation" class="form-control" type="number" min="0" />
-                        <span asp-validation-for="Circulation" class="text-danger small"></span>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label asp-for="CmPrice" class="form-label fw-semibold"></label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input asp-for="CmPrice" class="form-control" type="number" step="0.01" min="0" />
-                        </div>
-                        <span asp-validation-for="CmPrice" class="text-danger small"></span>
-                    </div>
+                 
 
                 </div>
 

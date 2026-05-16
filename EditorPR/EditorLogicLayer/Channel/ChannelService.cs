@@ -8,8 +8,18 @@ namespace EditorLogicLayer.Channel
     public class ChannelService : IChannelService
     {
         private readonly IChannelRepository _repo;
+        private readonly IClientRepository _clientRepo;
+        private readonly IChannelCustomerCategoryRepository _categoryRepo;
 
-        public ChannelService(IChannelRepository repo) => _repo = repo;
+        public ChannelService(
+            IChannelRepository repo,
+            IClientRepository clientRepo,
+            IChannelCustomerCategoryRepository categoryRepo)
+        {
+            _repo = repo;
+            _clientRepo = clientRepo;
+            _categoryRepo = categoryRepo;
+        }
 
         // ── CRUD ───────────────────────────────────────────────────────────────
 
@@ -28,13 +38,16 @@ namespace EditorLogicLayer.Channel
         public async Task<(bool Success, string Message)> CreateAsync(ChannelDTO model)
         {
             var entity = MapToEntity(model);
-
-            // ✅ BaseEntity — correct field names: IsActive, CreatedAt, Deleted
             entity.IsActive = true;
             entity.CreatedAt = DateTime.UtcNow;
             entity.Deleted = 0;
 
             await _repo.AddAsync(entity);
+
+            // Fan-out: create one ChannelCustomerCategory row per active client,
+            // inheriting this channel's MediaTier as the default (editable later).
+            await FanOutToClientsAsync(entity.Id, entity.MediaTier);
+
             return (true, "Channel created successfully.");
         }
 
@@ -207,7 +220,24 @@ namespace EditorLogicLayer.Channel
         }
 
         // ── Mappers ────────────────────────────────────────────────────────────
+        /// <summary>
+        /// For a newly persisted channel, creates one <see cref="ChannelCustomerCategory"/>
+        /// row for every active client, defaulting MediaTier from the channel itself.
+        /// </summary>
+        private async Task FanOutToClientsAsync(int channelId, string? mediaTier)
+        {
+            var clients = await _clientRepo.GetActiveClientsAsync();
+            if (!clients.Any()) return;
 
+            var categories = clients.Select(c => new ChannelCustomerCategory
+            {
+                CustomerId = c.Id,
+                ChannelId = channelId,
+                MediaTier = mediaTier   // default from channel — editable per-client later
+            }).ToList();
+
+            await _categoryRepo.AddRangeAsync(categories);
+        }
         private static ChannelDTO MapToDTO(EditorEntitiesLayer.Entities.Channel c) => new()
         {
             Id = c.Id,
