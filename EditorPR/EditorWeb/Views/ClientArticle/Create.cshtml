@@ -1,0 +1,238 @@
+@model EditorViewModelLayer.MediaViewModel.ClientArticleDTO
+@using EditorViewModelLayer.MediaViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    bool isEdit = Model.Id > 0;
+    ViewData["Title"] = isEdit ? "Edit Website Article" : "Add Website Article";
+
+    List<SelectListItem> ToSL(List<MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var webSL     = ToSL(Model.WebsiteOptions);
+    var catSL     = ToSL(Model.CategoryOptions);
+    var subSL     = ToSL(Model.SubCategoryOptions);
+    var writerSL  = ToSL(Model.WriterOptions);
+    var brandSL   = ToSL(Model.BrandingOptions);
+    var toningSL  = ToSL(Model.ToningOptions);
+    var yesNoSL   = ToSL(Model.YesNoOptions);
+    var genSL     = ToSL(Model.GenerationOptions);
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<div class="form-wrap">
+
+    <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+       style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
+        ← Back to Articles
+    </a>
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#cffafe;">@(isEdit ? "✏️" : "🌐")</div>
+        <div>
+            <h1>@ViewData["Title"]</h1>
+            <p>@Model.ClientName</p>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="val-summary">
+            <strong>Please fix the errors below:</strong>
+            <ul>@foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) { <li>@e.ErrorMessage</li> }</ul>
+        </div>
+    }
+
+    <form method="post" action="@(isEdit ? Url.Action("Edit", new { id=Model.Id }) : Url.Action("Create"))">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ClientId" />
+        <input type="hidden" asp-for="ArticleId" />
+
+        @* ── CARD 1: Source ── *@
+        <div class="form-card">
+            <div class="form-card-title">📂 Source & Classification</div>
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="WebsiteId">Website <span style="color:var(--red)">*</span></label>
+                    <select asp-for="WebsiteId" asp-items="webSL" onchange="autoFillWebsite(this.value)">
+                        <option value="0">— Select —</option>
+                    </select>
+                    <span asp-validation-for="WebsiteId" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="CategoryId">Category</label>
+                    <select asp-for="CategoryId" asp-items="catSL" id="catSel" onchange="loadSubs(this.value)">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="SubCategoryId">Sub Category</label>
+                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="WriterId">Writer</label>
+                    <select asp-for="WriterId" asp-items="writerSL">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
+                    <input asp-for="Date" type="date" />
+                    <span asp-validation-for="Date" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="ArticleURL">Article URL</label>
+                    <input asp-for="ArticleURL" type="url" placeholder="https://…" />
+                </div>
+            </div>
+        </div>
+
+        @* ── CARD 2: Auto-filled from Website ── *@
+        <div class="form-card">
+            <div class="form-card-title">
+                🔄 Website Data
+                <span class="badge-autofill">Auto-filled on Website change</span>
+            </div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="MediaType">Media Type</label>
+                    <input asp-for="MediaType" class="autofill" id="afMediaType" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="MediaTier">Media Tier</label>
+                    <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Frequency">Frequency</label>
+                    <input asp-for="Frequency" class="autofill" id="afFrequency" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Language">Language</label>
+                    <input asp-for="Language" class="autofill" id="afLanguage" readonly />
+                </div>
+            </div>
+            <div class="fg-4" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Impression">Impression</label>
+                    <input asp-for="Impression" type="number" id="afImpression"
+                           oninput="recalcReach()" class="autofill" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Reach">Reach (Impression × 4)</label>
+                    <input asp-for="Reach" class="autofill" id="afReach" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="ADValue">AD Value (Unit Price)</label>
+                    <input asp-for="ADValue" type="number" step="0.01" id="afAD"
+                           oninput="recalcPR()" class="autofill" />
+                </div>
+                <div class="fg">
+                    <label asp-for="PRValue">PR Value (AD × 3.5)</label>
+                    <input asp-for="PRValue" class="autofill" id="afPR" readonly />
+                </div>
+            </div>
+        </div>
+
+        @* ── CARD 3: Content ── *@
+        <div class="form-card">
+            <div class="form-card-title">📝 Article Content</div>
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
+                <input asp-for="Title" placeholder="Enter article headline…" />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Content">Content</label>
+                <textarea asp-for="Content" placeholder="Article body…"></textarea>
+            </div>
+            <div class="fg">
+                <label>Images</label>
+                <input type="file" name="imageFiles" multiple accept="image/*"
+                       style="border:1.5px dashed var(--rule);padding:.45rem;" />
+                <input type="hidden" asp-for="Images" />
+            </div>
+        </div>
+
+        @* ── CARD 4: Branding & Analysis ── *@
+        <div class="form-card">
+            <div class="form-card-title">🎯 Branding & Analysis</div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="ArticleBranding">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="HeadlineBranding">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="PictureinArticle">Picture in Article</label>
+                    <select asp-for="PictureinArticle" asp-items="yesNoSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Generation">Generation</label>
+                    <select asp-for="Generation" asp-items="genSL"></select>
+                </div>
+            </div>
+            <div class="fg-2" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Toning">Toning</label>
+                    <select asp-for="Toning" asp-items="toningSL">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+                <div></div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
+            <button type="submit" class="btn-save">@(isEdit ? "💾 Save Changes" : "✅ Create Article")</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    const clientId = @Model.ClientId;
+
+    async function autoFillWebsite(webId) {
+        if (!webId || webId == '0') return;
+        const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
+        document.getElementById('afMediaType').value  = d.mediaType  ?? '';
+        document.getElementById('afMediaTier').value  = d.mediaTier  ?? '';
+        document.getElementById('afFrequency').value  = d.frequency  ?? '';
+        document.getElementById('afLanguage').value   = d.language   ?? '';
+        document.getElementById('afImpression').value = d.impression ?? '';
+        document.getElementById('afReach').value      = d.reach      ?? '';
+        document.getElementById('afAD').value         = d.adValue    ?? '';
+        document.getElementById('afPR').value         = d.prValue    ?? '';
+    }
+
+    function recalcReach() {
+        const imp = parseInt(document.getElementById('afImpression').value) || 0;
+        document.getElementById('afReach').value = imp * 4;
+        document.querySelector('[name="Reach"]').value = imp * 4;
+    }
+
+    function recalcPR() {
+        const ad = parseFloat(document.getElementById('afAD').value) || 0;
+        document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
+        document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
+    }
+
+    async function loadSubs(parentId) {
+        const sel = document.getElementById('subSel');
+        sel.innerHTML = '<option value="0">Loading…</option>';
+        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
+        const data = await (await fetch(`/ClientArticle/GetSubCategories?parentId=${parentId}`)).json();
+        sel.innerHTML = '<option value="0">— None —</option>';
+        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+    }
+</script>
+}

@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace EditorViewModelLayer.NewsViewModel
 {
+    public class SelectOption
+    {
+        public string Value { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+        public bool Selected { get; set; } = false;
+    }
+
     // ── Static option lists ────────────────────────────────────────────────────
     public static class NewsOptions
     {
@@ -13,15 +20,15 @@ namespace EditorViewModelLayer.NewsViewModel
         public static readonly string[] ToningOpts = { "None", "Positive", "Neutral", "Negative" };
         public static readonly string[] TranslationOpts = { "None", "Summary", "Full" };
 
-        // Pre-built SelectListItem collections for static options
-        public static List<SelectListItem> BrandingSelectList() =>
-            BrandingOpts.Select(o => new SelectListItem(o, o)).ToList();
+        // Pre-built SelectOption lists for static string arrays
+        public static List<SelectOption> BrandingList() =>
+            BrandingOpts.Select(o => new SelectOption { Value = o, Text = o }).ToList();
 
-        public static List<SelectListItem> ToningSelectList() =>
-            ToningOpts.Select(o => new SelectListItem(o, o)).ToList();
+        public static List<SelectOption> ToningList() =>
+            ToningOpts.Select(o => new SelectOption { Value = o, Text = o }).ToList();
 
-        public static List<SelectListItem> TranslationSelectList() =>
-            TranslationOpts.Select(o => new SelectListItem(o, o)).ToList();
+        public static List<SelectOption> TranslationList() =>
+            TranslationOpts.Select(o => new SelectOption { Value = o, Text = o }).ToList();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -31,6 +38,8 @@ namespace EditorViewModelLayer.NewsViewModel
     {
         public int Id { get; set; }
         public int NewsId { get; set; }
+
+        [Required]
         public int ClientId { get; set; }
 
         [Display(Name = "Client")]
@@ -44,7 +53,7 @@ namespace EditorViewModelLayer.NewsViewModel
 
         [Required]
         [Display(Name = "Source Type")]
-        public string SourceType { get; set; } = "Publication";
+        public string SourceType { get; set; } = "Publication"; // Publication | Article | Video
 
         [Display(Name = "Source")]
         public int publicationId { get; set; }
@@ -93,11 +102,7 @@ namespace EditorViewModelLayer.NewsViewModel
         [Range(0, double.MaxValue)]
         public decimal ADValue { get; set; }
 
-        [Display(Name = "PR Option")]
-        public string? PROption { get; set; }
-
-        [Display(Name = "AD Option")]
-        public string? ADOption { get; set; }
+        
 
         [Display(Name = "Article Branding")]
         public string ArticleBranding { get; set; } = "N/A";
@@ -120,18 +125,20 @@ namespace EditorViewModelLayer.NewsViewModel
         [Display(Name = "Published")]
         public bool Publish { get; set; } = false;
 
-        // ── SelectListItem dropdowns (populated by service, never posted) ──────
-        public List<SelectListItem> SourceSelectList { get; set; } = new();
-        public List<SelectListItem> CategorySelectList { get; set; } = new();
-        public List<SelectListItem> SubCategorySelectList { get; set; } = new();
-        public List<SelectListItem> WriterSelectList { get; set; } = new();
-        public List<SelectListItem> ExistingNewsSelectList { get; set; } = new();
-        public List<SelectListItem> BrandingSelectList { get; set; } = new();
-        public List<SelectListItem> ToningSelectList { get; set; } = new();
-        public List<SelectListItem> TranslationSelectList { get; set; } = new();
+        // ── Dropdown data (populated by controller, never posted) ─────────────
+        public List<SelectOption> SourceOptions { get; set; } = new();
+        public List<SelectOption> CategoryOptions { get; set; } = new();
+        public List<SelectOption> SubCategoryOptions { get; set; } = new();
+        public List<SelectOption> WriterOptions { get; set; } = new();
+        public List<SelectOption> ExistingNewsOptions { get; set; } = new();
+        public List<SelectOption> BrandingOptions { get; set; } = new();
+        public List<SelectOption> ToningOptions { get; set; } = new();
+        public List<SelectOption> TranslationOptions { get; set; } = new();
     }
 
-    // ── Dashboard list wrapper ─────────────────────────────────────────────────
+    // ──────────────────────────────────────────────────────────────────────────
+    // ClientNewsListDTO  — dashboard / index wrapper
+    // ──────────────────────────────────────────────────────────────────────────
     public class ClientNewsListDTO
     {
         public int ClientId { get; set; }
@@ -140,11 +147,11 @@ namespace EditorViewModelLayer.NewsViewModel
 
         public IEnumerable<ClientNewsDTO> Items { get; set; } = new List<ClientNewsDTO>();
 
-        // Filter-panel SelectListItem lists (populated in controller Index action)
-        public List<SelectListItem> CategorySelectList { get; set; } = new();
-        public List<SelectListItem> SubCategorySelectList { get; set; } = new();
-        public List<SelectListItem> WriterSelectList { get; set; } = new();
-        public List<SelectListItem> PublicationSelectList { get; set; } = new();
+        // Filter-panel dropdowns (populated by controller Index action)
+        public List<SelectOption> CategoryOptions { get; set; } = new();
+        public List<SelectOption> SubCategoryOptions { get; set; } = new();
+        public List<SelectOption> WriterOptions { get; set; } = new();
+        public List<SelectOption> PublicationOptions { get; set; } = new();
 
         // Live counters
         public int TotalNews => Items.Count();
@@ -156,7 +163,7 @@ namespace EditorViewModelLayer.NewsViewModel
         public decimal TotalAD => Items.Sum(i => i.ADValue);
     }
 
-    // ── Lightweight DTOs used only inside service layer ────────────────────────
+    // ── Lightweight DTOs used only inside the service layer ───────────────────
     public class SourceItemDTO
     {
         public int Id { get; set; }

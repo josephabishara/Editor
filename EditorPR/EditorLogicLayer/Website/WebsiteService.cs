@@ -65,7 +65,7 @@ namespace EditorLogicLayer.Website
             existing.URL = model.URL;
             existing.MediaTier = model.MediaTier;
             existing.Frequency = model.Frequency;
-            existing.Reach = model.Reach;
+            existing.Impression = model.Impression;
             existing.Distribution = model.Distribution;
             existing.Language = model.Language;
             existing.UnitPrice = model.UnitPrice;
@@ -117,7 +117,7 @@ namespace EditorLogicLayer.Website
                 ws.Cell(row, 3).Value = w.URL;
                 ws.Cell(row, 4).Value = w.MediaTier ?? "";
                 ws.Cell(row, 5).Value = w.Frequency ?? "";
-                ws.Cell(row, 6).Value = w.Reach ?? "";
+                ws.Cell(row, 6).Value = w.Impression ?? "";
                 ws.Cell(row, 7).Value = w.Distribution ?? "";
                 ws.Cell(row, 8).Value = w.Language ?? "";
                 ws.Cell(row, 9).Value = w.UnitPrice;
@@ -206,7 +206,7 @@ namespace EditorLogicLayer.Website
                         URL = url,
                         MediaTier = row.Cell(4).GetString().Trim(),
                         Frequency = row.Cell(5).GetString().Trim(),
-                        Reach = row.Cell(6).GetString().Trim(),
+                        Impression = row.Cell(6).GetString().Trim(),
                         Distribution = row.Cell(7).GetString().Trim(),
                         Language = row.Cell(8).GetString().Trim(),
                         UnitPrice = unitPrice,
@@ -260,7 +260,7 @@ namespace EditorLogicLayer.Website
             URL = w.URL,
             MediaTier = w.MediaTier,
             Frequency = w.Frequency,
-            Reach = w.Reach,
+            Impression = w.Impression,
             Distribution = w.Distribution,
             Language = w.Language,
             UnitPrice = w.UnitPrice
@@ -273,7 +273,7 @@ namespace EditorLogicLayer.Website
             URL = vm.URL,
             MediaTier = vm.MediaTier,
             Frequency = vm.Frequency,
-            Reach = vm.Reach,
+            Impression = vm.Impression,
             Distribution = vm.Distribution,
             Language = vm.Language,
             UnitPrice = vm.UnitPrice

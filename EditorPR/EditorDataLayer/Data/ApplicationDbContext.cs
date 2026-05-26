@@ -23,6 +23,16 @@ namespace EditorDataLayer.Data
         public DbSet<ClientCategories> ClientCategories { get; set; }
         public DbSet<News> News { get; set; }
         public DbSet<ClientNews> ClientNews { get; set; }
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ApplicationDbContext — add DbSets
+        // ═══════════════════════════════════════════════════════════════════════════
+        public DbSet<NewsPaper> NewsPapers { get; set; }
+        public DbSet<ClientNewsPaper> ClientNewsPapers { get; set; }
+        public DbSet<GeneralArticle> GeneralArticles { get; set; }
+        public DbSet<ClientArticle> ClientArticles { get; set; }
+        public DbSet<GeneralVideos> GeneralVideos { get; set; }
+        public DbSet<ClientVideo> ClientVideos { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -168,7 +178,81 @@ namespace EditorDataLayer.Data
                       .HasForeignKey(e => e.WriterId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+            builder.Entity<NewsPaper>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.PRValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ADValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ArticleBranding).HasMaxLength(20);
+                entity.Property(e => e.HeadlineBranding).HasMaxLength(20);
+            });
 
+            builder.Entity<ClientNewsPaper>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.PRValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ADValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Height).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Width).HasColumnType("decimal(18,2)");
+
+                // NewsPaperId is a reference (not FK) — no constraint
+                entity.HasOne(e => e.Client)
+                      .WithMany()
+                      .HasForeignKey(e => e.ClientId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Writer)
+                      .WithMany()
+                      .HasForeignKey(e => e.WriterId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<GeneralArticle>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).HasMaxLength(500);
+            });
+
+            builder.Entity<ClientArticle>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).HasMaxLength(500);
+                entity.Property(e => e.ADValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PRValue).HasColumnType("decimal(18,2)");
+
+                // ArticleId is a reference (not FK) — no constraint
+                entity.HasOne<Client>()
+                      .WithMany()
+                      .HasForeignKey(e => e.ClientId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<GeneralVideos>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Duration).HasColumnType("decimal(18,2)");
+            });
+
+            builder.Entity<ClientVideo>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Duration).HasColumnType("decimal(18,2)");
+
+                // VideoId is a reference (not FK) — no constraint
+                entity.HasOne<Client>()
+                      .WithMany()
+                      .HasForeignKey(e => e.ClientId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Channel>()
+                      .WithMany()
+                      .HasForeignKey(e => e.ChannelId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }

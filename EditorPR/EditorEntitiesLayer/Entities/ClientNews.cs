@@ -34,10 +34,7 @@ namespace EditorEntitiesLayer.Entities
         public string Title { get; set; }
         public decimal PRValue { get; set; }
         public decimal ADValue { get; set; }
-        public string ADOption { get; set; }
-
-        [MaxLength(50)]
-        public string PROption { get; set; }
+        
         [MaxLength(20)]
         public string ArticleBranding { get; set; } // Branded, Unbranded, N/A
         [MaxLength(20)]

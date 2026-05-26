@@ -71,51 +71,43 @@ namespace EditorLogicLayer.News
         // ── Create ─────────────────────────────────────────────────────────────
 
         public async Task<(bool Success, string Message)> CreateAsync(ClientNewsDTO model)
-        {
-            if (model.NewsMode == "Existing")
-                return await CreateFromExistingAsync(model);
-            return await CreateNewAsync(model);
-        }
+            => model.NewsMode == "Existing"
+                ? await CreateFromExistingAsync(model)
+                : await CreateNewAsync(model);
 
         private async Task<(bool Success, string Message)> CreateNewAsync(ClientNewsDTO model)
         {
             var client = await _clientRepo.GetByIdAsync(model.ClientId);
             if (client == null) return (false, "Client not found.");
 
-            // Step 1: insert ClientNews (NewsId = 0 temporarily)
-            var clientNews = MapToEntity(model);
-            clientNews.NewsId = 0;
-            clientNews.IsActive = true;
-            clientNews.Deleted = 0;
-            clientNews.CreatedAt = DateTime.UtcNow;
-            await _clientNewsRepo.AddAsync(clientNews);
-
-            // Step 2: create News master as copy
+            // Step 1: insert News master FIRST — it has no FK dependency
             var news = new EditorEntitiesLayer.Entities.News
             {
                 SourceType = model.SourceType,
-                Date = clientNews.Date,
-                Title = clientNews.Title,
-                PRValue = clientNews.PRValue,
-                ADValue = clientNews.ADValue,
-                PROption = clientNews.PROption,
-                ADOption = clientNews.ADOption,
-                ArticleBranding = clientNews.ArticleBranding,
-                HeadlineBranding = clientNews.HeadlineBranding,
-                pictureInArticle = clientNews.pictureInArticle,
-                Generation = clientNews.Generation,
-                Toning = clientNews.Toning,
-                Translation = clientNews.Translation,
+                Date = model.Date,
+                Title = model.Title,
+                PRValue = model.PRValue,
+                ADValue = model.ADValue,
+                
+                ArticleBranding = model.ArticleBranding,
+                HeadlineBranding = model.HeadlineBranding,
+                pictureInArticle = model.pictureInArticle,
+                Generation = model.Generation,
+                Toning = model.Toning,
+                Translation = model.Translation,
                 IsActive = true,
                 Deleted = 0,
                 CreatedAt = DateTime.UtcNow
             };
-            await _newsRepo.AddAsync(news);
+            await _newsRepo.AddAsync(news); // news.Id is now set by EF
 
-            // Step 3: link
+            // Step 2: insert ClientNews with the real NewsId — FK satisfied immediately
+            var clientNews = MapToEntity(model);
             clientNews.NewsId = news.Id;
-            clientNews.UpdatedAt = DateTime.UtcNow;
-            await _clientNewsRepo.UpdateAsync(clientNews);
+            clientNews.IsActive = true;
+            clientNews.Deleted = 0;
+            clientNews.CreatedAt = DateTime.UtcNow;
+            await _clientNewsRepo.AddAsync(clientNews);
 
             return (true, "News created successfully.");
         }
@@ -125,16 +117,16 @@ namespace EditorLogicLayer.News
             if (!model.ExistingNewsId.HasValue || model.ExistingNewsId == 0)
                 return (false, "Please select an existing news record.");
 
-            var existingNews = await _newsRepo.GetByIdAsync(model.ExistingNewsId.Value);
-            if (existingNews == null) return (false, "Selected news record not found.");
+            var existing = await _newsRepo.GetByIdAsync(model.ExistingNewsId.Value);
+            if (existing == null) return (false, "Selected news record not found.");
 
-            var already = await _clientNewsRepo.GetByNewsIdAsync(existingNews.Id);
+            var already = await _clientNewsRepo.GetByNewsIdAsync(existing.Id);
             if (already.Any(cn => cn.ClientId == model.ClientId))
                 return (false, "This news is already assigned to this client.");
 
             var clientNews = new ClientNews
             {
-                NewsId = existingNews.Id,
+                NewsId = existing.Id,
                 ClientId = model.ClientId,
                 publicationId = model.publicationId,
                 CategoryId = model.CategoryId,
@@ -143,25 +135,24 @@ namespace EditorLogicLayer.News
                 Pages = model.Pages,
                 Height = model.Height,
                 Width = model.Width,
-                Date = existingNews.Date,
-                Title = existingNews.Title,
-                PRValue = existingNews.PRValue,
-                ADValue = existingNews.ADValue,
-                PROption = existingNews.PROption,
-                ADOption = existingNews.ADOption,
-                ArticleBranding = existingNews.ArticleBranding,
-                HeadlineBranding = existingNews.HeadlineBranding,
-                pictureInArticle = existingNews.pictureInArticle,
-                Generation = existingNews.Generation,
-                Toning = existingNews.Toning,
-                Translation = existingNews.Translation,
+                Date = existing.Date,
+                Title = existing.Title,
+                PRValue = existing.PRValue,
+                ADValue = existing.ADValue,
+               
+                ArticleBranding = existing.ArticleBranding,
+                HeadlineBranding = existing.HeadlineBranding,
+                pictureInArticle = existing.pictureInArticle,
+                Generation = existing.Generation,
+                Toning = existing.Toning,
+                Translation = existing.Translation,
                 Publish = false,
                 IsActive = true,
                 Deleted = 0,
                 CreatedAt = DateTime.UtcNow
             };
             await _clientNewsRepo.AddAsync(clientNews);
-            return (true, $"News '{existingNews.Title}' assigned to client successfully.");
+            return (true, $"News '{existing.Title}' assigned to client successfully.");
         }
 
         // ── Update ─────────────────────────────────────────────────────────────
@@ -182,8 +173,7 @@ namespace EditorLogicLayer.News
             cn.Title = model.Title;
             cn.PRValue = model.PRValue;
             cn.ADValue = model.ADValue;
-            cn.PROption = model.PROption;
-            cn.ADOption = model.ADOption;
+          
             cn.ArticleBranding = model.ArticleBranding;
             cn.HeadlineBranding = model.HeadlineBranding;
             cn.pictureInArticle = model.pictureInArticle;
@@ -208,6 +198,7 @@ namespace EditorLogicLayer.News
             cn.DeletedAt = DateTime.UtcNow;
             await _clientNewsRepo.UpdateAsync(cn);
 
+            // Soft-delete News master only if no other ClientNews rows reference it
             var others = await _clientNewsRepo.GetByNewsIdAsync(cn.NewsId);
             if (!others.Any(o => o.Id != cn.Id))
             {
@@ -240,39 +231,48 @@ namespace EditorLogicLayer.News
             return (true, "News unpublished.");
         }
 
-        // ── SelectListItem builders ────────────────────────────────────────────
+        // ── SelectOption builders (no MVC reference) ───────────────────────────
 
-        public async Task<List<SelectListItem>> GetSourceSelectListAsync(
+        public async Task<List<SelectOption>> GetSourceOptionsAsync(
             string sourceType, int selectedId = 0)
         {
             return sourceType switch
             {
                 "Publication" => (await _publicationRepo.GetActivePublicationsAsync())
-                    .Select(p => new SelectListItem(
-                        $"{p.PublicationName}{(p.MediaTier != null ? $" ({p.MediaTier})" : "")}",
-                        p.Id.ToString(),
-                        p.Id == selectedId))
-                    .ToList(),
+                    .Select(p => new SelectOption
+                    {
+                        Value = p.Id.ToString(),
+                        Text = p.MediaTier != null
+                                   ? $"{p.PublicationName} ({p.MediaTier})"
+                                   : p.PublicationName,
+                        Selected = p.Id == selectedId
+                    }).ToList(),
 
                 "Article" => (await _websiteRepo.GetActiveWebsitesAsync())
-                    .Select(w => new SelectListItem(
-                        $"{w.WebsiteName}{(w.MediaTier != null ? $" ({w.MediaTier})" : "")}",
-                        w.Id.ToString(),
-                        w.Id == selectedId))
-                    .ToList(),
+                    .Select(w => new SelectOption
+                    {
+                        Value = w.Id.ToString(),
+                        Text = w.MediaTier != null
+                                   ? $"{w.WebsiteName} ({w.MediaTier})"
+                                   : w.WebsiteName,
+                        Selected = w.Id == selectedId
+                    }).ToList(),
 
                 "Video" => (await _channelRepo.GetActiveChannelsAsync())
-                    .Select(c => new SelectListItem(
-                        $"{c.ChannelName}{(c.MediaTier != null ? $" ({c.MediaTier})" : "")}",
-                        c.Id.ToString(),
-                        c.Id == selectedId))
-                    .ToList(),
+                    .Select(c => new SelectOption
+                    {
+                        Value = c.Id.ToString(),
+                        Text = c.MediaTier != null
+                                   ? $"{c.ChannelName} ({c.MediaTier})"
+                                   : c.ChannelName,
+                        Selected = c.Id == selectedId
+                    }).ToList(),
 
-                _ => new List<SelectListItem>()
+                _ => new List<SelectOption>()
             };
         }
 
-        public async Task<List<SelectListItem>> GetCategorySelectListAsync(
+        public async Task<List<SelectOption>> GetCategoryOptionsAsync(
             int clientId, int selectedId = 0)
         {
             var cats = await _context.Set<ClientCategories>()
@@ -282,15 +282,18 @@ namespace EditorLogicLayer.News
                 .OrderBy(c => c.Order).ThenBy(c => c.CategoryName)
                 .ToListAsync();
 
-            return cats.Select(c => new SelectListItem(
-                c.CategoryName, c.Id.ToString(), c.Id == selectedId))
-                .ToList();
+            return cats.Select(c => new SelectOption
+            {
+                Value = c.Id.ToString(),
+                Text = c.CategoryName,
+                Selected = c.Id == selectedId
+            }).ToList();
         }
 
-        public async Task<List<SelectListItem>> GetSubCategorySelectListAsync(
+        public async Task<List<SelectOption>> GetSubCategoryOptionsAsync(
             int parentId, int selectedId = 0)
         {
-            if (parentId == 0) return new List<SelectListItem>();
+            if (parentId == 0) return new List<SelectOption>();
 
             var cats = await _context.Set<ClientCategories>()
                 .Where(c => c.ParentCategory == parentId
@@ -298,31 +301,38 @@ namespace EditorLogicLayer.News
                 .OrderBy(c => c.Order).ThenBy(c => c.CategoryName)
                 .ToListAsync();
 
-            return cats.Select(c => new SelectListItem(
-                c.CategoryName, c.Id.ToString(), c.Id == selectedId))
-                .ToList();
+            return cats.Select(c => new SelectOption
+            {
+                Value = c.Id.ToString(),
+                Text = c.CategoryName,
+                Selected = c.Id == selectedId
+            }).ToList();
         }
 
-        public async Task<List<SelectListItem>> GetWriterSelectListAsync(int selectedId = 0)
+        public async Task<List<SelectOption>> GetWriterOptionsAsync(int selectedId = 0)
         {
             var writers = await _writerRepo.GetActiveWritersAsync();
-            return writers.Select(w => new SelectListItem(
-                w.WriterName, w.Id.ToString(), w.Id == selectedId))
-                .ToList();
+            return writers.Select(w => new SelectOption
+            {
+                Value = w.Id.ToString(),
+                Text = w.WriterName,
+                Selected = w.Id == selectedId
+            }).ToList();
         }
 
-        public async Task<List<SelectListItem>> GetExistingNewsSelectListAsync(
+        public async Task<List<SelectOption>> GetExistingNewsOptionsAsync(
             string sourceType, int selectedId = 0)
         {
             var news = string.IsNullOrWhiteSpace(sourceType)
                 ? await _newsRepo.GetActiveNewsAsync()
                 : await _newsRepo.GetBySourceTypeAsync(sourceType);
 
-            return news.Select(n => new SelectListItem(
-                $"[{n.SourceType}] {n.Date:dd MMM yyyy} — {n.Title}",
-                n.Id.ToString(),
-                n.Id == selectedId))
-                .ToList();
+            return news.Select(n => new SelectOption
+            {
+                Value = n.Id.ToString(),
+                Text = $"[{n.SourceType}] {n.Date:dd MMM yyyy} — {n.Title}",
+                Selected = n.Id == selectedId
+            }).ToList();
         }
 
         public async Task<ClientNewsDTO?> PrefillFromExistingNewsAsync(int newsId, int clientId)
@@ -340,8 +350,7 @@ namespace EditorLogicLayer.News
                 Title = news.Title,
                 PRValue = news.PRValue,
                 ADValue = news.ADValue,
-                PROption = news.PROption,
-                ADOption = news.ADOption,
+              
                 ArticleBranding = news.ArticleBranding,
                 HeadlineBranding = news.HeadlineBranding,
                 pictureInArticle = news.pictureInArticle,
@@ -351,7 +360,7 @@ namespace EditorLogicLayer.News
             };
         }
 
-        // ── Mapper ─────────────────────────────────────────────────────────────
+        // ── Mappers ────────────────────────────────────────────────────────────
 
         private static ClientNewsDTO MapToDTO(ClientNews cn) => new()
         {
@@ -372,8 +381,7 @@ namespace EditorLogicLayer.News
             Title = cn.Title,
             PRValue = cn.PRValue,
             ADValue = cn.ADValue,
-            PROption = cn.PROption,
-            ADOption = cn.ADOption,
+            
             ArticleBranding = cn.ArticleBranding,
             HeadlineBranding = cn.HeadlineBranding,
             pictureInArticle = cn.pictureInArticle,
@@ -397,8 +405,7 @@ namespace EditorLogicLayer.News
             Title = dto.Title,
             PRValue = dto.PRValue,
             ADValue = dto.ADValue,
-            PROption = dto.PROption,
-            ADOption = dto.ADOption,
+           
             ArticleBranding = dto.ArticleBranding,
             HeadlineBranding = dto.HeadlineBranding,
             pictureInArticle = dto.pictureInArticle,

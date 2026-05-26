@@ -1,0 +1,245 @@
+@model EditorViewModelLayer.MediaViewModel.ClientNewsPaperDTO
+@using EditorViewModelLayer.MediaViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    bool isEdit = Model.Id > 0;
+    ViewData["Title"] = isEdit ? "Edit Newspaper Article" : "Add Newspaper Article";
+
+    List<SelectListItem> ToSL(List<MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var pubSL     = ToSL(Model.PublicationOptions);
+    var catSL     = ToSL(Model.CategoryOptions);
+    var subSL     = ToSL(Model.SubCategoryOptions);
+    var writerSL  = ToSL(Model.WriterOptions);
+    var brandSL   = ToSL(Model.BrandingOptions);
+    var toningSL  = ToSL(Model.ToningOptions);
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<div class="form-wrap">
+
+    <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+       style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
+        ← Back to Articles
+    </a>
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#dbeafe;">@(isEdit ? "✏️" : "📰")</div>
+        <div>
+            <h1>@ViewData["Title"]</h1>
+            <p>@Model.ClientName</p>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="val-summary">
+            <strong>Please fix the errors below:</strong>
+            <ul>@foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) { <li>@e.ErrorMessage</li> }</ul>
+        </div>
+    }
+
+    <form method="post" action="@(isEdit ? Url.Action("Edit", new { id=Model.Id }) : Url.Action("Create"))">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ClientId" />
+        <input type="hidden" asp-for="NewsPaperId" />
+
+        @* ── CARD 1: Source ── *@
+        <div class="form-card">
+            <div class="form-card-title">📂 Source & Classification</div>
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="PublicationId">Publication <span style="color:var(--red)">*</span></label>
+                    <select asp-for="PublicationId" asp-items="pubSL"
+                            onchange="autoFillPublication(this.value)">
+                        <option value="0">— Select —</option>
+                    </select>
+                    <span asp-validation-for="PublicationId" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="CategoryId">Category</label>
+                    <select asp-for="CategoryId" asp-items="catSL" id="catSel"
+                            onchange="loadSubs(this.value)">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="SubCategoryId">Sub Category</label>
+                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="WriterId">Writer</label>
+                    <select asp-for="WriterId" asp-items="writerSL">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
+                    <input asp-for="Date" type="date" />
+                    <span asp-validation-for="Date" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="Pages">Pages</label>
+                    <input asp-for="Pages" type="number" min="0" />
+                </div>
+            </div>
+            <div class="fg-2" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Height">Height (cm)</label>
+                    <input asp-for="Height" type="number" step="0.01" min="0" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Width">Width (cm)</label>
+                    <input asp-for="Width" type="number" step="0.01" min="0" />
+                </div>
+            </div>
+        </div>
+
+        @* ── CARD 2: Auto-filled from Publication ── *@
+        <div class="form-card">
+            <div class="form-card-title">
+                🔄 Publication Data
+                <span class="badge-autofill">Auto-filled on Publication change</span>
+            </div>
+            <div class="fg-5">
+                <div class="fg">
+                    <label asp-for="MediaType">Media Type</label>
+                    <input asp-for="MediaType" class="autofill" id="afMediaType" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="MediaTier">Media Tier</label>
+                    <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Frequency">Frequency</label>
+                    <input asp-for="Frequency" class="autofill" id="afFrequency" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Language">Language</label>
+                    <input asp-for="Language" class="autofill" id="afLanguage" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Circulation">Circulation</label>
+                    <input asp-for="Circulation" class="autofill" id="afCirculation" readonly />
+                </div>
+            </div>
+            <div class="fg-4" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Reach">Reach (Circulation × 4)</label>
+                    <input asp-for="Reach" class="autofill" id="afReach" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="ADValue">AD Value (CM Price)</label>
+                    <input asp-for="ADValue" type="number" step="0.01" id="afAD"
+                           oninput="recalcPR()" />
+                </div>
+                <div class="fg">
+                    <label asp-for="PRValue">PR Value (AD × 3.5)</label>
+                    <input asp-for="PRValue" class="autofill" id="afPR" readonly />
+                </div>
+                <div></div>
+            </div>
+        </div>
+
+        @* ── CARD 3: Content ── *@
+        <div class="form-card">
+            <div class="form-card-title">📝 Article Content</div>
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
+                <input asp-for="Title" placeholder="Enter article headline…" />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Content">Content</label>
+                <textarea asp-for="Content" id="contentEditor" placeholder="Article body…"></textarea>
+            </div>
+            <div class="fg">
+                <label>Images</label>
+                <input type="file" name="imageFiles" multiple accept="image/*"
+                       style="border:1.5px dashed var(--rule);padding:.45rem;" />
+                <input type="hidden" asp-for="Images" />
+                @if (!string.IsNullOrEmpty(Model.Images))
+                {
+                    <small style="color:var(--slate);">Saved: @Model.Images</small>
+                }
+            </div>
+        </div>
+
+        @* ── CARD 4: Branding & Analysis ── *@
+        <div class="form-card">
+            <div class="form-card-title">🎯 Branding & Analysis</div>
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="ArticleBranding">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="HeadlineBranding">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Toning">Toning</label>
+                    <select asp-for="Toning" asp-items="toningSL">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
+            <button type="submit" class="btn-save">
+                @(isEdit ? "💾 Save Changes" : "✅ Create Article")
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    const clientId = @Model.ClientId;
+
+    async function autoFillPublication(pubId) {
+        if (!pubId || pubId == '0') return;
+        const d = await (await fetch(`/ClientNewsPaper/GetPublicationAutoFill?publicationId=${pubId}&clientId=${clientId}`)).json();
+        document.getElementById('afMediaType').value  = d.mediaType  ?? '';
+        document.getElementById('afMediaTier').value  = d.mediaTier  ?? '';
+        document.getElementById('afFrequency').value  = d.frequency  ?? '';
+        document.getElementById('afLanguage').value   = d.language   ?? '';
+        document.getElementById('afCirculation').value = d.circulation ?? '';
+        document.getElementById('afReach').value      = d.reach      ?? '';
+        document.getElementById('afAD').value         = d.adValue    ?? '';
+        document.getElementById('afPR').value         = d.prValue    ?? '';
+
+        // Sync hidden fields
+        document.querySelector('[name="MediaType"]').value   = d.mediaType  ?? '';
+        document.querySelector('[name="MediaTier"]').value   = d.mediaTier  ?? '';
+        document.querySelector('[name="Frequency"]').value   = d.frequency  ?? '';
+        document.querySelector('[name="Language"]').value    = d.language   ?? '';
+        document.querySelector('[name="Circulation"]').value = d.circulation ?? '';
+        document.querySelector('[name="Reach"]').value       = d.reach      ?? '';
+    }
+
+    function recalcPR() {
+        const ad = parseFloat(document.getElementById('afAD').value) || 0;
+        document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
+        document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
+    }
+
+    async function loadSubs(parentId) {
+        const sel = document.getElementById('subSel');
+        sel.innerHTML = '<option value="0">Loading…</option>';
+        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
+        const data = await (await fetch(`/ClientNewsPaper/GetSubCategories?parentId=${parentId}`)).json();
+        sel.innerHTML = '<option value="0">— None —</option>';
+        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+    }
+</script>
+}

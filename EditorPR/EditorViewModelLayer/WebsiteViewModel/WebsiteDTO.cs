@@ -25,8 +25,8 @@ namespace EditorViewModelLayer.WebsiteViewModel
         [Display(Name = "Frequency")]
         public string? Frequency { get; set; }
 
-        [Display(Name = "Reach")]
-        public string? Reach { get; set; }
+        [Display(Name = "Impression")]
+        public string? Impression { get; set; }
 
         [Display(Name = "Distribution")]
         public string? Distribution { get; set; }

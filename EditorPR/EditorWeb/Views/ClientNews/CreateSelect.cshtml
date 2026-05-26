@@ -112,26 +112,26 @@
 
 <div class="sel-wrap">
     <a href="@Url.Action("Index", new { clientId })" class="sel-back">
-        ← Back to News List
+        ← Back to Dashboard
     </a>
-    <h1 class="sel-title">Add News</h1>
-    <p class="sel-sub">Choose whether to create a new news record or assign an existing one to this client.</p>
-
+    <h1 class="sel-title">Add New</h1>
+@*     <p class="sel-sub">Choose whether to create a new news record or assign an existing one to this client.</p>
+ *@
     @* ── Step 1: Mode ── *@
     <div class="mode-section">
         <h2>Step 1 — Choose Mode</h2>
         <div class="mode-cards">
             <div class="mode-card mc-new" onclick="setMode('New')">
                 <div class="mc-icon">✍️</div>
-                <h3>Create New News</h3>
-                <p>Write a brand-new news record from scratch. A master News entry will be created alongside the client record.</p>
-                <span class="mc-arrow">Select source below ↓</span>
+                <h3>Create New </h3>
+               @*  <p>Write a brand-new news record from scratch. A master News entry will be created alongside the client record.</p>
+                <span class="mc-arrow">Select source below ↓</span> *@
             </div>
             <div class="mode-card mc-exist" onclick="setMode('Existing')">
                 <div class="mc-icon">🔗</div>
-                <h3>Use Existing News</h3>
-                <p>Assign a news record that already exists in the system to this client. Data will be copied and can be adjusted.</p>
-                <span class="mc-arrow">Select source below ↓</span>
+                <h3>Use Existing </h3>
+               @*  <p>Assign a news record that already exists in the system to this client. Data will be copied and can be adjusted.</p>
+                <span class="mc-arrow">Select source below ↓</span> *@
             </div>
         </div>
     </div>
@@ -142,24 +142,24 @@
         <div class="src-cards">
             <div class="src-card src-card-pub">
                 <h4>📰 Publication</h4>
-                <p>News from a print or digital publication (newspaper, magazine, journal, newsletter).</p>
-                <div class="src-card-btns">
+@*                 <p>News from a print or digital publication (newspaper, magazine, journal, newsletter).</p>
+ *@                <div class="src-card-btns">
                     <a id="btn-pub-new"   href="#" class="btn-src btn-pub-new">+ New</a>
                     <a id="btn-pub-exist" href="#" class="btn-src btn-pub-exist">🔗 Existing</a>
                 </div>
             </div>
             <div class="src-card src-card-art">
                 <h4>🌐 Article (Website)</h4>
-                <p>Online article published on a website or digital platform.</p>
-                <div class="src-card-btns">
+@*                 <p>Online article published on a website or digital platform.</p>
+ *@                <div class="src-card-btns">
                     <a id="btn-art-new"   href="#" class="btn-src btn-art-new">+ New</a>
                     <a id="btn-art-exist" href="#" class="btn-src btn-art-exist">🔗 Existing</a>
                 </div>
             </div>
             <div class="src-card src-card-vid">
                 <h4>📺 Video (Channel)</h4>
-                <p>Video coverage from a TV channel or digital video channel.</p>
-                <div class="src-card-btns">
+@*                 <p>Video coverage from a TV channel or digital video channel.</p>
+ *@                <div class="src-card-btns">
                     <a id="btn-vid-new"   href="#" class="btn-src btn-vid-new">+ New</a>
                     <a id="btn-vid-exist" href="#" class="btn-src btn-vid-exist">🔗 Existing</a>
                 </div>

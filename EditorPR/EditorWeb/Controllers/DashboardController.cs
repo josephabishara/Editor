@@ -1,4 +1,6 @@
 ﻿using EditorLogicLayer.Client;
+using EditorLogicLayer.Dashboard;
+using EditorLogicLayer.News;
 using EditorViewModelLayer.ClientViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,9 +12,18 @@ namespace EditorWeb.Controllers
     public class DashboardController : Controller
     {
         private readonly IClientService _clientService;
+        private readonly IClientNewsService _newsService;
+        private readonly IDashboardService _dashboardService;
 
-        public DashboardController(IClientService clientService)
-            => _clientService = clientService;
+        public DashboardController(
+            IClientService clientService,
+            IClientNewsService newsService,
+            IDashboardService dashboardService)
+        {
+            _clientService = clientService;
+            _newsService = newsService;
+            _dashboardService = dashboardService;
+        }
 
         // GET: /Client
         [HttpGet]
@@ -26,24 +37,19 @@ namespace EditorWeb.Controllers
         // ClientDashboard
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,Auditor")]
+        [HttpGet]
         public async Task<IActionResult> ClientDashboard(int id)
         {
-            ClientDTO client = await _clientService.GetByIdAsync(id);
-            ClientDashboardDTO clientDashboard = new ClientDashboardDTO();
-          
-            clientDashboard.Publications = 50;
-            clientDashboard.Websites = 10;
-            clientDashboard.Videos = 20;
-            clientDashboard.TotalAD = 30;
-            clientDashboard.TotalPR = 40;
-            clientDashboard.TotalCirclation = 60;
-            clientDashboard.Name = client.Name;
-            clientDashboard.Photo = client.Photo;
-            clientDashboard.Email = client.Email;
-            clientDashboard.Notes = client.Notes;
-            clientDashboard.ClientId = client.Id;
+            try
+            {
+                var dashboard = await _dashboardService.GetClientDashboardAsync(id);
+                return View(dashboard);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
 
-            return View(clientDashboard);
         }
     }
 }

@@ -184,23 +184,13 @@
                 <span class="lbl">PR Value</span>
                 <span class="val val-pr">@Model.PRValue.ToString("N2")</span>
             </div>
-            <div class="det-field">
-                <span class="lbl">PR Option</span>
-                <span class="val @(string.IsNullOrEmpty(Model.PROption) ? "val-nil" : "")">
-                    @(string.IsNullOrEmpty(Model.PROption) ? "—" : Model.PROption)
-                </span>
-            </div>
+           
             <div class="det-field"></div>
             <div class="det-field">
                 <span class="lbl">AD Value</span>
                 <span class="val val-ad">@Model.ADValue.ToString("N2")</span>
             </div>
-            <div class="det-field">
-                <span class="lbl">AD Option</span>
-                <span class="val @(string.IsNullOrEmpty(Model.ADOption) ? "val-nil" : "")">
-                    @(string.IsNullOrEmpty(Model.ADOption) ? "—" : Model.ADOption)
-                </span>
-            </div>
+          
         </div>
     </div>
 

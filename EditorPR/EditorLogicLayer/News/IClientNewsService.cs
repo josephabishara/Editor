@@ -24,12 +24,12 @@ namespace EditorLogicLayer.News
         Task<(bool Success, string Message)> PublishAsync(int clientNewsId);
         Task<(bool Success, string Message)> UnpublishAsync(int clientNewsId);
 
-        // ── SelectListItem builders (used by controller to populate DTO) ───────
-        Task<List<SelectListItem>> GetSourceSelectListAsync(string sourceType, int selectedId = 0);
-        Task<List<SelectListItem>> GetCategorySelectListAsync(int clientId, int selectedId = 0);
-        Task<List<SelectListItem>> GetSubCategorySelectListAsync(int parentId, int selectedId = 0);
-        Task<List<SelectListItem>> GetWriterSelectListAsync(int selectedId = 0);
-        Task<List<SelectListItem>> GetExistingNewsSelectListAsync(string sourceType, int selectedId = 0);
+        // ── Dropdown builders — return SelectOption (no MVC dependency) ────────
+        Task<List<SelectOption>> GetSourceOptionsAsync(string sourceType, int selectedId = 0);
+        Task<List<SelectOption>> GetCategoryOptionsAsync(int clientId, int selectedId = 0);
+        Task<List<SelectOption>> GetSubCategoryOptionsAsync(int parentId, int selectedId = 0);
+        Task<List<SelectOption>> GetWriterOptionsAsync(int selectedId = 0);
+        Task<List<SelectOption>> GetExistingNewsOptionsAsync(string sourceType, int selectedId = 0);
 
         // ── AJAX prefill ───────────────────────────────────────────────────────
         Task<ClientNewsDTO?> PrefillFromExistingNewsAsync(int newsId, int clientId);

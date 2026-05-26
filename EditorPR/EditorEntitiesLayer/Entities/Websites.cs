@@ -11,7 +11,7 @@ namespace EditorEntitiesLayer.Entities
         public string URL { get; set; } = string.Empty;
         public string? MediaTier { get; set; }
         public string? Frequency { get; set; }
-        public string? Reach { get; set; }
+        public string? Impression { get; set; }
         public string? Distribution { get; set; }
         public string? Language { get; set; }
         public decimal UnitPrice { get; set; }

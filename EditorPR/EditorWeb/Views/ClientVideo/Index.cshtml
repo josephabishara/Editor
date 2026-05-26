@@ -1,0 +1,297 @@
+@model EditorViewModelLayer.MediaViewModel.ClientVideoListDTO
+@using EditorViewModelLayer.MediaViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Videos";
+    var clientId  = Model.ClientId > 0 ? Model.ClientId : (ViewBag.ClientId is int v ? v : 0);
+
+    var fTitle   = ViewBag.FilterTitle    as string ?? "";
+    var fFrom    = ViewBag.FilterDateFrom as string ?? "";
+    var fTo      = ViewBag.FilterDateTo   as string ?? "";
+    var fCat     = (int)(ViewBag.FilterCategoryId ?? 0);
+    var fSub     = (int)(ViewBag.FilterSubId      ?? 0);
+    var fChannel = (int)(ViewBag.FilterChannelId  ?? 0);
+
+    bool isAdmin = User.IsInRole("Admin");
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
+
+    List<SelectListItem> ToSL(List<MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var chSL  = ToSL(Model.ChannelOptions);
+    var catSL = ToSL(Model.CategoryOptions);
+    var subSL = ToSL(Model.SubCategoryOptions);
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<style>
+    .cb-col { width:36px; text-align:center !important; }
+    .row-cb { width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+    .sel-toolbar { display:none; align-items:center; gap:.75rem; background:#7c3aed; color:#fff; border-radius:var(--radius); padding:.65rem 1.2rem; margin-bottom:1rem; flex-wrap:wrap; }
+    .sel-toolbar.visible { display:flex; }
+    .sel-toolbar .sel-count { font-size:.85rem; font-weight:700; flex:1; }
+    .sel-toolbar .sel-count span { background:rgba(255,255,255,.25); border-radius:20px; padding:.15rem .6rem; margin-left:.4rem; }
+    .btn-export { display:inline-flex; align-items:center; gap:.35rem; border:none; border-radius:7px; padding:.42rem 1rem; font-size:.82rem; font-weight:700; cursor:pointer; transition:filter .15s; }
+    .btn-export:hover { filter:brightness(.9); }
+    .btn-xl  { background:#16a34a; color:#fff; }
+    .btn-pdf { background:#dc2626; color:#fff; }
+    .btn-desel { background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); }
+</style>
+
+@if (TempData["Success"] != null) { <div class="alert alert-success">✓ @TempData["Success"]</div> }
+@if (TempData["Error"]   != null) { <div class="alert alert-danger">✗ @TempData["Error"]</div> }
+
+<div class="m-header">
+    <div class="m-header-icon" style="background:#ede9fe;">📺</div>
+    <div><h1>Videos</h1><p>@Model.ClientName</p></div>
+    <div class="ms-auto"><a href="@Url.Action("ClientDashboard", "Dashboard", new { id = clientId })" class="btn-dashboard">← Dashboard</a></div>
+</div>
+
+<div class="stat-row">
+    <div class="stat-pill sp-total"><span class="num">@Model.Total</span><span class="lbl">Total Videos</span></div>
+    <div class="stat-pill sp-pr"><span class="num">@Model.TotalPR.ToString("N0")</span><span class="lbl">Total PR</span></div>
+    <div class="stat-pill sp-ad"><span class="num">@Model.TotalAD.ToString("N0")</span><span class="lbl">Total AD</span></div>
+</div>
+
+<div class="filter-card">
+    <div class="filter-title">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter Videos
+    </div>
+    <form method="get" action="@Url.Action("Index")">
+        <input type="hidden" name="clientId" value="@clientId" />
+        <div class="filter-grid">
+            <div class="fg"><label>Title</label><input type="text" name="title" value="@fTitle" placeholder="Search…" /></div>
+            <div class="fg"><label>Date From</label><input type="date" name="dateFrom" value="@fFrom" /></div>
+            <div class="fg"><label>Date To</label><input type="date" name="dateTo" value="@fTo" /></div>
+            <div class="fg">
+                <label>Category</label>
+                <select name="categoryId" id="fCat" asp-items="catSL" onchange="loadSubs(this.value,'fSub','/ClientVideo/GetSubCategories')">
+                    <option value="0">All</option>
+                </select>
+            </div>
+            <div class="fg"><label>Sub Category</label><select name="subCategoryId" id="fSub" asp-items="subSL"><option value="0">All</option></select></div>
+            <div class="fg"><label>Channel</label><select name="channelId" asp-items="chSL"><option value="0">All</option></select></div>
+            <div></div>
+            <div class="fg" style="display:flex;gap:.4rem;">
+                <button type="submit" class="btn-filter">Search</button>
+                <a href="@Url.Action("Index", new { clientId })" class="btn-reset">Reset</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="sel-toolbar" id="selToolbar">
+    <div class="sel-count">Selected <span id="selCount">0</span> videos</div>
+    <button class="btn-export btn-xl"  onclick="exportExcel()">⬇ Excel</button>
+    <button class="btn-export btn-pdf" onclick="exportPDF()">⬇ PDF Report</button>
+    <button class="btn-export btn-desel" onclick="deselectAll()">✕ Deselect All</button>
+</div>
+
+<div class="action-bar">
+    <div class="result-count">Showing <strong>@Model.Items.Count()</strong> of <strong>@Model.Total</strong></div>
+    @if (canEdit) { <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add Video</a> }
+</div>
+
+<div class="m-table-wrap">
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state"><h3>No videos found</h3><p>Adjust filters or add a new video.</p></div>
+    }
+    else
+    {
+        <table class="m-table" id="mainTable">
+            <thead>
+                <tr>
+                    <th class="cb-col"><input type="checkbox" class="row-cb" id="cbAll" onchange="toggleAll(this)" /></th>
+                    <th>#</th><th>Date</th><th>Title</th><th>Channel</th>
+                    <th>Program</th><th>Duration</th><th>Media Tier</th>
+                    <th>Impression</th><th>Reach</th>
+                    <th>AD Value</th><th>PR Value</th><th>Toning</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int r = 1; }
+                @foreach (var item in Model.Items)
+                {
+                    <tr data-id="@item.Id"
+                        data-date="@item.Date.ToString("dd MMM yyyy")"
+                        data-title="@item.Title"
+                        data-channel="@(item.ChannelName ?? "")"
+                        data-program="@(item.Program ?? "")"
+                        data-duration="@item.Duration"
+                        data-language="@(item.Language ?? "")"
+                        data-mediatier="@(item.MediaTier ?? "")"
+                        data-impression="@item.Impression"
+                        data-reach="@item.Reach"
+                        data-ad="@item.ADValue.ToString("F2")"
+                        data-pr="@item.PRValue.ToString("F2")"
+                        data-toning="@(item.Toning ?? "")"
+                        data-videourl="@(item.VideoUrl ?? "")"
+                        data-client="@Model.ClientName">
+                        <td class="cb-col"><input type="checkbox" class="row-cb row-check" onchange="onRowCheck()" /></td>
+                        <td style="color:var(--slate);font-size:.75rem;">@r</td>
+                        <td style="white-space:nowrap;color:var(--slate);">@item.Date.ToString("dd MMM yyyy")</td>
+                        <td><div class="m-title">@item.Title @if (!string.IsNullOrEmpty(item.ChannelName)) { <small>@item.ChannelName</small> }</div></td>
+                        <td style="font-size:.78rem;">@(item.ChannelName ?? "—")</td>
+                        <td style="font-size:.78rem;">@(item.Program ?? "—")</td>
+                        <td style="font-size:.78rem;">@(item.Duration > 0 ? $"{item.Duration}s" : "—")</td>
+                        <td style="font-size:.78rem;">@(item.MediaTier ?? "—")</td>
+                        <td style="font-size:.78rem;">@item.Impression.ToString("N0")</td>
+                        <td style="font-size:.78rem;">@item.Reach.ToString("N0")</td>
+                        <td class="val-ad">@item.ADValue.ToString("N2")</td>
+                        <td class="val-pr">@item.PRValue.ToString("N2")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.Toning) && item.Toning != "None")
+                            {
+                                var dc = item.Toning switch { "Positive"=>"t-pos","Negative"=>"t-neg",_=>"t-neu" };
+                                <span class="toning-dot @dc"></span>@item.Toning
+                            }
+                            else { <span style="color:var(--slate);">—</span> }
+                        </td>
+                        <td>
+                            <a href="@Url.Action("Details", new { id=item.Id })" class="act-btn act-view" title="View">👁</a>
+                            @if (canEdit) { <a href="@Url.Action("Edit", new { id=item.Id })" class="act-btn act-edit" title="Edit">✏️</a> }
+                            @if (isAdmin)
+                            {
+                                <form method="post" action="@Url.Action("Delete")" style="display:inline;" onsubmit="return confirm('Delete?')">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <input type="hidden" name="clientId" value="@clientId" />
+                                    <button type="submit" class="act-btn act-del" title="Delete">🗑</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                    r++;
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+const clientName = "@Model.ClientName";
+
+function toggleAll(cb) {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+    onRowCheck();
+}
+function onRowCheck() {
+    const count = document.querySelectorAll('.row-check:checked').length;
+    document.getElementById('selCount').textContent = count;
+    document.getElementById('selToolbar').classList.toggle('visible', count > 0);
+    const all = document.querySelectorAll('.row-check');
+    document.getElementById('cbAll').indeterminate = count > 0 && count < all.length;
+    document.getElementById('cbAll').checked = count === all.length && all.length > 0;
+}
+function deselectAll() {
+    document.querySelectorAll('.row-check, #cbAll').forEach(c => { c.checked = false; c.indeterminate = false; });
+    onRowCheck();
+}
+function getSelectedRows() {
+    const rows = [];
+    document.querySelectorAll('.row-check:checked').forEach(cb => rows.push(cb.closest('tr').dataset));
+    return rows;
+}
+
+// ── EXCEL ──────────────────────────────────────────────────────────────────
+function exportExcel() {
+    const rows = getSelectedRows();
+    if (!rows.length) { alert('Please select at least one video.'); return; }
+
+    const headers = ['Date','Title','Channel','Program','Duration (s)','Language','Media Tier','Impression','Reach','AD Value','PR Value','Toning','Video URL'];
+    const data = rows.map(d => [d.date, d.title, d.channel, d.program, d.duration, d.language, d.mediatier, d.impression, d.reach, d.ad, d.pr, d.toning, d.videourl]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    ws['!cols'] = headers.map((_, i) => ({ wch: i === 1 ? 38 : i === 2 ? 22 : 15 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Videos');
+    XLSX.writeFile(wb, `${clientName}_Videos_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ── PDF ────────────────────────────────────────────────────────────────────
+function exportPDF() {
+    const rows = getSelectedRows();
+    if (!rows.length) { alert('Please select at least one video.'); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const PW=210, PH=297, ML=15, MR=15, MT=15, CW=180;
+    const INK=[15,25,35], ACCENT=[124,58,237], SLATE=[90,106,122], RULE=[221,227,234], GREEN=[22,163,74], AMBER=[217,119,6], BG=[244,246,249];
+
+    rows.forEach((d, idx) => {
+        if (idx > 0) doc.addPage();
+        let y = MT;
+
+        doc.setFillColor(...ACCENT); doc.rect(0,0,PW,28,'F');
+        doc.setTextColor(255,255,255);
+        doc.setFontSize(9); doc.setFont('helvetica','normal');
+        doc.text('VIDEO REPORT', ML, 10);
+        doc.setFontSize(13); doc.setFont('helvetica','bold');
+        doc.text(doc.splitTextToSize(d.title||'Untitled', CW-20), ML, 19);
+        doc.setFontSize(8); doc.setFont('helvetica','normal');
+        doc.text(clientName, PW-MR, 10, { align:'right' });
+        doc.text(d.date, PW-MR, 16, { align:'right' });
+        y = 34;
+
+        y = pdfCard(doc, ML, y, CW, 'Source', [
+            ['Channel', d.channel], ['Program', d.program],
+            ['Duration', d.duration ? d.duration + ' sec' : ''], ['Language', d.language],
+        ], ACCENT, BG, INK, SLATE, RULE);
+        y += 4;
+
+        y = pdfCard(doc, ML, y, CW, 'Metrics & Values', [
+            ['Media Tier', d.mediatier], ['Impression', d.impression],
+            ['Reach', d.reach], ['AD Value', d.ad], ['PR Value', d.pr],
+        ], GREEN, BG, INK, SLATE, RULE);
+        y += 4;
+
+        y = pdfCard(doc, ML, y, CW, 'Analysis', [
+            ['Toning', d.toning], ['Video URL', d.videourl],
+        ], AMBER, BG, INK, SLATE, RULE);
+
+        doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
+        doc.line(ML, PH-12, PW-MR, PH-12);
+        doc.setTextColor(...SLATE); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+        doc.text(`Generated: ${new Date().toLocaleString()}`, ML, PH-8);
+        doc.text(`Page ${idx+1} of ${rows.length}`, PW-MR, PH-8, { align:'right' });
+    });
+
+    doc.save(`${clientName}_Videos_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+function pdfCard(doc, x, y, w, title, pairs, hc, bg, ink, slate, rule) {
+    doc.setFillColor(...hc); doc.roundedRect(x,y,w,6,1,1,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(title, x+3, y+4.2); y += 7;
+    const vp = pairs.filter(([,v]) => v!=null && v!=='');
+    if (!vp.length) return y;
+    const cardH = vp.length*6+3;
+    doc.setFillColor(...bg); doc.roundedRect(x,y,w,cardH,1,1,'F');
+    vp.forEach(([label,val],i) => {
+        const ry = y+4+i*6;
+        doc.setTextColor(...slate); doc.setFontSize(7); doc.setFont('helvetica','bold');
+        doc.text(String(label).toUpperCase(), x+3, ry);
+        doc.setTextColor(...ink); doc.setFontSize(8); doc.setFont('helvetica','normal');
+        doc.text(String(val||'—'), x+55, ry);
+        if (i < vp.length-1) { doc.setDrawColor(...rule); doc.setLineWidth(0.2); doc.line(x+3,ry+2,x+w-3,ry+2); }
+    });
+    return y+cardH+1;
+}
+
+async function loadSubs(parentId, targetId, url) {
+    const sel = document.getElementById(targetId);
+    sel.innerHTML = '<option value="0">Loading…</option>';
+    if (!parentId || parentId=='0') { sel.innerHTML='<option value="0">All</option>'; return; }
+    const data = await (await fetch(`${url}?parentId=${parentId}`)).json();
+    sel.innerHTML = '<option value="0">All</option>';
+    data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+}
+</script>
+}

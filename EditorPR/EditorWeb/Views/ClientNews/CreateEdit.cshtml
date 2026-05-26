@@ -1,5 +1,6 @@
 @model EditorViewModelLayer.NewsViewModel.ClientNewsDTO
 @using EditorViewModelLayer.NewsViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
     bool isEdit = Model.Id > 0;
     bool isExist = Model.NewsMode == "Existing";
@@ -12,12 +13,20 @@
         "Video" => "📺 Video (Channel)",
         _ => Model.SourceType
     };
-    var siClass = Model.SourceType switch
-    {
-        "Article" => "si-art",
-        "Video" => "si-vid",
-        _ => "si-pub"
-    };
+    var siClass = Model.SourceType switch { "Article" => "si-art", "Video" => "si-vid", _ => "si-pub" };
+
+    // Convert SelectOption → SelectListItem (MVC reference is fine in EditorWeb)
+    List<SelectListItem> ToSL(List<SelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var sourceSL = ToSL(Model.SourceOptions);
+    var categorySL = ToSL(Model.CategoryOptions);
+    var subCategorySL = ToSL(Model.SubCategoryOptions);
+    var writerSL = ToSL(Model.WriterOptions);
+    var existingNewsSL = ToSL(Model.ExistingNewsOptions);
+    var brandingSL = ToSL(Model.BrandingOptions);
+    var toningSL = ToSL(Model.ToningOptions);
+    var translationSL = ToSL(Model.TranslationOptions);
 }
 
 <style>
@@ -187,11 +196,6 @@
                 background: #fff;
             }
 
-        .fg textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-
     .field-error {
         color: var(--red);
         font-size: .72rem;
@@ -309,7 +313,7 @@
 
     <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
        style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;margin-bottom:1.25rem;">
-        ← Back to News List
+        ← Back Dashboard
     </a>
 
     <div class="form-header">
@@ -336,7 +340,6 @@
         </div>
     }
 
-    @* Existing news picker *@
     @if (isExist && !isEdit)
     {
         <div class="exist-banner">
@@ -345,7 +348,7 @@
                 <h3>Select Existing News</h3>
                 <p>Pick a news record — data will be copied and you can adjust client-specific fields below.</p>
                 <select id="existingNewsPicker"
-                        asp-items="Model.ExistingNewsSelectList"
+                        asp-items="existingNewsSL"
                         onchange="prefillFromNews(this.value)"
                         style="width:100%;margin-top:.6rem;border:1.5px solid #c4b5fd;border-radius:7px;padding:.45rem .75rem;font-size:.85rem;background:#fff;">
                     <option value="">— Select a news record —</option>
@@ -374,57 +377,10 @@
             <div class="form-card-title">📂 Source & Classification</div>
             <div class="fg-3">
                 <div class="fg">
-                    <label asp-for="publicationId">@Model.SourceType</label>
-                    <select asp-for="publicationId" asp-items="Model.SourceSelectList">
-                        <option value="0">— Select —</option>
-                    </select>
-                    <span asp-validation-for="publicationId" class="field-error"></span>
-                </div>
-
-                <div class="fg">
-                    <label asp-for="CategoryId">Category</label>
-                    <select asp-for="CategoryId"
-                            asp-items="Model.CategorySelectList"
-                            id="categorySelect"
-                            onchange="loadSubCats(this.value)">
-                        <option value="0">— None —</option>
-                    </select>
-                </div>
-
-                <div class="fg">
-                    <label asp-for="SubCategoryId">Sub Category</label>
-                    <select asp-for="SubCategoryId"
-                            asp-items="Model.SubCategorySelectList"
-                            id="subCatSelect">
-                        <option value="0">— None —</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="fg-2" style="margin-top:1rem;">
-                <div class="fg">
-                    <label asp-for="WriterId">Writer</label>
-                    <select asp-for="WriterId" asp-items="Model.WriterSelectList">
-                        <option value="0">— None —</option>
-                    </select>
-                </div>
-                <div class="fg">
                     <label asp-for="Date">Date</label>
                     <input asp-for="Date" type="date" />
                     <span asp-validation-for="Date" class="field-error"></span>
                 </div>
-            </div>
-        </div>
-
-        @* CARD 2: Article Info *@
-        <div class="form-card">
-            <div class="form-card-title">📝 Article Information</div>
-            <div class="fg" style="margin-bottom:1rem;">
-                <label asp-for="Title">Title <span style="color:var(--red);">*</span></label>
-                <input asp-for="Title" placeholder="Enter news title…" />
-                <span asp-validation-for="Title" class="field-error"></span>
-            </div>
-            <div class="fg-4">
                 <div class="fg">
                     <label asp-for="Pages">Pages</label>
                     <input asp-for="Pages" type="number" min="0" />
@@ -436,6 +392,58 @@
                 <div class="fg">
                     <label asp-for="Width">Width (cm)</label>
                     <input asp-for="Width" type="number" min="0" step="0.01" />
+                </div>
+                <div class="fg">
+                    <label asp-for="publicationId">@Model.SourceType</label>
+                    <select asp-for="publicationId" asp-items="sourceSL">
+                        <option value="0">— Select —</option>
+                    </select>
+                    <span asp-validation-for="publicationId" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="WriterId">Writer</label>
+                    <select asp-for="WriterId" asp-items="writerSL">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="CategoryId">Category</label>
+                    <select asp-for="CategoryId" asp-items="categorySL"
+                            id="categorySelect" onchange="loadSubCats(this.value)">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="SubCategoryId">Sub Category</label>
+                    <select asp-for="SubCategoryId" asp-items="subCategorySL" id="subCatSelect">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fg-2" style="margin-top:1rem;">
+                
+               
+            </div>
+        </div>
+
+        @* CARD 2: Branding & Analysis *@
+        <div class="form-card">
+            <div class="form-card-title">🎯 Branding & Analysis</div>
+           
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="ArticleBranding">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="brandingSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="HeadlineBranding">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="brandingSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Toning">Toning</label>
+                    <select asp-for="Toning" asp-items="toningSL">
+                        <option value="">— Select —</option>
+                    </select>
                 </div>
                 <div class="fg">
                     <label>Flags</label>
@@ -451,7 +459,7 @@
             </div>
         </div>
 
-        @* CARD 3: Values *@
+        @* CARD 3: PR / AD Values *@
         <div class="form-card">
             <div class="form-card-title">💰 PR / AD Values</div>
             <div class="fg-4">
@@ -460,43 +468,31 @@
                     <input asp-for="PRValue" type="number" min="0" step="0.01" />
                     <span asp-validation-for="PRValue" class="field-error"></span>
                 </div>
-                <div class="fg">
-                    <label asp-for="PROption">PR Option</label>
-                    <input asp-for="PROption" placeholder="e.g. Full, Half…" />
-                </div>
+               
                 <div class="fg">
                     <label asp-for="ADValue">AD Value</label>
                     <input asp-for="ADValue" type="number" min="0" step="0.01" />
                     <span asp-validation-for="ADValue" class="field-error"></span>
                 </div>
-                <div class="fg">
-                    <label asp-for="ADOption">AD Option</label>
-                    <input asp-for="ADOption" placeholder="e.g. Full, Half…" />
-                </div>
+               
             </div>
         </div>
 
-        @* CARD 4: Branding & Analysis *@
+        @* CARD 4:  Article Info *@
         <div class="form-card">
-            <div class="form-card-title">🎯 Branding & Analysis</div>
-            <div class="fg-4">
-                <div class="fg">
-                    <label asp-for="ArticleBranding">Article Branding</label>
-                    <select asp-for="ArticleBranding" asp-items="Model.BrandingSelectList"></select>
+            <div class="form-card-title">📝 Article Information</div>
+            <div class="fg-12">
+                <div class="fg" style="margin-bottom:1rem;">
+                    <label asp-for="Title">Title <span style="color:var(--red);">*</span></label>
+                    <input asp-for="Title" placeholder="Enter news title…" />
+                    <span asp-validation-for="Title" class="field-error"></span>
                 </div>
-                <div class="fg">
-                    <label asp-for="HeadlineBranding">Headline Branding</label>
-                    <select asp-for="HeadlineBranding" asp-items="Model.BrandingSelectList"></select>
                 </div>
-                <div class="fg">
-                    <label asp-for="Toning">Toning</label>
-                    <select asp-for="Toning" asp-items="Model.ToningSelectList">
-                        <option value="">— Select —</option>
-                    </select>
-                </div>
+            <div class="fg-12">
+                
                 <div class="fg">
                     <label asp-for="Translation">Translation</label>
-                    <select asp-for="Translation" asp-items="Model.TranslationSelectList">
+                    <select asp-for="Translation" asp-items="translationSL">
                         <option value="">— None —</option>
                     </select>
                 </div>
@@ -537,16 +533,16 @@
                 const el = document.querySelector(`[name="${name}"]`);
                 if (el) el.value = val ?? '';
             };
-            setVal('Title',           data.title);
-            setVal('Date',            data.date);
-            setVal('PRValue',         data.prValue);
-            setVal('ADValue',         data.adValue);
-            setVal('PROption',        data.prOption);
-            setVal('ADOption',        data.adOption);
-            setVal('Toning',          data.toning);
-            setVal('Translation',     data.translation);
-            setVal('ArticleBranding', data.articleBranding);
-            setVal('HeadlineBranding',data.headlineBranding);
+            setVal('Title',            data.title);
+            setVal('Date',             data.date);
+            setVal('PRValue',          data.prValue);
+            setVal('ADValue',          data.adValue);
+            setVal('PROption',         data.prOption);
+            setVal('ADOption',         data.adOption);
+            setVal('Toning',           data.toning);
+            setVal('Translation',      data.translation);
+            setVal('ArticleBranding',  data.articleBranding);
+            setVal('HeadlineBranding', data.headlineBranding);
 
             const pic = document.getElementById('chkPic');
             const gen = document.getElementById('chkGen');

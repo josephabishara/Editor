@@ -15,6 +15,10 @@ namespace EditorWeb.Controllers
         public ClientNewsController(IClientNewsService newsService)
             => _newsService = newsService;
 
+        // ── SelectOption → SelectListItem (only the controller needs this) ─────
+        private static List<SelectListItem> ToSelectList(List<SelectOption> opts)
+            => opts.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
         // ══════════════════════════════════════════════════════════════════════
         // INDEX
         // ══════════════════════════════════════════════════════════════════════
@@ -33,9 +37,11 @@ namespace EditorWeb.Controllers
             string? sourceType = null,
             bool? published = null)
         {
+            if (clientId <= 0) return RedirectToAction("Index", "Dashboard");
             var dashboard = await _newsService.GetClientNewsDashboardAsync(clientId);
             var items = dashboard.Items.AsEnumerable();
 
+            // Filters
             if (!string.IsNullOrWhiteSpace(title))
                 items = items.Where(i => i.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
             if (DateTime.TryParse(dateFrom, out var from))
@@ -51,19 +57,16 @@ namespace EditorWeb.Controllers
             if (published.HasValue)
                 items = items.Where(i => i.Publish == published.Value);
 
-            // Build filter SelectLists and assign to dashboard model
-            dashboard.CategorySelectList = await _newsService
-                .GetCategorySelectListAsync(clientId, categoryId);
-            dashboard.SubCategorySelectList = categoryId > 0
-                ? await _newsService.GetSubCategorySelectListAsync(categoryId, subCategoryId)
-                : new List<SelectListItem>();
-            dashboard.WriterSelectList = await _newsService
-                .GetWriterSelectListAsync(writerId);
-            dashboard.PublicationSelectList = await _newsService
-                .GetSourceSelectListAsync(
-                    string.IsNullOrWhiteSpace(sourceType) ? "Publication" : sourceType,
-                    publicationId);
+            // Populate filter SelectLists (conversion happens only here in the controller)
+            dashboard.CategoryOptions = await _newsService.GetCategoryOptionsAsync(clientId, categoryId);
+            dashboard.SubCategoryOptions = categoryId > 0
+                ? await _newsService.GetSubCategoryOptionsAsync(categoryId, subCategoryId)
+                : new List<SelectOption>();
+            dashboard.WriterOptions = await _newsService.GetWriterOptionsAsync(writerId);
+            dashboard.PublicationOptions = await _newsService.GetSourceOptionsAsync(
+                string.IsNullOrWhiteSpace(sourceType) ? "Publication" : sourceType, publicationId);
 
+            ViewBag.ClientId = clientId;
             ViewBag.FilterTitle = title;
             ViewBag.FilterDateFrom = dateFrom;
             ViewBag.FilterDateTo = dateTo;
@@ -87,6 +90,10 @@ namespace EditorWeb.Controllers
             return View(dashboard);
         }
 
+        // ══════════════════════════════════════════════════════════════════════
+        // DETAILS
+        // ══════════════════════════════════════════════════════════════════════
+
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
         public async Task<IActionResult> Details(int id)
@@ -96,6 +103,10 @@ namespace EditorWeb.Controllers
             return View(item);
         }
 
+        // ══════════════════════════════════════════════════════════════════════
+        // CREATE — step 1: choose mode
+        // ══════════════════════════════════════════════════════════════════════
+
         [HttpGet]
         public IActionResult Create(int clientId)
         {
@@ -103,6 +114,10 @@ namespace EditorWeb.Controllers
             ViewBag.SourceTypes = NewsOptions.SourceTypes;
             return View("CreateSelect");
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // CREATE NEW
+        // ══════════════════════════════════════════════════════════════════════
 
         [HttpGet]
         public async Task<IActionResult> CreateNew(int clientId, string sourceType = "Publication")
@@ -116,12 +131,16 @@ namespace EditorWeb.Controllers
         public async Task<IActionResult> CreateNew(ClientNewsDTO model)
         {
             model.NewsMode = "New";
-            if (!ModelState.IsValid) { await PopulateDropdownsAsync(model); return View("CreateEdit", model); }
+            if (!ModelState.IsValid) { await PopulateOptionsAsync(model); return View("CreateEdit", model); }
             var (success, message) = await _newsService.CreateAsync(model);
-            if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateDropdownsAsync(model); return View("CreateEdit", model); }
+            if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateOptionsAsync(model); return View("CreateEdit", model); }
             TempData["Success"] = message;
             return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // CREATE FROM EXISTING
+        // ══════════════════════════════════════════════════════════════════════
 
         [HttpGet]
         public async Task<IActionResult> CreateFromExisting(int clientId, string sourceType = "Publication")
@@ -142,8 +161,7 @@ namespace EditorWeb.Controllers
                 date = p.Date.ToString("yyyy-MM-dd"),
                 prValue = p.PRValue,
                 adValue = p.ADValue,
-                prOption = p.PROption,
-                adOption = p.ADOption,
+               
                 articleBranding = p.ArticleBranding,
                 headlineBranding = p.HeadlineBranding,
                 pictureInArticle = p.pictureInArticle,
@@ -158,19 +176,23 @@ namespace EditorWeb.Controllers
         public async Task<IActionResult> CreateFromExisting(ClientNewsDTO model)
         {
             model.NewsMode = "Existing";
-            if (!ModelState.IsValid) { await PopulateDropdownsAsync(model); return View("CreateEdit", model); }
+            if (!ModelState.IsValid) { await PopulateOptionsAsync(model); return View("CreateEdit", model); }
             var (success, message) = await _newsService.CreateAsync(model);
-            if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateDropdownsAsync(model); return View("CreateEdit", model); }
+            if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateOptionsAsync(model); return View("CreateEdit", model); }
             TempData["Success"] = message;
             return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // EDIT
+        // ══════════════════════════════════════════════════════════════════════
 
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
             var item = await _newsService.GetByIdAsync(id);
             if (item == null) return NotFound();
-            await PopulateDropdownsAsync(item);
+            await PopulateOptionsAsync(item);
             return View("CreateEdit", item);
         }
 
@@ -179,12 +201,16 @@ namespace EditorWeb.Controllers
         public async Task<IActionResult> Edit(int id, ClientNewsDTO model)
         {
             if (id != model.Id) return BadRequest();
-            if (!ModelState.IsValid) { await PopulateDropdownsAsync(model); return View("CreateEdit", model); }
+            if (!ModelState.IsValid) { await PopulateOptionsAsync(model); return View("CreateEdit", model); }
             var (success, message) = await _newsService.UpdateAsync(model);
-            if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateDropdownsAsync(model); return View("CreateEdit", model); }
+            if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateOptionsAsync(model); return View("CreateEdit", model); }
             TempData["Success"] = message;
             return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // DELETE
+        // ══════════════════════════════════════════════════════════════════════
 
         [HttpGet]
         [Authorize(Roles = "Admin,Manager")]
@@ -204,6 +230,10 @@ namespace EditorWeb.Controllers
             TempData[success ? "Success" : "Error"] = message;
             return RedirectToAction(nameof(Index), new { clientId });
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // PUBLISH / UNPUBLISH
+        // ══════════════════════════════════════════════════════════════════════
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
@@ -225,27 +255,29 @@ namespace EditorWeb.Controllers
             return RedirectToAction(nameof(Index), new { clientId });
         }
 
-        // ── AJAX ──────────────────────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        // AJAX
+        // ══════════════════════════════════════════════════════════════════════
 
         [HttpGet]
         public async Task<IActionResult> GetSources(string sourceType, int selectedId = 0)
         {
-            var list = await _newsService.GetSourceSelectListAsync(sourceType, selectedId);
-            return Json(list.Select(i => new { value = i.Value, text = i.Text }));
+            var opts = await _newsService.GetSourceOptionsAsync(sourceType, selectedId);
+            return Json(opts.Select(o => new { value = o.Value, text = o.Text }));
         }
 
         [HttpGet]
         public async Task<IActionResult> GetSubCategories(int parentId, int selectedId = 0)
         {
-            var list = await _newsService.GetSubCategorySelectListAsync(parentId, selectedId);
-            return Json(list.Select(i => new { value = i.Value, text = i.Text }));
+            var opts = await _newsService.GetSubCategoryOptionsAsync(parentId, selectedId);
+            return Json(opts.Select(o => new { value = o.Value, text = o.Text }));
         }
 
         [HttpGet]
         public async Task<IActionResult> GetExistingNews(string sourceType, int selectedId = 0)
         {
-            var list = await _newsService.GetExistingNewsSelectListAsync(sourceType, selectedId);
-            return Json(list.Select(i => new { value = i.Value, text = i.Text }));
+            var opts = await _newsService.GetExistingNewsOptionsAsync(sourceType, selectedId);
+            return Json(opts.Select(o => new { value = o.Value, text = o.Text }));
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -261,24 +293,24 @@ namespace EditorWeb.Controllers
                 ArticleBranding = "N/A",
                 HeadlineBranding = "N/A"
             };
-            await PopulateDropdownsAsync(model);
+            await PopulateOptionsAsync(model);
             return model;
         }
 
-        private async Task PopulateDropdownsAsync(ClientNewsDTO model)
+        private async Task PopulateOptionsAsync(ClientNewsDTO model)
         {
-            model.SourceSelectList = await _newsService.GetSourceSelectListAsync(model.SourceType, model.publicationId);
-            model.CategorySelectList = await _newsService.GetCategorySelectListAsync(model.ClientId, model.CategoryId);
-            model.SubCategorySelectList = model.CategoryId > 0
-                ? await _newsService.GetSubCategorySelectListAsync(model.CategoryId, model.SubCategoryId)
-                : new List<SelectListItem>();
-            model.WriterSelectList = await _newsService.GetWriterSelectListAsync(model.WriterId);
-            model.ExistingNewsSelectList = model.NewsMode == "Existing"
-                ? await _newsService.GetExistingNewsSelectListAsync(model.SourceType, model.ExistingNewsId ?? 0)
-                : new List<SelectListItem>();
-            model.BrandingSelectList = NewsOptions.BrandingSelectList();
-            model.ToningSelectList = NewsOptions.ToningSelectList();
-            model.TranslationSelectList = NewsOptions.TranslationSelectList();
+            model.SourceOptions = await _newsService.GetSourceOptionsAsync(model.SourceType, model.publicationId);
+            model.CategoryOptions = await _newsService.GetCategoryOptionsAsync(model.ClientId, model.CategoryId);
+            model.SubCategoryOptions = model.CategoryId > 0
+                ? await _newsService.GetSubCategoryOptionsAsync(model.CategoryId, model.SubCategoryId)
+                : new List<SelectOption>();
+            model.WriterOptions = await _newsService.GetWriterOptionsAsync(model.WriterId);
+            model.ExistingNewsOptions = model.NewsMode == "Existing"
+                ? await _newsService.GetExistingNewsOptionsAsync(model.SourceType, model.ExistingNewsId ?? 0)
+                : new List<SelectOption>();
+            model.BrandingOptions = NewsOptions.BrandingList();
+            model.ToningOptions = NewsOptions.ToningList();
+            model.TranslationOptions = NewsOptions.TranslationList();
         }
     }
 }

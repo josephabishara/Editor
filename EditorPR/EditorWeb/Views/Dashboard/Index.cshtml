@@ -19,8 +19,7 @@
                     <img class="card-img-top img-thumbnail"  src="@c.Photo" alt="@c.Name" >
                 <div class="card-body">
                     <h4 class="card-title"> @c.Name  </h4>
-                    
-                    <a asp-action="ClientDashboard" asp-route-id="@c.Id" class="btn btn-dark">Dashboard</a>
+                        <a asp-action="ClientDashboard" asp-controller="Dashboard" asp-route-Id="@c.Id" class="btn btn-dark">Dashboard</a>
                 </div>
             </div>
             </div>

@@ -21,11 +21,7 @@ namespace EditorEntitiesLayer.Entities
         public decimal PRValue { get; set; }
         public decimal ADValue { get; set; }
 
-        [MaxLength(50)]
-        public string? PROption { get; set; }
-
-        [MaxLength(50)]
-        public string? ADOption { get; set; }
+      
 
         [MaxLength(20)]
         public string ArticleBranding { get; set; } = "N/A";
