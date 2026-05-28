@@ -1,4 +1,5 @@
 ﻿using EditorDataLayer.Data;
+using EditorEntitiesLayer.Entities;
 using EditorRepositoryLayer.IRepositories;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -65,5 +66,67 @@ namespace EditorRepositoryLayer.Repositories
                          && v.IsActive
                          && v.Deleted == 0)
                 .SumAsync(v => (decimal?)v.PRValue ?? 0m);
+
+        // ── shared filter helpers ──────────────────────────────────────────────
+
+        private IQueryable<ClientArticle> Articles(int clientId, DateTime? from, DateTime? to)
+        {
+            var q = _context.Set<ClientArticle>()
+                            .Where(a => a.ClientId == clientId
+                                     && a.IsActive
+                                     && a.Deleted == 0);
+            if (from.HasValue) q = q.Where(a => a.Date >= from.Value);
+            if (to.HasValue) q = q.Where(a => a.Date <= to.Value.AddDays(1).AddTicks(-1));
+            return q;
+        }
+
+        private IQueryable<ClientNewsPaper> Papers(int clientId, DateTime? from, DateTime? to)
+        {
+            var q = _context.Set<ClientNewsPaper>()
+                            .Where(n => n.ClientId == clientId
+                                     && n.IsActive
+                                     && n.Deleted == 0);
+            if (from.HasValue) q = q.Where(n => n.Date >= from.Value);
+            if (to.HasValue) q = q.Where(n => n.Date <= to.Value.AddDays(1).AddTicks(-1));
+            return q;
+        }
+
+        private IQueryable<ClientVideo> Videos(int clientId, DateTime? from, DateTime? to)
+        {
+            var q = _context.Set<ClientVideo>()
+                            .Where(v => v.ClientId == clientId
+                                     && v.IsActive
+                                     && v.Deleted == 0);
+            if (from.HasValue) q = q.Where(v => v.Date >= from.Value);
+            if (to.HasValue) q = q.Where(v => v.Date <= to.Value.AddDays(1).AddTicks(-1));
+            return q;
+        }
+
+        // ── Articles ──────────────────────────────────────────────────────────
+
+        public Task<int> GetArticleCountAsync(int clientId, DateTime? from, DateTime? to)
+            => Articles(clientId, from, to).CountAsync();
+
+        public Task<decimal> GetArticleTotalPRAsync(int clientId, DateTime? from, DateTime? to)
+            => Articles(clientId, from, to).SumAsync(a => a.PRValue ?? 0m);
+
+        // ── Newspapers ────────────────────────────────────────────────────────
+
+        public Task<int> GetNewsPaperCountAsync(int clientId, DateTime? from, DateTime? to)
+            => Papers(clientId, from, to).CountAsync();
+
+        public Task<decimal> GetNewsPaperTotalPRAsync(int clientId, DateTime? from, DateTime? to)
+            => Papers(clientId, from, to).SumAsync(n => n.PRValue);
+
+        // ── Videos ────────────────────────────────────────────────────────────
+
+        public Task<int> GetVideoCountAsync(int clientId, DateTime? from, DateTime? to)
+            => Videos(clientId, from, to).CountAsync();
+
+        public Task<decimal> GetVideoTotalADAsync(int clientId, DateTime? from, DateTime? to)
+            => Videos(clientId, from, to).SumAsync(v => v.ADValue ?? 0m);
+
+        public Task<decimal> GetVideoTotalPRAsync(int clientId, DateTime? from, DateTime? to)
+            => Videos(clientId, from, to).SumAsync(v => v.PRValue ?? 0m);
     }
 }

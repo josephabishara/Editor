@@ -7,6 +7,7 @@ using EditorLogicLayer.ClientArticleLogic;
 using EditorLogicLayer.ClientNewsPaperLogic;
 using EditorLogicLayer.ClientVideoLogic;
 using EditorLogicLayer.Dashboard;
+using EditorLogicLayer.GeneralArticle;
 using EditorLogicLayer.News;
 using EditorLogicLayer.Publication;
 using EditorLogicLayer.Website;
@@ -66,6 +67,7 @@ builder.Services.AddScoped<IClientArticleRepository, ClientArticleRepository>();
 builder.Services.AddScoped<IGeneralVideosRepository, GeneralVideosRepository>();
 builder.Services.AddScoped<IClientVideoRepository, ClientVideoRepository>();
 builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IGeneralArticleRepository, GeneralArticleRepository>();
 
 
 // ──    Services Injection    ───────────────────────────────────────────────────
@@ -82,7 +84,7 @@ builder.Services.AddScoped<IClientNewsPaperService, ClientNewsPaperService>();
 builder.Services.AddScoped<IClientArticleService, ClientArticleService>();
 builder.Services.AddScoped<IClientVideoService, ClientVideoService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-
+builder.Services.AddScoped<IGeneralArticleService, GeneralArticleService>();
 
 // ── 5. MVC ────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();

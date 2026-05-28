@@ -11,24 +11,14 @@ namespace EditorViewModelLayer.ClientViewModel
         public int ClientId { get; set; }
         public string? Photo { get; set; }
         public string? Name { get; set; }
-      
-    
         public string? Email { get; set; } 
         public string? Notes { get; set; }
 
-        public int Publications { get; set; } = 0;
-        public int Websites { get; set; }= 0;
-        public int Videos { get; set; }= 0;
-        public int TotalAD { get; set; }= 0;
-        public int TotalPR { get; set; }= 0;
-        public int TotalCirclation { get; set; } = 0;
+        // ── Date filter (carried back to view for form state) ──────────────────
+        public DateTime? DateFrom { get; set; }
+        public DateTime? DateTo { get; set; }
 
-
-       
-        
-      
-    
-
+         
         // ── Articles (ClientArticle → Website) ─────────────────────────────
         public int ArticleCount { get; set; }
         public decimal ArticleTotalPR { get; set; }
@@ -44,6 +34,8 @@ namespace EditorViewModelLayer.ClientViewModel
 
         // ── Grand totals ───────────────────────────────────────────────────
         public decimal GrandTotalPR => ArticleTotalPR + NewsPaperTotalPR + VideoTotalPR;
+
+
 
     }
 }

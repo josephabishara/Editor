@@ -1,0 +1,156 @@
+@model IEnumerable<EditorViewModelLayer.GeneralArticleViewModel.GeneralArticleDTO>
+@{
+    ViewData["Title"] = "General Articles";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h4 class="mb-0">
+        <i class="bi bi-file-earmark-text me-2"></i>General Articles
+    </h4>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="Create" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle me-1"></i> New Article
+        </a>
+        <a asp-action="Import" class="btn btn-success btn-sm">
+            <i class="bi bi-upload me-1"></i> Import Excel
+        </a>
+        <a asp-action="DownloadTemplate" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-download me-1"></i> Template
+        </a>
+        <a asp-action="ExportToExcel" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export All
+        </a>
+        <button type="button" class="btn btn-warning btn-sm" id="btnExportSelected">
+            <i class="bi bi-check2-square me-1"></i> Export Selected
+        </button>
+    </div>
+</div>
+
+@* {{-- Export Selected hidden form --}} *@
+<form id="exportSelectedForm"
+      asp-action="ExportSelected"
+      asp-controller="GeneralArticle"
+      method="post"
+      style="display:none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" id="selectedIdsInput" name="selectedIds" />
+</form>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0 align-middle" id="articlesTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:40px">
+                            <input type="checkbox" id="selectAll" title="Select All" />
+                        </th>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Title</th>
+                        <th>Website</th>
+                        <th>Writer</th>
+                        <th>Language</th>
+                        <th>Branding</th>
+                        <th>Generated</th>
+                        <th style="width:130px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="row-check" value="@item.Id" />
+                            </td>
+                            <td>@item.Id</td>
+                            <td>@item.Date.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <span title="@item.ArticleURL">
+                                    @item.Title
+                                </span>
+                            </td>
+                            <td>@item.WebsiteName</td>
+                            <td>@item.WriterName</td>
+                            <td>@item.Language</td>
+                            <td>
+                                <span class="badge bg-secondary">@item.ArticleBranding</span>
+                            </td>
+                            <td>
+                                @if (item.Generation == true)
+                                {
+                                    <span class="badge bg-info text-dark">AI</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-dark">Manual</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                       class="btn btn-outline-info btn-sm" title="Details">
+                                        <i class="fa fa-eye"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id"
+                                       class="btn btn-outline-primary btn-sm" title="Edit">
+                                        <i class="fa fa-pencil"></i>
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"
+                                       class="btn btn-outline-danger btn-sm" title="Delete">
+                                        <i class="fa fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-4">
+                                No articles found.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Select All toggle
+        document.getElementById('selectAll').addEventListener('change', function () {
+            document.querySelectorAll('.row-check')
+                    .forEach(cb => cb.checked = this.checked);
+        });
+
+        // Export Selected
+        document.getElementById('btnExportSelected').addEventListener('click', function () {
+            const checked = [...document.querySelectorAll('.row-check:checked')]
+                                .map(cb => cb.value);
+            if (checked.length === 0) {
+                alert('Please select at least one article to export.');
+                return;
+            }
+            document.getElementById('selectedIdsInput').value = checked.join(',');
+            document.getElementById('exportSelectedForm').submit();
+        });
+    </script>
+}

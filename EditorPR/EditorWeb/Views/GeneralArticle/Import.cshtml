@@ -1,0 +1,53 @@
+@{
+    ViewData["Title"] = "Import Articles";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-upload me-2"></i>Import Articles from Excel</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <div class="alert alert-info">
+            <strong>Instructions:</strong>
+            <ul class="mb-0 mt-1">
+                <li>Download the template first to see the correct column structure.</li>
+                <li>Column C (Website) and Column D (Writer) must match existing names exactly.</li>
+                <li>Column I (AI Generated): use <code>Yes</code> or <code>No</code>.</li>
+                <li>Date format: <code>yyyy-MM-dd</code> (e.g. 2025-06-01).</li>
+            </ul>
+        </div>
+
+        <form asp-action="Import" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Select Excel File (.xlsx)</label>
+                <input type="file" name="file" accept=".xlsx,.xls" class="form-control" required />
+           @*      <span asp-validation-for="File" class="text-danger small"></span>
+
+                <input type="file" name="file" accept=".xlsx,.xls" class="form-control" required />
+                <span asp-validation-for="@(null)" class="text-danger small"></span> *@
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-upload me-1"></i> Import
+                </button>
+                <a asp-action="DownloadTemplate" class="btn btn-outline-secondary">
+                    <i class="bi bi-download me-1"></i> Download Template
+                </a>
+            </div>
+        </form>
+
+    </div>
+</div>

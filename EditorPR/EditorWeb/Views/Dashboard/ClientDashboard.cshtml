@@ -1,110 +1,215 @@
 ﻿@model EditorViewModelLayer.ClientViewModel.ClientDashboardDTO
+
 @{
     ViewData["Title"] = "Client Dashboard";
 }
 
-<div class="container-fluid py-4">
-    
-      
-   
-   @*  {{!-- Client header --}} *@
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <a asp-action="Index" asp-controller="Dashboard"
-           style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;margin-bottom:1.25rem;">
-            ← Back Dashboard
-        </a>  <img src="@Model.Photo" class="rounded-circle" width="150" height="150" />
-        <div>
-            <h4 class="mb-0">@Model.Name</h4>
-            <small class="text-muted">@Model.Email</small>
+@await Html.PartialAsync("_ClientStyles")
+<div class="container-fluid dashboard-wrapper">
+
+    <div class="dashboard-header mb-4">
+
+        <a asp-action="Index"
+           asp-controller="Dashboard"
+           class="back-link">
+            <i class="bi bi-arrow-left"></i>
+            Back To Dashboard
+        </a>
+
+        <div class="row d-flex align-items-center justify-content-between flex-wrap gap-4 client-header-content">
+
+            <form method="get"
+                  asp-action="ClientDashboard"
+                  asp-controller="Dashboard"
+                  class="row d-flex align-items-center justify-content-between flex-wrap gap-4 client-header-content">
+
+                <input type="hidden" name="id" value="@Model.ClientId" />
+
+                <div class="col-md-5 d-flex align-items-center gap-4 flex-wrap">
+                    <img src="@Model.Photo" class="client-avatar" alt="@Model.Name" />
+                    <div>
+                        <h1 class="client-name">@Model.Name</h1>
+                        <div class="client-email">
+                            <i class="bi bi-envelope"></i> @Model.Email
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <input type="date"
+                           name="from"
+                           value="@Model.DateFrom?.ToString("yyyy-MM-dd")"
+                           class="form-control fs-6 rounded-pill shadow-sm"
+                           placeholder="From" />
+                </div>
+
+                <div class="col-md-2">
+                    <input type="date"
+                           name="to"
+                           value="@Model.DateTo?.ToString("yyyy-MM-dd")"
+                           class="form-control fs-6 rounded-pill shadow-sm"
+                           placeholder="To" />
+                </div>
+
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-outline-light w-100">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                </div>
+
+            </form>
+         
         </div>
     </div>
 
- @*    {{!-- KPI Cards row --}} *@
-    <div class="row g-3 mb-4">
+    <div class="row g-4 stats-grid">
 
-       @*  {{!-- Articles --}} *@
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <p class="text-muted mb-1 small">Articles (Web)</p>
-                            <h3 class="fw-bold mb-0">@Model.ArticleCount.ToString("N0")</h3>
-                        </div>
-                        <span class="badge bg-primary fs-6 p-2">
-                            <i class="bi bi-newspaper"></i>
-                        </span>
+        <div class="col-lg-4 col-md-6">
+            <div class="dashboard-card articles-card">
+
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-title">Articles (Website)</div>
+                        <div class="metric-number">@Model.ArticleCount.ToString("N0")</div>
                     </div>
-                    <hr class="my-2" />
-                    <p class="mb-0 small">
-                        Total PR Value:
-                        <strong class="text-success">@Model.ArticleTotalPR.ToString("N2")</strong>
-                    </p>
-                    <a asp-action="Index" asp-controller="ClientArticle" asp-route-clientId="@Model.ClientId" class="btn btn-primary btn-lg btn-block"> See Website</a>
+
+                    <div class="card-icon icon-primary">
+                        <i class="bi bi-newspaper"></i>
+                    </div>
                 </div>
+
+                <div class="metric-details d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="metric-label">Total PR Value</div>
+                        <div class="metric-value">@Model.ArticleTotalPR.ToString("N2")</div>
+                    </div>
+
+                    <i class="bi bi-graph-up-arrow text-success fs-4"></i>
+                </div>
+
+                <a asp-action="Index"
+                   asp-controller="ClientArticle"
+                   asp-route-clientId="@Model.ClientId"
+                   class="btn btn-primary w-100 dashboard-btn">
+                    Open Articles
+                </a>
+
             </div>
         </div>
 
-    @*     {{!-- Newspapers --}} *@
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <p class="text-muted mb-1 small">Publications (Print)</p>
-                            <h3 class="fw-bold mb-0">@Model.NewsPaperCount.ToString("N0")</h3>
-                        </div>
-                        <span class="badge bg-warning text-dark fs-6 p-2">
-                            <i class="bi bi-journal-text"></i>
-                        </span>
+        <div class="col-lg-4 col-md-6">
+            <div class="dashboard-card publications-card">
+
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-title">Publications (Print)</div>
+                        <div class="metric-number">@Model.NewsPaperCount.ToString("N0")</div>
                     </div>
-                    <hr class="my-2" />
-                    <p class="mb-0 small">
-                        Total PR Value:
-                        <strong class="text-success">@Model.NewsPaperTotalPR.ToString("N2")</strong>
-                    </p>
-                    <a asp-action="Index" asp-controller="ClientNewsPaper" asp-route-clientId="@Model.ClientId" class="btn btn-primary btn-lg btn-block"> See Publication</a>
+
+                    <div class="card-icon icon-warning">
+                        <i class="bi bi-journal-richtext"></i>
+                    </div>
                 </div>
+
+                <div class="metric-details d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="metric-label">Total PR Value</div>
+                        <div class="metric-value">@Model.NewsPaperTotalPR.ToString("N2")</div>
+                    </div>
+
+                    <i class="bi bi-bar-chart-line text-warning fs-4"></i>
+                </div>
+
+                <a asp-action="Index"
+                   asp-controller="ClientNewsPaper"
+                   asp-route-clientId="@Model.ClientId"
+                   class="btn btn-warning w-100 dashboard-btn text-dark">
+                    Open Publications
+                </a>
+
             </div>
         </div>
 
-       @*  {{!-- Videos --}} *@
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <p class="text-muted mb-1 small">Videos (TV/Channel)</p>
-                            <h3 class="fw-bold mb-0">@Model.VideoCount.ToString("N0")</h3>
-                        </div>
-                        <span class="badge bg-danger fs-6 p-2">
-                            <i class="bi bi-play-circle"></i>
-                        </span>
+        <div class="col-lg-4 col-md-6">
+            <div class="dashboard-card videos-card">
+
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-title">Videos (TV / Channels)</div>
+                        <div class="metric-number">@Model.VideoCount.ToString("N0")</div>
                     </div>
-                    <hr class="my-2" />
-                    <p class="mb-0 small">
-                        AD: <strong>@Model.VideoTotalAD.ToString("N2")</strong> &nbsp;|&nbsp;
-                        PR: <strong class="text-success">@Model.VideoTotalPR.ToString("N2")</strong>
-                    </p>
-                    <a asp-action="Index" asp-controller="ClientVideo" asp-route-clientId="@Model.ClientId" class="btn btn-primary btn-lg btn-block"> See Videos</a>
+
+                    <div class="card-icon icon-danger">
+                        <i class="bi bi-play-circle-fill"></i>
+                    </div>
                 </div>
+
+                <div class="metric-details">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="metric-label">Total AD Value</span>
+                        <strong>@Model.VideoTotalAD.ToString("N2")</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <span class="metric-label">Total PR Value</span>
+                        <strong class="text-success">@Model.VideoTotalPR.ToString("N2")</strong>
+                    </div>
+                </div>
+
+                <a asp-action="Index"
+                   asp-controller="ClientVideo"
+                   asp-route-clientId="@Model.ClientId"
+                   class="btn btn-danger w-100 dashboard-btn">
+                    Open Videos
+                </a>
+
             </div>
         </div>
 
     </div>
 
-  @*   {{!-- Grand Total row --}} *@
-    <div class="row">
-        
-        <div class="col-md-6">
-            <div class="card border-0 bg-dark text-white shadow-sm">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Grand Total PR Value</h5>
-                    <h3 class="mb-0 text-warning">@Model.GrandTotalPR.ToString("N2")</h3>
+    <div class="overview-panel">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <h3 class="overview-title mb-0">Performance Overview</h3>
+
+            <span class="badge bg-success px-3 py-2 rounded-pill">
+                @if (Model.DateFrom.HasValue || Model.DateTo.HasValue)
+                {
+                    @($"{Model.DateFrom?.ToString("dd MMM yyyy") ?? "Start"} → {Model.DateTo?.ToString("dd MMM yyyy") ?? "Today"}")
+                }
+                else
+                {
+                    <span>All Time</span>
+                }
+            </span>
+        </div>
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <div class="overview-item">
+                    <h6>Total Articles</h6>
+                    <p>@Model.ArticleCount.ToString("N0") active media articles published.</p>
                 </div>
             </div>
+
+            <div class="col-md-4">
+                <div class="overview-item">
+                    <h6>Total Publications</h6>
+                    <p>@Model.NewsPaperCount.ToString("N0") print publications tracked.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="overview-item">
+                    <h6>Total Videos</h6>
+                    <p>@Model.VideoCount.ToString("N0") TV and media videos monitored.</p>
+                </div>
+            </div>
+
         </div>
+
     </div>
 
-</div>
- 
+</div> 

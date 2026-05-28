@@ -16,12 +16,13 @@ namespace EditorViewModelLayer.MediaViewModel
     public static class MediaOptions
     {
         public static readonly string[] BrandingOpts = { "Branded", "Unbranded", "N/A" };
-        public static readonly string[] ToningOpts = { "None", "Positive", "Neutral", "Negative" };
+        public static readonly string[] ToningOpts = {  "Positive", "Neutral", "Negative" };
         public static readonly string[] YesNoOpts = { "Yes", "No" };
         public static readonly string[] GenerationOpts = { "Generated", "Not Generated" };
 
         public static List<MediaSelectOption> BrandingList() =>
             BrandingOpts.Select(o => new MediaSelectOption { Value = o, Text = o }).ToList();
+
         public static List<MediaSelectOption> ToningList() =>
             ToningOpts.Select(o => new MediaSelectOption { Value = o, Text = o }).ToList();
         public static List<MediaSelectOption> YesNoList() =>

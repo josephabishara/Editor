@@ -35,21 +35,38 @@ namespace EditorWeb.Controllers
         }
 
         // ClientDashboard
+        //[HttpGet]
+        //[Authorize(Roles = "Admin,Manager,Auditor")]
+        
+        //public async Task<IActionResult> ClientDashboard(int id)
+        //{
+        //    try
+        //    {
+        //        var dashboard = await _dashboardService.GetClientDashboardAsync(id);
+        //        return View(dashboard);
+        //    }
+        //    catch (KeyNotFoundException)
+        //    {
+        //        return NotFound();
+        //    }
+
+        //}
+
+        // GET: /Dashboard/ClientDashboard/5?from=2025-01-01&to=2025-12-31
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,Auditor")]
-        [HttpGet]
-        public async Task<IActionResult> ClientDashboard(int id)
+        public async Task<IActionResult> ClientDashboard(
+            int id, DateTime? from, DateTime? to)
         {
             try
             {
-                var dashboard = await _dashboardService.GetClientDashboardAsync(id);
+                var dashboard = await _dashboardService.GetClientDashboardAsync(id, from, to);
                 return View(dashboard);
             }
             catch (KeyNotFoundException)
             {
                 return NotFound();
             }
-
         }
     }
 }

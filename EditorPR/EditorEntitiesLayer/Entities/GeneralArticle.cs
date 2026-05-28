@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
 namespace EditorEntitiesLayer.Entities
@@ -18,6 +19,15 @@ namespace EditorEntitiesLayer.Entities
         public string? Title { get; set; } // is the Header of article 
         public string? Content { get; set; } // is a text area as  TinyMCE free edition 
         public string? Images { get; set; } // can select multi images
+
+
+        // ── Navigation ─────────────────────────────────────────────────────
+        [ForeignKey(nameof(WebsiteId))]
+        public Websites? Website { get; set; }
+
+        [ForeignKey(nameof(WriterId))]
+        public Writer? Writer { get; set; }
+
 
     }
 }

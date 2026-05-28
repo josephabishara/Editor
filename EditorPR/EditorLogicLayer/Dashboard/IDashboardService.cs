@@ -8,5 +8,6 @@ namespace EditorLogicLayer.Dashboard
     public interface IDashboardService
     {
         Task<ClientDashboardDTO> GetClientDashboardAsync(int clientId);
+        Task<ClientDashboardDTO> GetClientDashboardAsync(int clientId, DateTime? from = null, DateTime? to = null);
     }
 }

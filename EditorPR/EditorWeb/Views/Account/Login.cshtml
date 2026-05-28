@@ -19,11 +19,11 @@
         <input type="radio" name="slide" id="login" checked>
         <input type="radio" name="slide" id="signup">
         <label for="login" class="slide login">Client</label>
-        <label for="signup" class="slide signup">Admin</label>
+        <label for="signup" class="slide signup">Editor</label>
         <div class="slider-tab"></div>
     </div>
     <div class="form-inner">
-        <form asp-action="Login" method="post" class="login">
+        <form asp-action="ClientLogin" method="post" class="login">
             @Html.AntiForgeryToken()
             <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
 

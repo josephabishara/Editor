@@ -195,6 +195,9 @@ namespace EditorWeb.Controllers
             model.WriterOptions = await _service.GetWriterOptionsAsync(model.WriterId);
             model.BrandingOptions = MediaOptions.BrandingList();
             model.ToningOptions = MediaOptions.ToningList();
+            model.ArticleBranding = "Branded";
+            model.HeadlineBranding = "Branded";
+            model.Toning = "Neutral";
         }
     }
 

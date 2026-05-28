@@ -8,6 +8,7 @@
         --green:   #16a34a; --amber: #d97706;  --red: #dc2626;
         --pub:     #1a56db; --art: #0891b2;    --vid: #7c3aed;
         --radius:  10px;    --shadow: 0 2px 12px rgba(15,25,35,.08);
+        --blac: #000000
     }
     body { background:var(--bg); font-family:'Segoe UI',system-ui,sans-serif; }
 
@@ -37,7 +38,14 @@
     .filter-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.1rem 1.4rem; margin-bottom:1.4rem; }
     .filter-title { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink); margin-bottom:.85rem; display:flex; align-items:center; gap:.4rem; }
     .fg { display:flex; flex-direction:column; gap:.28rem; }
-    .fg label { font-size:.7rem; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:.04em; }
+
+        .fg label {
+            font-size: .7rem;
+            font-weight: 700;
+            color: var(--blac);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
     .fg input, .fg select { width:100%; border:1.5px solid var(--rule); border-radius:7px; padding:.42rem .65rem; font-size:.84rem; color:var(--ink); background:var(--bg); height:36px; transition:border-color .15s; }
     .fg input:focus, .fg select:focus { outline:none; border-color:var(--accent); background:#fff; }
     .filter-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr auto; gap:.55rem; align-items:end; }

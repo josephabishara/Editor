@@ -159,9 +159,14 @@ namespace EditorWeb.Controllers
                 : new List<MediaSelectOption>();
             model.WriterOptions = await _service.GetWriterOptionsAsync(model.WriterId);
             model.BrandingOptions = MediaOptions.BrandingList();
+            model.ArticleBranding = "Branded";
+            model.HeadlineBranding = "Branded";
             model.ToningOptions = MediaOptions.ToningList();
+            model.Toning = "Neutral";
             model.YesNoOptions = MediaOptions.YesNoList();
+            model.PictureinArticle = "Yes";
             model.GenerationOptions = MediaOptions.GenerationList();
+            model.Generation = "Generation";
         }
     }
 

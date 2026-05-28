@@ -1,0 +1,131 @@
+@model EditorViewModelLayer.GeneralArticleViewModel.GeneralArticleDTO
+@{
+    ViewData["Title"] = "Create Article";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-plus-circle me-2"></i>New Article</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row g-3">
+
+                <div class="col-md-3">
+                    <label asp-for="Date" class="form-label fw-semibold"></label>
+                    <input asp-for="Date" type="date" class="form-control" />
+                    <span asp-validation-for="Date" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="WebsiteId" class="form-label fw-semibold"></label>
+                    <select asp-for="WebsiteId"
+                            asp-items="ViewBag.Websites"
+                            class="form-select">
+                        <option value="">-- Select Website --</option>
+                    </select>
+                    <span asp-validation-for="WebsiteId" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="WriterId" class="form-label fw-semibold"></label>
+                    <select asp-for="WriterId"
+                            asp-items="ViewBag.Writers"
+                            class="form-select">
+                        <option value="">-- Select Writer --</option>
+                    </select>
+                    <span asp-validation-for="WriterId" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="Language" class="form-label fw-semibold"></label>
+                    <input asp-for="Language" class="form-control" />
+                    <span asp-validation-for="Language" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-12">
+                    <label asp-for="Title" class="form-label fw-semibold"></label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-12">
+                    <label asp-for="ArticleURL" class="form-label fw-semibold"></label>
+                    <input asp-for="ArticleURL" class="form-control" placeholder="https://..." />
+                    <span asp-validation-for="ArticleURL" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="ArticleBranding" class="form-label fw-semibold"></label>
+                    <select asp-for="ArticleBranding" class="form-select">
+                        <option value="">-- Select --</option>
+                        <option>Branded</option>
+                        <option>Not Branded</option>
+                        <option>N/A</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="HeadlineBranding" class="form-label fw-semibold"></label>
+                    <select asp-for="HeadlineBranding" class="form-select">
+                        <option value="">-- Select --</option>
+                        <option>Branded</option>
+                        <option>Not Branded</option>
+                        <option>N/A</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="PictureinArticle" class="form-label fw-semibold"></label>
+                    <select asp-for="PictureinArticle" class="form-select">
+                        <option value="">-- Select --</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="Generation" class="form-label fw-semibold d-block"></label>
+                    <div class="form-check form-switch mt-2">
+                        <input asp-for="Generation" class="form-check-input" type="checkbox" role="switch" />
+                        <label class="form-check-label">AI Generated</label>
+                    </div>
+                </div>
+
+                <div class="col-md-12">
+                    <label asp-for="Content" class="form-label fw-semibold"></label>
+                    <textarea asp-for="Content" class="form-control" rows="6"
+                              id="contentEditor"></textarea>
+                </div>
+
+                <div class="col-md-12">
+                    <label asp-for="Images" class="form-label fw-semibold"></label>
+                    <input asp-for="Images" class="form-control"
+                           placeholder="Comma-separated image paths or URLs" />
+                </div>
+
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i> Save
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

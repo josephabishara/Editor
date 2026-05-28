@@ -91,9 +91,38 @@
                 </div>
             </div>
         </div>
-
-        @* ── CARD 2: Auto-filled from Website ── *@
+        @* ── CARD 2: Branding & Analysis ── *@
         <div class="form-card">
+            <div class="form-card-title">🎯 Branding & Analysis</div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="ArticleBranding">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="HeadlineBranding">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="PictureinArticle">Picture in Article</label>
+                    <select asp-for="PictureinArticle" asp-items="yesNoSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Generation">Generation</label>
+                    <select asp-for="Generation" asp-items="genSL"></select>
+                </div>
+            </div>
+            <div class="fg-2" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Toning">Toning</label>
+                    <select asp-for="Toning" asp-items="toningSL">
+                    </select>
+                </div>
+                <div></div>
+            </div>
+        </div>
+        @* ── CARD 3: Auto-filled from Website ── *@
+        <div class="form-card" style="display:none;">
             <div class="form-card-title">
                 🔄 Website Data
                 <span class="badge-autofill">Auto-filled on Website change</span>
@@ -148,8 +177,18 @@
             </div>
             <div class="fg" style="margin-bottom:.9rem;">
                 <label asp-for="Content">Content</label>
-                <textarea asp-for="Content" placeholder="Article body…"></textarea>
+               
+                <textarea id="textarea" class="form-control" asp-for="Content"  placeholder=" Content"></textarea>
+                <script src="~/lib/tinymce/tinymce.min.js"></script>
+                <script>
+                    tinymce.init({
+                        selector: '#textarea', plugins: "tooltip print preview fullpage paste searchreplace autolink directionality visualblocks visualchars fullscreen image link media template codesample code table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists textcolor wordcount imagetools contextmenu colorpicker textpattern", toolbar1: 'formatselect | bold italic strikethrough forecolor backcolor | link | alignleft aligncenter alignright alignjustify  | numlist bullist outdent indent  | removeformat', height: "200", paste_data_images: true
+                    });
+
+                </script>
+
             </div>
+
             <div class="fg">
                 <label>Images</label>
                 <input type="file" name="imageFiles" multiple accept="image/*"
@@ -158,37 +197,7 @@
             </div>
         </div>
 
-        @* ── CARD 4: Branding & Analysis ── *@
-        <div class="form-card">
-            <div class="form-card-title">🎯 Branding & Analysis</div>
-            <div class="fg-4">
-                <div class="fg">
-                    <label asp-for="ArticleBranding">Article Branding</label>
-                    <select asp-for="ArticleBranding" asp-items="brandSL"></select>
-                </div>
-                <div class="fg">
-                    <label asp-for="HeadlineBranding">Headline Branding</label>
-                    <select asp-for="HeadlineBranding" asp-items="brandSL"></select>
-                </div>
-                <div class="fg">
-                    <label asp-for="PictureinArticle">Picture in Article</label>
-                    <select asp-for="PictureinArticle" asp-items="yesNoSL"></select>
-                </div>
-                <div class="fg">
-                    <label asp-for="Generation">Generation</label>
-                    <select asp-for="Generation" asp-items="genSL"></select>
-                </div>
-            </div>
-            <div class="fg-2" style="margin-top:.9rem;">
-                <div class="fg">
-                    <label asp-for="Toning">Toning</label>
-                    <select asp-for="Toning" asp-items="toningSL">
-                        <option value="">— Select —</option>
-                    </select>
-                </div>
-                <div></div>
-            </div>
-        </div>
+      
 
         <div class="form-footer">
             <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>

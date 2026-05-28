@@ -154,6 +154,7 @@ namespace EditorWeb.Controllers
                 ? await _service.GetSubCategoryOptionsAsync(model.CategoryId, model.SubCategoryId)
                 : new List<MediaSelectOption>();
             model.ToningOptions = MediaOptions.ToningList();
+            model.Toning = "Neutral";
         }
     }
 

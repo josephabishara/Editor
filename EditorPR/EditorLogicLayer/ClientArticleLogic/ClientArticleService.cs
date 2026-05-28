@@ -65,7 +65,8 @@ namespace EditorLogicLayer.ClientArticleLogic
             model.Reach = model.Impression * 4;
 
             // Step 1 — GeneralArticle master
-            var general = new GeneralArticle
+ 
+            var general = new EditorEntitiesLayer.Entities.GeneralArticle
             {
                 Date = model.Date,
                 WebsiteId = model.WebsiteId,
