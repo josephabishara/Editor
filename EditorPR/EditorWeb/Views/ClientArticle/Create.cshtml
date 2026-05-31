@@ -8,14 +8,14 @@
     List<SelectListItem> ToSL(List<MediaSelectOption> src)
         => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
 
-    var webSL     = ToSL(Model.WebsiteOptions);
-    var catSL     = ToSL(Model.CategoryOptions);
-    var subSL     = ToSL(Model.SubCategoryOptions);
-    var writerSL  = ToSL(Model.WriterOptions);
-    var brandSL   = ToSL(Model.BrandingOptions);
-    var toningSL  = ToSL(Model.ToningOptions);
-    var yesNoSL   = ToSL(Model.YesNoOptions);
-    var genSL     = ToSL(Model.GenerationOptions);
+    var webSL = ToSL(Model.WebsiteOptions);
+    var catSL = ToSL(Model.CategoryOptions);
+    var subSL = ToSL(Model.SubCategoryOptions);
+    var writerSL = ToSL(Model.WriterOptions);
+    var brandSL = ToSL(Model.BrandingOptions);
+    var toningSL = ToSL(Model.ToningOptions);
+    var yesNoSL = ToSL(Model.YesNoOptions);
+    var genSL = ToSL(Model.GenerationOptions);
 }
 
 @await Html.PartialAsync("_MediaStyles")
@@ -39,9 +39,12 @@
     {
         <div class="val-summary">
             <strong>Please fix the errors below:</strong>
-            <ul>@foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) { <li>@e.ErrorMessage</li> }</ul>
-        </div>
-    }
+            <ul>@foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) {
+            <li>@e.ErrorMessage</li>
+        }
+</ul>
+    </div>
+        }
 
     <form method="post" action="@(isEdit ? Url.Action("Edit", new { id=Model.Id }) : Url.Action("Create"))">
         @Html.AntiForgeryToken()
@@ -55,7 +58,7 @@
             <div class="fg-3">
                 <div class="fg">
                     <label asp-for="WebsiteId">Website <span style="color:var(--red)">*</span></label>
-                    <select asp-for="WebsiteId" asp-items="webSL" onchange="autoFillWebsite(this.value)">
+                    <select asp-for="WebsiteId" asp-items="webSL" onchange="autoFillWebsite(this.value)" class="select-search">
                         <option value="0">— Select —</option>
                     </select>
                     <span asp-validation-for="WebsiteId" class="field-error"></span>
@@ -76,7 +79,7 @@
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
                     <label asp-for="WriterId">Writer</label>
-                    <select asp-for="WriterId" asp-items="writerSL">
+                    <select asp-for="WriterId" asp-items="writerSL" class=" select-search">
                         <option value="0">— None —</option>
                     </select>
                 </div>
@@ -177,8 +180,8 @@
             </div>
             <div class="fg" style="margin-bottom:.9rem;">
                 <label asp-for="Content">Content</label>
-               
-                <textarea id="textarea" class="form-control" asp-for="Content"  placeholder=" Content"></textarea>
+
+                <textarea id="textarea" class="form-control" asp-for="Content" placeholder=" Content"></textarea>
                 <script src="~/lib/tinymce/tinymce.min.js"></script>
                 <script>
                     tinymce.init({
@@ -197,7 +200,7 @@
             </div>
         </div>
 
-      
+
 
         <div class="form-footer">
             <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
@@ -207,41 +210,49 @@
 </div>
 
 @section Scripts {
-<script>
-    const clientId = @Model.ClientId;
+    <script>
+        const clientId = @Model.ClientId;
 
-    async function autoFillWebsite(webId) {
-        if (!webId || webId == '0') return;
-        const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
-        document.getElementById('afMediaType').value  = d.mediaType  ?? '';
-        document.getElementById('afMediaTier').value  = d.mediaTier  ?? '';
-        document.getElementById('afFrequency').value  = d.frequency  ?? '';
-        document.getElementById('afLanguage').value   = d.language   ?? '';
-        document.getElementById('afImpression').value = d.impression ?? '';
-        document.getElementById('afReach').value      = d.reach      ?? '';
-        document.getElementById('afAD').value         = d.adValue    ?? '';
-        document.getElementById('afPR').value         = d.prValue    ?? '';
-    }
+        async function autoFillWebsite(webId) {
+            if (!webId || webId == '0') return;
+            const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
+            document.getElementById('afMediaType').value  = d.mediaType  ?? '';
+            document.getElementById('afMediaTier').value  = d.mediaTier  ?? '';
+            document.getElementById('afFrequency').value  = d.frequency  ?? '';
+            document.getElementById('afLanguage').value   = d.language   ?? '';
+            document.getElementById('afImpression').value = d.impression ?? '';
+            document.getElementById('afReach').value      = d.reach      ?? '';
+            document.getElementById('afAD').value         = d.adValue    ?? '';
+            document.getElementById('afPR').value         = d.prValue    ?? '';
+        }
 
-    function recalcReach() {
-        const imp = parseInt(document.getElementById('afImpression').value) || 0;
-        document.getElementById('afReach').value = imp * 4;
-        document.querySelector('[name="Reach"]').value = imp * 4;
-    }
+        function recalcReach() {
+            const imp = parseInt(document.getElementById('afImpression').value) || 0;
+            document.getElementById('afReach').value = imp * 4;
+            document.querySelector('[name="Reach"]').value = imp * 4;
+        }
 
-    function recalcPR() {
-        const ad = parseFloat(document.getElementById('afAD').value) || 0;
-        document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
-        document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
-    }
+        function recalcPR() {
+            const ad = parseFloat(document.getElementById('afAD').value) || 0;
+            document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
+            document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
+        }
 
-    async function loadSubs(parentId) {
-        const sel = document.getElementById('subSel');
-        sel.innerHTML = '<option value="0">Loading…</option>';
-        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
-        const data = await (await fetch(`/ClientArticle/GetSubCategories?parentId=${parentId}`)).json();
-        sel.innerHTML = '<option value="0">— None —</option>';
-        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
-    }
-</script>
+        async function loadSubs(parentId) {
+            const sel = document.getElementById('subSel');
+            sel.innerHTML = '<option value="0">Loading…</option>';
+            if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
+            const data = await (await fetch(`/ClientArticle/GetSubCategories?parentId=${parentId}`)).json();
+            sel.innerHTML = '<option value="0">— None —</option>';
+            data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+        }
+
+
+        $(document).ready(function () {
+            $('.select-search').select2({
+                placeholder: 'Search...',
+                allowClear: true
+            });
+        });
+    </script>
 }

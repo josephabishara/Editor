@@ -54,7 +54,7 @@
                 <div class="fg">
                     <label asp-for="PublicationId">Publication <span style="color:var(--red)">*</span></label>
                     <select asp-for="PublicationId" asp-items="pubSL"
-                            onchange="autoFillPublication(this.value)">
+                            onchange="autoFillPublication(this.value)" class="select-search">
                         <option value="0">— Select —</option>
                     </select>
                     <span asp-validation-for="PublicationId" class="field-error"></span>
@@ -76,7 +76,7 @@
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
                     <label asp-for="WriterId">Writer</label>
-                    <select asp-for="WriterId" asp-items="writerSL">
+                    <select asp-for="WriterId" asp-items="writerSL" class="select-search">
                         <option value="0">— None —</option>
                     </select>
                 </div>
@@ -249,5 +249,12 @@
         sel.innerHTML = '<option value="0">— None —</option>';
         data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
     }
+
+        $(document).ready(function () {
+            $('.select-search').select2({
+                placeholder: 'Search...',
+                allowClear: true
+            });
+        });
 </script>
 }
