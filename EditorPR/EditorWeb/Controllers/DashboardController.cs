@@ -68,5 +68,24 @@ namespace EditorWeb.Controllers
                 return NotFound();
             }
         }
+
+
+        [HttpGet]
+        [Authorize(Roles = "Client, Assistant")]
+        public async Task<IActionResult> MyDashboard( DateTime? from, DateTime? to)
+        {
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value;
+            var user = await _clientService.GetByIdAsync(int.Parse(userId!));
+
+            try
+            {
+                var dashboard = await _dashboardService.GetClientDashboardAsync(user.Id, from, to);
+                return View(dashboard);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+        }
     }
 }

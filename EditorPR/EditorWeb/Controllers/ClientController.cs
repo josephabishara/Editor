@@ -414,12 +414,166 @@ namespace EditorWeb.Controllers
         // POST: /Client/DeleteAssistant
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteAssistant(int id, int clientId)
         {
             var (success, message) = await _clientService.DeleteAssistantAsync(id); // FIXED: was _assistantService (null)
             TempData[success ? "Success" : "Error"] = message;
             return RedirectToAction(nameof(Details), new { id = clientId });
         }
+
+
+        // ── Website Categories Excel ──────────────────────────────────────────────────
+
+        // GET: /Client/ExportWebsiteCategories/5
+        [HttpGet]
+        public async Task<IActionResult> ExportWebsiteCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+
+            var categories = await _clientService.GetClientCategoriesAsync(id);
+            var bytes = _clientService.ExportWebsiteCategoriesToExcel(categories, client.Name);
+            var fileName = $"WebsiteCategories_{client.Name.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        // GET: /Client/ImportWebsiteCategories/5
+        [HttpGet]
+        public async Task<IActionResult> ImportWebsiteCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+            ViewBag.ClientId = id;
+            ViewBag.ClientName = client.Name;
+            return View();
+        }
+
+        // POST: /Client/ImportWebsiteCategories/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportWebsiteCategories(int id, IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an Excel file.";
+                return RedirectToAction(nameof(ImportWebsiteCategories), new { id });
+            }
+
+            using var stream = file.OpenReadStream();
+            var (success, message, _) =
+                await _clientService.ImportWebsiteCategoriesFromExcelAsync(id, stream, file.FileName);
+
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(
+                success ? nameof(EditCategories) : nameof(ImportWebsiteCategories),
+                new { id });
+        }
+
+
+        // ── Publication Categories Excel ──────────────────────────────────────────────
+
+        // GET: /Client/ExportPublicationCategories/5
+        [HttpGet]
+        public async Task<IActionResult> ExportPublicationCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+
+            var categories = await _clientService.GetClientPublicationCategoriesAsync(id);
+            var bytes = _clientService.ExportPublicationCategoriesToExcel(categories, client.Name);
+            var fileName = $"PublicationCategories_{client.Name.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        // GET: /Client/ImportPublicationCategories/5
+        [HttpGet]
+        public async Task<IActionResult> ImportPublicationCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+            ViewBag.ClientId = id;
+            ViewBag.ClientName = client.Name;
+            return View();
+        }
+
+        // POST: /Client/ImportPublicationCategories/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportPublicationCategories(int id, IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an Excel file.";
+                return RedirectToAction(nameof(ImportPublicationCategories), new { id });
+            }
+
+            using var stream = file.OpenReadStream();
+            var (success, message, _) =
+                await _clientService.ImportPublicationCategoriesFromExcelAsync(id, stream, file.FileName);
+
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(
+                success ? nameof(EditPublicationCategories) : nameof(ImportPublicationCategories),
+                new { id });
+        }
+
+
+        // ── Channel Categories Excel ──────────────────────────────────────────────────
+
+        // GET: /Client/ExportChannelCategories/5
+        [HttpGet]
+        public async Task<IActionResult> ExportChannelCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+
+            var categories = await _clientService.GetClientChannelCategoriesAsync(id);
+            var bytes = _clientService.ExportChannelCategoriesToExcel(categories, client.Name);
+            var fileName = $"ChannelCategories_{client.Name.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        // GET: /Client/ImportChannelCategories/5
+        [HttpGet]
+        public async Task<IActionResult> ImportChannelCategories(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+            ViewBag.ClientId = id;
+            ViewBag.ClientName = client.Name;
+            return View();
+        }
+
+        // POST: /Client/ImportChannelCategories/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportChannelCategories(int id, IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an Excel file.";
+                return RedirectToAction(nameof(ImportChannelCategories), new { id });
+            }
+
+            using var stream = file.OpenReadStream();
+            var (success, message, _) =
+                await _clientService.ImportChannelCategoriesFromExcelAsync(id, stream, file.FileName);
+
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(
+                success ? nameof(EditChannelCategories) : nameof(ImportChannelCategories),
+                new { id });
+        }
+
+
     }
 }

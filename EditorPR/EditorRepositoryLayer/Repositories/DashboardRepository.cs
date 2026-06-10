@@ -43,7 +43,7 @@ namespace EditorRepositoryLayer.Repositories
                 .Where(n => n.ClientId == clientId
                          && n.IsActive
                          && n.Deleted == 0)
-                .SumAsync(n => n.PRValue);
+                .SumAsync(n => n.PRValue ?? 0m);
 
         // ── Videos ───────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ namespace EditorRepositoryLayer.Repositories
             => Papers(clientId, from, to).CountAsync();
 
         public Task<decimal> GetNewsPaperTotalPRAsync(int clientId, DateTime? from, DateTime? to)
-            => Papers(clientId, from, to).SumAsync(n => n.PRValue);
+            => Papers(clientId, from, to).SumAsync(n => n.PRValue ?? 0m);
 
         // ── Videos ────────────────────────────────────────────────────────────
 
@@ -128,5 +128,20 @@ namespace EditorRepositoryLayer.Repositories
 
         public Task<decimal> GetVideoTotalPRAsync(int clientId, DateTime? from, DateTime? to)
             => Videos(clientId, from, to).SumAsync(v => v.PRValue ?? 0m);
+
+
+        
+        public Task<decimal> GetArticleTotalADAsync(int clientId)
+        => _context.Set<EditorEntitiesLayer.Entities.ClientArticle>()
+                .Where(a => a.ClientId == clientId
+                         && a.IsActive
+                         && a.Deleted == 0)
+                .SumAsync(a => a.ADValue ?? 0m);
+        public Task<decimal> GetNewsPaperTotalADAsync(int clientId)
+        => _context.Set<EditorEntitiesLayer.Entities.ClientNewsPaper>()
+                .Where(n => n.ClientId == clientId
+                         && n.IsActive
+                         && n.Deleted == 0)
+                .SumAsync(n => n.ADValue ?? 0m);
     }
 }

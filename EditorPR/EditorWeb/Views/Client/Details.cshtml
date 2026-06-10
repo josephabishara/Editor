@@ -164,6 +164,7 @@
                         <thead class="table-secondary">
                             <tr>
                                 <th>Website</th>
+                                <th>Price</th>
                                 <th class=" text-center"> Tier</th>
                             </tr>
                         </thead>
@@ -180,6 +181,7 @@
                             {
                                 <tr>
                                     <td class="fw-semibold small">@cat.WebsiteName</td>
+                                    <td class="fw-semibold small">@cat.UnitPrice</td>
                                   
                                     <td class=" text-center">
                                         @if (!string.IsNullOrEmpty(cat.MediaTier))
@@ -219,7 +221,7 @@
                         <thead class="table-secondary">
                             <tr>
                                 <th>Publication</th>
-                              
+                                <th>Price</th>
                                 <th class=" text-center"> Tier</th>
                             </tr>
                         </thead>
@@ -234,6 +236,7 @@
                             {
                                 <tr>
                                     <td class="fw-semibold small">@cat.PublicationName</td>
+                                    <td class="fw-semibold small">@cat.UnitPrice</td>
                                     
                                     <td class=" text-center">
                                         @{
@@ -275,6 +278,7 @@
                         <thead class="table-secondary">
                             <tr>
                                 <th>Channel</th>
+                                <th>Price</th>
                                 <th class=" text-center"> Tier</th>
                             </tr>
                         </thead>
@@ -289,6 +293,7 @@
                             {
                                 <tr>
                                     <td class="fw-semibold small">@cat.ChannelName</td>
+                                    <td class="fw-semibold small">@cat.UnitPrice</td>
                                     <td class=" text-center">
                                         @{
                                             var cColor = cat.MediaTier switch

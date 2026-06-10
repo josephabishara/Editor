@@ -22,10 +22,12 @@ namespace EditorViewModelLayer.ClientViewModel
         // ── Articles (ClientArticle → Website) ─────────────────────────────
         public int ArticleCount { get; set; }
         public decimal ArticleTotalPR { get; set; }
+        public decimal ArticleTotalAD { get; set; }
 
         // ── Newspaper clippings (ClientNewsPaper → Publication) ────────────
         public int NewsPaperCount { get; set; }
         public decimal NewsPaperTotalPR { get; set; }
+        public decimal NewsPaperTotalAD { get; set; }
 
         // ── Videos (ClientVideo → Channel) ────────────────────────────────
         public int VideoCount { get; set; }

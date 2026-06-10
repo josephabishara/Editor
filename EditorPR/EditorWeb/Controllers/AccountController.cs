@@ -17,7 +17,7 @@ namespace EditorWeb.Controllers
         public IActionResult Login(string? returnUrl = null)
         {
             if (User.Identity?.IsAuthenticated == true)
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "dashboard");
 
             ViewData["ReturnUrl"] = returnUrl;
             return View();

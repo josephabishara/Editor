@@ -46,6 +46,7 @@
     <div class="m-header-icon" style="background:#ede9fe;">📺</div>
     <div><h1>Videos</h1><p>@Model.ClientName</p></div>
     <div class="ms-auto"><a href="@Url.Action("ClientDashboard", "Dashboard", new { id = clientId })" class="btn-dashboard">← Dashboard</a></div>
+    @await Html.PartialAsync("_navdashboard")
 </div>
 
 <div class="stat-row">

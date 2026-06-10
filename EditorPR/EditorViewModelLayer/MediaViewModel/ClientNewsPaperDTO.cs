@@ -8,11 +8,16 @@ namespace EditorViewModelLayer.MediaViewModel
     public class ClientNewsPaperDTO
     {
         public int Id { get; set; }
-        public int NewsPaperId { get; set; }  // reference, not FK
+        public int NewsPaperId { get; set; }
 
         [Required]
         public int ClientId { get; set; }
         public string? ClientName { get; set; }
+
+        // ── Parent / Child ─────────────────────────────────────────────────────
+        public int? ParentId { get; set; }
+        public List<ChildNewsPaperDTO> Children { get; set; } = new();
+
 
         // ── Source ────────────────────────────────────────────────────────────
         [Required]
@@ -22,9 +27,11 @@ namespace EditorViewModelLayer.MediaViewModel
 
         [Display(Name = "Category")]
         public int CategoryId { get; set; }
+        public string? CategoryName { get; set; }        // ← display only
 
         [Display(Name = "Sub Category")]
         public int SubCategoryId { get; set; }
+        public string? SubCategoryName { get; set; }     // ← display only
 
         [Display(Name = "Writer")]
         public int WriterId { get; set; }
@@ -35,7 +42,7 @@ namespace EditorViewModelLayer.MediaViewModel
         public string? MediaType { get; set; }
 
         [Display(Name = "Media Tier")]
-        public string? MediaTier { get; set; }  // from PublicationCustomerCategory
+        public string? MediaTier { get; set; }
 
         [Display(Name = "Frequency")]
         public string? Frequency { get; set; }
@@ -47,7 +54,7 @@ namespace EditorViewModelLayer.MediaViewModel
         public int? Circulation { get; set; }
 
         [Display(Name = "Reach")]
-        public int Reach { get; set; }   // Circulation * 4
+        public int Reach { get; set; }
 
         // ── Layout ────────────────────────────────────────────────────────────
         [Display(Name = "Pages")]
@@ -64,22 +71,28 @@ namespace EditorViewModelLayer.MediaViewModel
         [DataType(DataType.Date)]
         public DateTime Date { get; set; } = DateTime.Today;
 
+
         [Required]
         [MaxLength(500)]
         public string Title { get; set; } = string.Empty;
 
         [Display(Name = "AD Value")]
-        public decimal ADValue { get; set; }   // CM Price from Publication
+        public decimal ADValue { get; set; }
 
         [Display(Name = "PR Value")]
-        public decimal PRValue { get; set; }   // ADValue * 3.5
+        public decimal PRValue { get; set; }
 
         // ── Branding & Analysis ───────────────────────────────────────────────
         [Display(Name = "Article Branding")]
-        public string ArticleBranding { get; set; } = "N/A";
+        public string ArticleBranding { get; set; } = "Branded";
 
         [Display(Name = "Headline Branding")]
-        public string HeadlineBranding { get; set; } = "N/A";
+        public string HeadlineBranding { get; set; } = "Branded";
+        [Display(Name = "Picture in Article")]
+        public string? PictureinArticle { get; set; } = "Yes";
+
+        [Display(Name = "Generation")]
+        public string? Generation { get; set; } = "Generated";
 
         [Display(Name = "Toning")]
         public string? Toning { get; set; }
@@ -88,17 +101,23 @@ namespace EditorViewModelLayer.MediaViewModel
         public string? Content { get; set; }
 
         [Display(Name = "Images")]
-        public string? Images { get; set; }  // comma-separated saved paths
+        public string? Images { get; set; }
 
         [Display(Name = "Published")]
         public bool Publish { get; set; } = false;
 
-        // ── Dropdown lists (populated by service) ─────────────────────────────
+        // ── Audit ─────────────────────────────────────────────────────────────
+        public string? CreatedByUserName { get; set; }   // ← display only
+        public DateTime CreatedAt { get; set; }           // ← from BaseEntity
+
+        // ── Dropdowns ─────────────────────────────────────────────────────────
         public List<MediaSelectOption> PublicationOptions { get; set; } = new();
         public List<MediaSelectOption> CategoryOptions { get; set; } = new();
         public List<MediaSelectOption> SubCategoryOptions { get; set; } = new();
         public List<MediaSelectOption> WriterOptions { get; set; } = new();
         public List<MediaSelectOption> BrandingOptions { get; set; } = new();
         public List<MediaSelectOption> ToningOptions { get; set; } = new();
+        public List<MediaSelectOption> YesNoOptions { get; set; } = new();
+        public List<MediaSelectOption> GenerationOptions { get; set; } = new();
     }
 }

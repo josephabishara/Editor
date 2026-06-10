@@ -14,5 +14,8 @@ namespace EditorLogicLayer.Client
         Task<(bool Success, string Message)> CreateAsync(ClientCategoryDTO model);
         Task<(bool Success, string Message)> UpdateAsync(ClientCategoryDTO model);
         Task<(bool Success, string Message)> DeleteAsync(int id);
+
+        Task<(bool Success, string Message)> ToggleStatusAsync(int id);
+
     }
 }

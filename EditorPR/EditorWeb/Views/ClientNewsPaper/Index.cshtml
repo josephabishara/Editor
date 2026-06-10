@@ -1,17 +1,18 @@
 ﻿@model EditorViewModelLayer.MediaViewModel.ClientNewsPaperListDTO
 @using EditorViewModelLayer.MediaViewModel
 @using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Text.Encodings.Web
 @{
-    ViewData["Title"] = "Newspaper Articles";
+    ViewData["Title"] = "Newspaper";
     var clientId = Model.ClientId > 0 ? Model.ClientId : (ViewBag.ClientId is int v ? v : 0);
 
-    var fTitle  = ViewBag.FilterTitle    as string ?? "";
-    var fFrom   = ViewBag.FilterDateFrom as string ?? "";
-    var fTo     = ViewBag.FilterDateTo   as string ?? "";
-    var fCat    = (int)(ViewBag.FilterCategoryId ?? 0);
-    var fSub    = (int)(ViewBag.FilterSubId      ?? 0);
-    var fWriter = (int)(ViewBag.FilterWriterId   ?? 0);
-    var fPub    = (int)(ViewBag.FilterPubId      ?? 0);
+    var fTitle = ViewBag.FilterTitle as string ?? "";
+    var fFrom = ViewBag.FilterDateFrom as string ?? "";
+    var fTo = ViewBag.FilterDateTo as string ?? "";
+    var fCat = (int)(ViewBag.FilterCategoryId ?? 0);
+    var fSub = (int)(ViewBag.FilterSubId ?? 0);
+    var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
+    var fPub = (int)(ViewBag.FilterPubId ?? 0);
 
     bool isAdmin = User.IsInRole("Admin");
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
@@ -19,70 +20,135 @@
     List<SelectListItem> ToSL(List<MediaSelectOption> src)
         => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
 
-    var pubSL    = ToSL(Model.PublicationOptions);
-    var catSL    = ToSL(Model.CategoryOptions);
-    var subSL    = ToSL(Model.SubCategoryOptions);
+    var pubSL = ToSL(Model.PublicationOptions);
+    var catSL = ToSL(Model.CategoryOptions);
+    var subSL = ToSL(Model.SubCategoryOptions);
     var writerSL = ToSL(Model.WriterOptions);
+
+    // Extract first image path from JSON Images array
+    string FirstImage(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return "";
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json)?.FirstOrDefault() ?? ""; }
+        catch { return ""; }
+    }
 }
 
 @await Html.PartialAsync("_MediaStyles")
 
 <style>
-    /* ── Checkbox column ── */
-    .cb-col { width: 36px; text-align: center !important; }
-    .row-cb { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .cb-col {
+        width: 36px;
+        text-align: center !important;
+    }
 
-    /* ── Selection toolbar ── */
+    .row-cb {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
     .sel-toolbar {
-        display: none; align-items: center; gap: .75rem;
-        background: #721a24; color: #fff;
-        border-radius: var(--radius); padding: .65rem 1.2rem;
-        margin-bottom: 1rem; flex-wrap: wrap;
+        display: none;
+        align-items: center;
+        gap: .75rem;
+        background: #0891b2;
+        color: #fff;
+        border-radius: var(--radius);
+        padding: .65rem 1.2rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
     }
-    .sel-toolbar.visible { display: flex; }
-    .sel-toolbar .sel-count { font-size: .85rem; font-weight: 700; flex: 1; }
-    .sel-toolbar .sel-count span { background: rgba(255,255,255,.25); border-radius: 20px; padding: .15rem .6rem; margin-left: .4rem; }
+
+        .sel-toolbar.visible {
+            display: flex;
+        }
+
+        .sel-toolbar .sel-count {
+            font-size: .85rem;
+            font-weight: 700;
+            flex: 1;
+        }
+
+            .sel-toolbar .sel-count span {
+                background: rgba(255,255,255,.25);
+                border-radius: 20px;
+                padding: .15rem .6rem;
+                margin-left: .4rem;
+            }
+
     .btn-export {
-        display: inline-flex; align-items: center; gap: .35rem;
-        border: none; border-radius: 7px; padding: .42rem 1rem;
-        font-size: .82rem; font-weight: 700; cursor: pointer; transition: filter .15s;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        border: none;
+        border-radius: 7px;
+        padding: .42rem 1rem;
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter .15s;
     }
-    .btn-export:hover { filter: brightness(.9); }
-    .btn-xl  { background: #16a34a; color: #fff; }
-    .btn-pdf { background: #dc2626; color: #fff; }
-    .btn-desel { background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.35); }
+
+        .btn-export:hover {
+            filter: brightness(.9);
+        }
+
+    .btn-xl {
+        background: #16a34a;
+        color: #fff;
+    }
+
+    .btn-pdf {
+        background: #dc2626;
+        color: #fff;
+    }
+
+    .btn-desel {
+        background: rgba(255,255,255,.18);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,.35);
+    }
 </style>
 
-@if (TempData["Success"] != null) { <div class="alert alert-success">✓ @TempData["Success"]</div> }
-@if (TempData["Error"]   != null) { <div class="alert alert-danger">✗ @TempData["Error"]</div> }
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        ✅ @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        ❌ @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
 <div class="m-header">
     <div class="m-header-icon" style="background:#dbeafe;">📰</div>
-    <div>
-        <h1>Newspaper Articles</h1>
-        <p>@Model.ClientName</p>
+    <div><h1>Newspaper</h1><p>@Model.ClientName</p></div>
+    <div class="ms-auto">
+        <a href="@Url.Action("ClientDashboard", "Dashboard", new { id = clientId })"
+           class="btn-dashboard">← Dashboard</a>
     </div>
-    <div class="ms-auto d-flex gap-2">
-        <a href="@Url.Action("ClientDashboard", "Dashboard", new { id = clientId })" class="btn-dashboard">← Dashboard</a>
-    </div>
+    @await Html.PartialAsync("_navdashboard")
 </div>
 
 <div class="stat-row">
-    <div class="stat-pill sp-total">
-        <span class="num">@Model.Total</span><span class="lbl">Total Articles</span>
-    </div>
-    <div class="stat-pill sp-pr">
-        <span class="num">@Model.TotalPR.ToString("N0")</span><span class="lbl">Total PR Value</span>
-    </div>
-    <div class="stat-pill sp-ad">
-        <span class="num">@Model.TotalAD.ToString("N0")</span><span class="lbl">Total AD Value</span>
-    </div>
+    <div class="stat-pill sp-total"><span class="num">@Model.Total</span><span class="lbl">Total Newspapers</span></div>
+    <div class="stat-pill sp-pr"><span class="num">@Model.TotalPR.ToString("N0")</span><span class="lbl">Total PR</span></div>
+    <div class="stat-pill sp-ad"><span class="num">@Model.TotalAD.ToString("N0")</span><span class="lbl">Total AD</span></div>
 </div>
 
 <div class="filter-card">
     <div class="filter-title">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        Filter Articles
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </svg>
+        Filter Newspapers
     </div>
     <form method="get" action="@Url.Action("Index")">
         <input type="hidden" name="clientId" value="@clientId" />
@@ -92,7 +158,8 @@
             <div class="fg"><label>Date To</label><input type="date" name="dateTo" value="@fTo" /></div>
             <div class="fg">
                 <label>Category</label>
-                <select name="categoryId" id="fCat" asp-items="catSL" onchange="loadSubs(this.value,'fSub','/ClientNewsPaper/GetSubCategories')">
+                <select name="categoryId" id="fCat" asp-items="catSL"
+                        onchange="loadSubs(this.value,'fSub','/ClientNewsPaper/GetSubCategories')">
                     <option value="0">All</option>
                 </select>
             </div>
@@ -107,28 +174,39 @@
     </form>
 </div>
 
-@* ── Selection toolbar (appears when rows are checked) ── *@
 <div class="sel-toolbar" id="selToolbar">
-    <div class="sel-count">Selected <span id="selCount">0</span> articles</div>
-    <button class="btn-export btn-xl"  onclick="exportExcel()">⬇ Excel</button>
+    <div class="sel-count">Selected <span id="selCount">0</span> newspapers</div>
+    <button class="btn-export btn-xl" onclick="exportExcel()">⬇ Excel</button>
     <button class="btn-export btn-pdf" onclick="exportPDF()">⬇ PDF Report</button>
+    <form id="duplicateForm" asp-action="Duplicate" asp-controller="ClientNewsPaper"
+          method="post" style="display:inline;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="clientId" value="@ViewBag.ClientId" />
+        <input type="hidden" name="id" id="hdnSelectedId" value="0" />
+        <button type="submit" id="btnDuplicate" disabled
+                style="display:inline-flex;align-items:center;gap:.35rem;
+            background:#f59e0b;color:#fff;border:none;border-radius:7px;
+            padding:.38rem .85rem;font-size:.82rem;font-weight:600;
+            cursor:pointer;opacity:.5;"
+                onclick="return confirmDuplicate()">
+            📋 Duplicate Selected
+        </button>
+    </form>
     <button class="btn-export btn-desel" onclick="deselectAll()">✕ Deselect All</button>
 </div>
 
 <div class="action-bar">
-    <div class="result-count">
-        Showing <strong>@Model.Items.Count()</strong> of <strong>@Model.Total</strong>
-    </div>
+    <div class="result-count">Showing <strong>@Model.Items.Count()</strong> of <strong>@Model.Total</strong></div>
     @if (canEdit)
     {
-        <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add Article</a>
+        <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add Newspaper</a>
     }
 </div>
 
 <div class="m-table-wrap">
     @if (!Model.Items.Any())
     {
-        <div class="empty-state"><h3>No articles found</h3><p>Adjust filters or add a new article.</p></div>
+        <div class="empty-state"><h3>No newspapers found</h3><p>Adjust filters or add a new newspaper.</p></div>
     }
     else
     {
@@ -136,86 +214,105 @@
             <thead>
                 <tr>
                     <th class="cb-col">
-                        <input type="checkbox" class="row-cb" id="cbAll" title="Select all" onchange="toggleAll(this)" />
+                        <input type="checkbox" class="row-cb" id="cbAll" onchange="toggleAll(this)" />
                     </th>
                     <th>#</th>
                     <th>Date</th>
                     <th>Title</th>
                     <th>Publication</th>
-                    <th>Media Type</th>
-                    <th>Media Tier</th>
                     <th>Category</th>
-                    <th>Writer</th>
-                    <th>Circulation</th>
-                    <th>Reach</th>
-                    <th>AD Value</th>
-                    <th>PR Value</th>
-                    <th>Toning</th>
-                    <th>Published</th>
-                    <th>Actions</th>
+                    <th>Sub-Category</th>
+                  @*   <th>Writer</th>
+                    <th class="text-end">AD Value</th>
+                    <th class="text-end">PR Value</th> *@
+                    <th>Created By</th>
+                    <th>Created At</th>
+                    <th class="text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @{ int r = 1; }
+                @{
+                    int rowNum = 1;
+                }
                 @foreach (var item in Model.Items)
                 {
+                    var firstImg = FirstImage(item.Images);
+                    var encodedContent = HtmlEncoder.Default.Encode(item.Content ?? "");
+                    var encodedTitle = HtmlEncoder.Default.Encode(item.Title ?? "");
+
                     <tr data-id="@item.Id"
-                        data-date="@item.Date.ToString("dd MMM yyyy")"
-                        data-title="@item.Title"
+                        data-date="@item.Date.ToString("dd-MM-yyyy")"
+                        data-title="@encodedTitle"
                         data-publication="@(item.PublicationName ?? "")"
+                        data-categorytype="@(item.CategoryName ?? "")"
+                        data-category="@(item.CategoryName ?? "")"
+                        data-subcategory="@(item.SubCategoryName ?? "")"
+                        data-writer="@(item.WriterName ?? "")"
                         data-mediatype="@(item.MediaType ?? "")"
                         data-mediatier="@(item.MediaTier ?? "")"
-                        data-category="@(item.CategoryId > 0 ? item.CategoryId.ToString() : "")"
-                        data-writer="@(item.WriterName ?? "")"
-                        data-circulation="@(item.Circulation?.ToString() ?? "")"
+                        data-frequency="@(item.Frequency ?? "")"
+                        data-language="@(item.Language ?? "")"
+                        data-circulation="@(item.Circulation ?? 0)"
                         data-reach="@item.Reach"
-                        data-ad="@item.ADValue.ToString("F2")"
-                        data-pr="@item.PRValue.ToString("F2")"
+                        data-ad="@item.ADValue"
+                        data-pr="@item.PRValue"
                         data-toning="@(item.Toning ?? "")"
-                        data-published="@(item.Publish ? "Yes" : "No")"
-                        data-content="@(System.Web.HttpUtility.HtmlAttributeEncode(item.Content ?? ""))"
-                        data-client="@Model.ClientName"
+                        data-articlebrand="@(item.ArticleBranding ?? "")"
+                        data-headlinebrand="@(item.HeadlineBranding ?? "")"
+                        data-picture="@(item.PictureinArticle ?? "")"
+                        data-generation="@(item.Generation ?? "")"
                         data-pages="@item.Pages"
                         data-height="@item.Height"
                         data-width="@item.Width"
-                        data-articlebrand="@item.ArticleBranding"
-                        data-headlinebrand="@item.HeadlineBranding">
+                        data-size="@(item.Height > 0 ? $"{item.Height} cm X {item.Width} col" : "")"
+                        data-createdby="@(item.CreatedByUserName ?? "")"
+                        data-createdat="@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")"
+                        data-screenshot="@firstImg"
+                        data-content="@encodedContent">
+
                         <td class="cb-col">
-                            <input type="checkbox" class="row-cb row-check" onchange="onRowCheck()" />
+                            <input type="checkbox" class="row-cb row-check"
+                                   value="@item.Id" onchange="onRowCheck()" />
                         </td>
-                        <td style="color:var(--slate);font-size:.75rem;">@r</td>
-                        <td style="white-space:nowrap;color:var(--slate);">@item.Date.ToString("dd MMM yyyy")</td>
-                        <td><div class="m-title">@item.Title</div></td>
-                        <td style="font-size:.78rem;">@(item.PublicationName ?? "—")</td>
-                        <td style="font-size:.78rem;">@(item.MediaType ?? "—")</td>
-                        <td style="font-size:.78rem;">@(item.MediaTier ?? "—")</td>
-                        <td style="font-size:.78rem;">@(item.CategoryId > 0 ? item.CategoryId.ToString() : "—")</td>
-                        <td style="font-size:.78rem;">@(item.WriterName ?? "—")</td>
-                        <td style="font-size:.78rem;">@(item.Circulation?.ToString("N0") ?? "—")</td>
-                        <td style="font-size:.78rem;">@item.Reach.ToString("N0")</td>
-                        <td class="val-ad">@item.ADValue.ToString("N2")</td>
-                        <td class="val-pr">@item.PRValue.ToString("N2")</td>
+                        <td class="text-muted small">@rowNum</td>
+                        <td class="small text-nowrap">@item.Date.ToString("dd MMM yyyy")</td>
                         <td>
-                            @if (!string.IsNullOrEmpty(item.Toning) && item.Toning != "None")
+                            <a asp-action="Details" asp-route-id="@item.Id"
+                               class="fw-semibold text-decoration-none text-dark"
+                               title="@item.Title">
+                                @(item.Title.Length > 55 ? item.Title[..55] + "…" : item.Title)
+                            </a>
+                            @if (item.Publish)
                             {
-                                var dc = item.Toning switch { "Positive"=>"t-pos","Negative"=>"t-neg",_=>"t-neu" };
-                                <span class="toning-dot @dc"></span>@item.Toning
+                                <span class="badge bg-success ms-1" style="font-size:.7rem;">Published</span>
                             }
-                            else { <span style="color:var(--slate);">—</span> }
                         </td>
-                        <td>
-                            <span class="pub-badge @(item.Publish ? "pub-yes" : "pub-no")">
-                                @(item.Publish ? "✓ Yes" : "⏳ No")
-                            </span>
+                        <td class="small">@(item.PublicationName ?? "—")</td>
+                        <td class="small">@(item.CategoryName ?? "—")</td>
+                        <td class="small">@(item.SubCategoryName ?? "—")</td>
+                     @*    <td class="small">@(item.WriterName ?? "—")</td>
+                        <td class="text-end small">@item.ADValue.ToString("N0")</td>
+                        <td class="text-end small fw-semibold text-success">@item.PRValue.ToString("N0")</td> *@
+                        <td class="small text-muted">@(item.CreatedByUserName ?? "—")</td>
+                        <td class="small text-nowrap text-muted">
+                            @item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
                         </td>
-                        <td>
-                            <a href="@Url.Action("Details", new { id=item.Id })" class="act-btn act-view" title="View">👁</a>
-                            @if (canEdit) { <a href="@Url.Action("Edit", new { id=item.Id })" class="act-btn act-edit" title="Edit">✏️</a> }
+                        <td class="text-center text-nowrap">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="act-btn act-view" title="View">
+                                <i class="fa fa-eye"></i>
+                            </a>
+                            @if (canEdit)
+                            {
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="act-btn act-edit" title="Edit">
+                                    <i class="fa fa-pencil"></i>
+                                </a>
+                            }
                             @if (isAdmin)
                             {
                                 @if (item.Publish)
                                 {
-                                    <form method="post" action="@Url.Action("Unpublish")" style="display:inline;" onsubmit="return confirm('Unpublish?')">
+                                    <form method="post" action="@Url.Action("Unpublish")" style="display:inline;"
+                                          onsubmit="return confirm('Unpublish?')">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="clientId" value="@clientId" />
@@ -231,16 +328,13 @@
                                         <button type="submit" class="act-btn act-pub" title="Publish">📢</button>
                                     </form>
                                 }
-                                <form method="post" action="@Url.Action("Delete")" style="display:inline;" onsubmit="return confirm('Delete?')">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@item.Id" />
-                                    <input type="hidden" name="clientId" value="@clientId" />
-                                    <button type="submit" class="act-btn act-del" title="Delete">🗑</button>
-                                </form>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="act-btn act-del" title="Delete">
+                                    <i class="fa fa-trash"></i>
+                                </a>
                             }
                         </td>
                     </tr>
-                    r++;
+                    rowNum++;
                 }
             </tbody>
         </table>
@@ -248,298 +342,416 @@
 </div>
 
 @section Scripts {
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script>
-const clientName = "@Model.ClientName";
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        const clientName = "@Model.ClientName";
 
-// ── Selection helpers ──────────────────────────────────────────────────────
-function toggleAll(cb) {
-    document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
-    onRowCheck();
-}
-function onRowCheck() {
-    const count = document.querySelectorAll('.row-check:checked').length;
-    document.getElementById('selCount').textContent = count;
-    document.getElementById('selToolbar').classList.toggle('visible', count > 0);
-    const all = document.querySelectorAll('.row-check');
-    document.getElementById('cbAll').indeterminate = count > 0 && count < all.length;
-    document.getElementById('cbAll').checked = count === all.length && all.length > 0;
-}
-function deselectAll() {
-    document.querySelectorAll('.row-check, #cbAll').forEach(c => { c.checked = false; c.indeterminate = false; });
-    onRowCheck();
-}
+        // ── Checkbox helpers ──────────────────────────────────────────────────────────
+        function toggleAll(cb) {
+        document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+        onRowCheck();
+        }
+        function deselectAll() {
+        document.querySelectorAll('.row-check, #cbAll').forEach(c => { c.checked = false; c.indeterminate = false; });
+        onRowCheck();
+        }
+        function onRowCheck() {
+        const checked = document.querySelectorAll('.row-check:checked');
+        const count   = checked.length;
+        const all     = document.querySelectorAll('.row-check');
+        document.getElementById('selCount').textContent = count;
+        document.getElementById('selToolbar').classList.toggle('visible', count > 0);
+        const cbAll = document.getElementById('cbAll');
+        cbAll.indeterminate = count > 0 && count < all.length;
+        cbAll.checked       = count === all.length && all.length > 0;
+        const btnDup = document.getElementById('btnDuplicate');
+        const hdnId  = document.getElementById('hdnSelectedId');
+        if (count === 1) {
+        hdnId.value = checked[0].value;
+        btnDup.disabled = false;
+        btnDup.style.opacity = '1';
+        } else {
+        hdnId.value = '0';
+        btnDup.disabled = true;
+        btnDup.style.opacity = '.5';
+        }
+        }
+        function getSelectedRows() {
+        const rows = [];
+        document.querySelectorAll('.row-check:checked').forEach(cb => rows.push(cb.closest('tr').dataset));
+        return rows;
+        }
+        function confirmDuplicate() {
+        const hdnId = document.getElementById('hdnSelectedId');
+        if (!hdnId.value || hdnId.value === '0') return false;
+        return confirm('Duplicate this record and all its children?');
+        }
 
-// ── Get selected row data ──────────────────────────────────────────────────
-function getSelectedRows() {
-    const rows = [];
-    document.querySelectorAll('.row-check:checked').forEach(cb => {
-        const tr = cb.closest('tr');
-        const d  = tr.dataset;
-        rows.push({
-            date:           d.date,
-            title:          d.title,
-            publication:    d.publication,
-            mediaType:      d.mediatype,
-            mediaTier:      d.mediatier,
-            category:       d.category,
-            writer:         d.writer,
-            circulation:    d.circulation,
-            reach:          d.reach,
-            adValue:        d.ad,
-            prValue:        d.pr,
-            toning:         d.toning,
-            published:      d.published,
-            content:        d.content,
-            client:         d.client,
-            pages:          d.pages,
-            height:         d.height,
-            width:          d.width,
-            articleBrand:   d.articlebrand,
-            headlineBrand:  d.headlinebrand,
+        // ── Sub-category cascade ──────────────────────────────────────────────────────
+        async function loadSubs(parentId, targetId, url) {
+        const sel = document.getElementById(targetId);
+        sel.innerHTML = '<option value="0">Loading…</option>';
+        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">All</option>'; return; }
+        const data = await (await fetch(`${url}?parentId=${parentId}`)).json();
+        sel.innerHTML = '<option value="0">All</option>';
+        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+        }
+
+        // ── Excel ─────────────────────────────────────────────────────────────────────
+        function exportExcel() {
+        const rows = getSelectedRows();
+        if (!rows.length) { alert('Please select at least one newspaper.'); return; }
+        const headers = ['Date','Title','Publication','Category','Sub-Category','Writer',
+        'Media Type','Media Tier','Frequency','Language',
+        'Circulation','Reach','AD Value','PR Value',
+        'Toning','Article Branding','Headline Branding',
+        'Picture in Article','Generation','Pages','Height','Width'];
+        const data = rows.map(d => [
+        d.date, d.title, d.publication, d.category, d.subcategory, d.writer,
+        d.mediatype, d.mediatier, d.frequency, d.language,
+        d.circulation, d.reach, d.ad, d.pr,
+        d.toning, d.articlebrand, d.headlinebrand,
+        d.picture, d.generation, d.pages, d.height, d.width
+        ]);
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        ws['!cols'] = headers.map((_, i) => ({ wch: i === 1 ? 40 : i === 2 ? 22 : 15 }));
+        XLSX.utils.book_append_sheet(wb, ws, 'Newspapers');
+        XLSX.writeFile(wb, `${clientName}_Newspapers_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // PDF EXPORT — reference design
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        // ── Arabic font loader (Cairo from jsDelivr) ──────────────────────────────────
+        // Loads the font once and caches it; subsequent calls return immediately.
+        let _arabicFontLoaded = false;
+        const ARABIC_FONT_NAME = 'Cairo';
+
+        async function ensureArabicFont(doc) {
+        if (_arabicFontLoaded) return;
+        try {
+        // Cairo Regular — Arabic + Latin — from jsDelivr (Google Fonts mirror)
+        const url = 'https://cdn.jsdelivr.net/fontsource/fonts/cairo@latest/arabic-400-normal.ttf';
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('font fetch failed');
+        const buf  = await resp.arrayBuffer();
+        // Convert ArrayBuffer → base64
+        const bytes = new Uint8Array(buf);
+        let binary  = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const b64 = btoa(binary);
+        doc.addFileToVFS('Cairo-Regular.ttf', b64);
+        doc.addFont('Cairo-Regular.ttf', ARABIC_FONT_NAME, 'normal');
+        _arabicFontLoaded = true;
+        } catch (e) {
+        console.warn('Arabic font load failed, falling back to helvetica:', e);
+        }
+        }
+
+        function useArabicFont(doc, size, style) {
+        const name = _arabicFontLoaded ? ARABIC_FONT_NAME : 'helvetica';
+        doc.setFont(name, style || 'normal');
+        doc.setFontSize(size);
+        }
+
+        // ── Detect if a string contains Arabic characters ─────────────────────────────
+        function isArabic(str) {
+        return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
+        }
+
+        // ── Reverse Arabic word order so jsPDF LTR engine reads RTL correctly ─────────
+        // jsPDF renders text left-to-right. For Arabic we reverse the word order
+        // so the visual result reads right-to-left.
+        function fixArabic(str) {
+        if (!str || !isArabic(str)) return str;
+        return str.split(' ').reverse().join(' ');
+        }
+
+        // ── HTML entity decoder + tag stripper ───────────────────────────────────────
+        function decodeContent(raw) {
+        if (!raw) return '';
+        try {
+        const ta  = document.createElement('textarea');
+        ta.innerHTML = raw;
+        const div = document.createElement('div');
+        div.innerHTML = ta.value;
+        return (div.textContent || div.innerText || '').replace(/\s+/g,' ').trim();
+        } catch { return ''; }
+        }
+
+        // ── Image helpers ─────────────────────────────────────────────────────────────
+        function imgFormat(dataUri) {
+        if (!dataUri) return 'JPEG';
+        if (dataUri.startsWith('data:image/png'))  return 'PNG';
+        if (dataUri.startsWith('data:image/webp')) return 'WEBP';
+        if (dataUri.startsWith('data:image/gif'))  return 'GIF';
+        return 'JPEG';
+        }
+        async function loadImgB64(url) {
+        if (!url) return null;
+        try {
+        const resp = await fetch(url);
+        if (!resp.ok) return null;
+        const blob = await resp.blob();
+        return new Promise(res => {
+        const r = new FileReader();
+        r.onload  = () => res(r.result);
+        r.onerror = () => res(null);
+        r.readAsDataURL(blob);
         });
-    });
-    return rows;
-}
+        } catch { return null; }
+        }
 
-// ══════════════════════════════════════════════════════════════════════════
-// EXCEL EXPORT
-// ══════════════════════════════════════════════════════════════════════════
-function exportExcel() {
-    const rows = getSelectedRows();
-    if (!rows.length) { alert('Please select at least one article.'); return; }
+        // ── Main export function ──────────────────────────────────────────────────────
+        async function exportPDF() {
+        const rows = getSelectedRows();
+        if (!rows.length) { alert('Please select at least one newspaper.'); return; }
 
-    const headers = [
-        'Date','Title','Publication','Media Type','Media Tier',
-        'Category','Writer','Circulation','Reach',
-        'AD Value','PR Value','Toning','Published',
-        'Pages','Height (cm)','Width (cm)','Article Branding','Headline Branding'
-    ];
+        const { jsPDF } = window.jspdf;
 
-    const data = rows.map(r => [
-        r.date, r.title, r.publication, r.mediaType, r.mediaTier,
-        r.category, r.writer, r.circulation, r.reach,
-        r.adValue, r.prValue, r.toning, r.published,
-        r.pages, r.height, r.width, r.articleBrand, r.headlineBrand
-    ]);
+        // ── Colours ───────────────────────────────────────────────────────────────
+        const DARK_RED  = [139,  0,  0];
+        const WHITE     = [255,255,255];
+        const LIGHT_GRY = [245,245,245];
+        const BORDER    = [200,200,200];
+        const INK       = [ 30, 30, 30];
+        const SLATE     = [ 90,106,122];
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        // ── Page / grid layout ────────────────────────────────────────────────────
+        const PW = 210, PH = 297, ML = 14, MR = 14, MT = 14;
+        const CW = PW - ML - MR;   // 182 mm
 
-    // Column widths
-    ws['!cols'] = headers.map((h, i) => ({ wch: i === 1 ? 40 : i === 2 ? 25 : 16 }));
+        // 3 columns × (C_LW label + C_VW value) + 2 × GAP = 182
+        // 3 × 60 + 2 × 1 = 182 ✓
+        const C_LW = 28, C_VW = 32, GAP = 1, ROW_H = 7.5;
 
-    // Header style (light blue fill + bold) via sheet format
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for (let c = range.s.c; c <= range.e.c; c++) {
-        const addr = XLSX.utils.encode_cell({ r: 0, c });
-        if (!ws[addr]) continue;
-        ws[addr].s = {
-            font:  { bold: true, color: { rgb: 'FFFFFF' } },
-            fill:  { fgColor: { rgb: '1A56DB' } },
-            alignment: { horizontal: 'center' }
-        };
-    }
+        const col1X = ML;
+        const col2X = ML + C_LW + C_VW + GAP;
+        const col3X = col2X + C_LW + C_VW + GAP;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Articles');
-    const ts = new Date().toISOString().slice(0,10);
-    XLSX.writeFile(wb, `${clientName}_Articles_${ts}.xlsx`);
-}
+        // ── Initialise jsPDF and load Arabic font ─────────────────────────────────
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        await ensureArabicFont(doc);
 
-// ══════════════════════════════════════════════════════════════════════════
-// PDF EXPORT — one page per article
-// ══════════════════════════════════════════════════════════════════════════
-function exportPDF() {
-    const rows = getSelectedRows();
-    if (!rows.length) { alert('Please select at least one article.'); return; }
+        // ── Draw one label + value cell ───────────────────────────────────────────
+        function drawCell(doc, x, y, label, value, shade) {
+        // label background (dark red)
+        doc.setFillColor(...DARK_RED);
+        doc.rect(x, y, C_LW, ROW_H, 'F');
+        // value background (white / light grey alternating)
+        doc.setFillColor(...(shade ? LIGHT_GRY : WHITE));
+        doc.rect(x + C_LW, y, C_VW, ROW_H, 'F');
+        // cell border
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.25);
+        doc.rect(x, y, C_LW + C_VW, ROW_H, 'S');
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        // Label text — always Latin, no Arabic expected in labels
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...WHITE);
+        const lblStr = String(label || '');
+        doc.text(lblStr, x + 2, y + 5);
 
-    const PW  = 210; // A4 width mm
-    const PH  = 297; // A4 height mm
-    const ML  = 15;  // margin left
-    const MR  = 15;  // margin right
-    const MT  = 15;  // margin top
-    const CW  = PW - ML - MR;
+        // Value text — use Arabic font + fixArabic if needed
+        const valStr = String(value || '—');
+        const arabic = isArabic(valStr);
+        if (arabic) {
+        useArabicFont(doc, 7.5, 'normal');
+        doc.setTextColor(...INK);
+        // Right-align Arabic value inside the cell
+        const fixedVal = fixArabic(valStr);
+        const maxW = C_VW - 4;
+        const lines = doc.splitTextToSize(fixedVal, maxW);
+        doc.text(lines[0], x + C_LW + C_VW - 2, y + 5, { align: 'right' });
+        } else {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...INK);
+        const maxW = C_VW - 4;
+        const lines = doc.splitTextToSize(valStr, maxW);
+        doc.text(lines[0], x + C_LW + 2, y + 5);
+        }
+        }
 
-    // Brand colors (RGB)
-    const INK     = [15, 25, 35];
-    const ACCENT  = [26, 86, 219];
-    const SLATE   = [90, 106, 122];
-    const RULE    = [221, 227, 234];
-    const GREEN   = [22, 163, 74];
-    const AMBER   = [217, 119, 6];
-    const BG_CARD = [244, 246, 249];
+        // ── Pre-load images ───────────────────────────────────────────────────────
+        const imgCache = {};
+        for (const d of rows) {
+        const src = d.screenshot || '';
+        if (src && !imgCache[src]) imgCache[src] = await loadImgB64(src);
+        }
 
-    rows.forEach((row, idx) => {
+        // ── Per-row page render ───────────────────────────────────────────────────
+        for (let idx = 0; idx < rows.length; idx++) {
+        const d = rows[idx];
         if (idx > 0) doc.addPage();
+
+        doc.setFillColor(255,255,255);
+        doc.rect(0, 0, PW, PH, 'F');
 
         let y = MT;
 
-        // ── Header band ──────────────────────────────────────────────────
-        doc.setFillColor(...ACCENT);
-        doc.rect(0, 0, PW, 28, 'F');
-
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
+        // ── TITLE BLOCK ───────────────────────────────────────────────────────
+        // Client name — top right, small
         doc.setFont('helvetica', 'normal');
-        doc.text('NEWSPAPER ARTICLE REPORT', ML, 10);
-
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        const titleLines = doc.splitTextToSize(row.title || 'Untitled', CW - 20);
-        doc.text(titleLines, ML, 19);
-
-        // Client name top-right
         doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.text(clientName, PW - MR, 10, { align: 'right' });
-
-        // Date top-right
-        doc.text(row.date, PW - MR, 16, { align: 'right' });
-
-        y = 34;
-
-        // ── Publication info card ────────────────────────────────────────
-        y = drawCard(doc, ML, y, CW, 'Source', [
-            ['Publication',  row.publication ],
-            ['Media Type',   row.mediaType   ],
-            ['Media Tier',   row.mediaTier   ],
-            ['Frequency',    ''              ],
-            ['Language',     ''              ],
-            ['Writer',       row.writer      ],
-            ['Category',     row.category    ],
-        ], ACCENT, BG_CARD, INK, SLATE, RULE);
-
-        y += 4;
-
-        // ── Metrics card ─────────────────────────────────────────────────
-        y = drawCard(doc, ML, y, CW, 'Metrics & Values', [
-            ['Circulation',      row.circulation ],
-            ['Reach',            row.reach       ],
-            ['AD Value',         row.adValue     ],
-            ['PR Value',         row.prValue     ],
-            ['Pages',            row.pages       ],
-            ['Size (H×W cm)',    `${row.height} × ${row.width}` ],
-        ], GREEN, BG_CARD, INK, SLATE, RULE);
-
-        y += 4;
-
-        // ── Branding card ────────────────────────────────────────────────
-        y = drawCard(doc, ML, y, CW, 'Branding & Analysis', [
-            ['Article Branding',  row.articleBrand  ],
-            ['Headline Branding', row.headlineBrand ],
-            ['Toning',            row.toning        ],
-            ['Published',         row.published     ],
-        ], AMBER, BG_CARD, INK, SLATE, RULE);
-
-        y += 4;
-
-        // ── Content section ──────────────────────────────────────────────
-        if (row.content && row.content.trim()) {
-            doc.setFillColor(...ACCENT);
-            doc.roundedRect(ML, y, CW, 6, 1, 1, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Content', ML + 3, y + 4.2);
-            y += 8;
-
-            doc.setFillColor(...BG_CARD);
-            const contentText = doc.splitTextToSize(row.content, CW - 6);
-            const contentH    = Math.min(contentText.length * 4.5 + 4, PH - y - MT);
-            doc.roundedRect(ML, y, CW, contentH, 1, 1, 'F');
-            doc.setTextColor(...INK);
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'normal');
-            doc.text(contentText, ML + 3, y + 5, { maxWidth: CW - 6 });
-            y += contentH + 4;
-        }
-
-        // ── Footer ───────────────────────────────────────────────────────
-        doc.setDrawColor(...RULE);
-        doc.setLineWidth(0.3);
-        doc.line(ML, PH - 12, PW - MR, PH - 12);
         doc.setTextColor(...SLATE);
-        doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'normal');
-        const now = new Date().toLocaleString();
-        doc.text(`Generated: ${now}`, ML, PH - 8);
-        doc.text(`Page ${idx + 1} of ${rows.length}`, PW - MR, PH - 8, { align: 'right' });
-    });
+        doc.text(clientName, PW - MR, y + 3, { align: 'right' });
 
-    const ts = new Date().toISOString().slice(0, 10);
-    doc.save(`${clientName}_Articles_Report_${ts}.pdf`);
-}
-
-// ── Helper: draw a labeled card with key-value rows ────────────────────────
-function drawCard(doc, x, y, w, title, pairs, headerColor, bgColor, inkColor, slateColor, ruleColor) {
-    // Card header
-    doc.setFillColor(...headerColor);
-    doc.roundedRect(x, y, w, 6, 1, 1, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, x + 3, y + 4.2);
-    y += 7;
-
-    // Card body
-    const validPairs = pairs.filter(([, v]) => v !== null && v !== undefined && v !== '');
-    if (!validPairs.length) return y;
-
-    const ROW_H = 6;
-    const cardH = validPairs.length * ROW_H + 3;
-    doc.setFillColor(...bgColor);
-    doc.roundedRect(x, y, w, cardH, 1, 1, 'F');
-
-    const colW = w / 2;
-    validPairs.forEach(([label, val], i) => {
-        const rowY = y + 4 + i * ROW_H;
-        const col  = i % 2;
-        const rx   = x + col * colW + 3;
-
-        // Draw on two-column grid
-        if (i % 2 === 0 && i > 0) { /* next row */ }
-
-        // Label
-        doc.setTextColor(...slateColor);
-        doc.setFontSize(7);
+        // Article title — bold, right-aligned, Arabic-aware
+        const titleRaw = decodeContent(d.title || 'Untitled');
+        const titleArabic = isArabic(titleRaw);
+        if (titleArabic) {
+        useArabicFont(doc, 11, 'normal');
+        } else {
         doc.setFont('helvetica', 'bold');
-        const lx = x + Math.floor(i / 2) >= 0 ? x + 3 : x + colW + 3;
-
-        // Simpler: single column layout
-        doc.setTextColor(...slateColor);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(label).toUpperCase(), x + 3, rowY);
-
-        doc.setTextColor(...inkColor);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.text(String(val || '—'), x + 55, rowY);
-
-        // Subtle rule between rows
-        if (i < validPairs.length - 1) {
-            doc.setDrawColor(...ruleColor);
-            doc.setLineWidth(0.2);
-            doc.line(x + 3, rowY + 2, x + w - 3, rowY + 2);
+        doc.setFontSize(11);
         }
-    });
+        doc.setTextColor(...INK);
+        const titleFixed = titleArabic ? fixArabic(titleRaw) : titleRaw;
+        const titleLines = doc.splitTextToSize(titleFixed, CW);
+        titleLines.forEach((line, li) => {
+        doc.text(line, PW - MR, y + 3 + (li + 1) * 6.5, { align: 'right' });
+        });
+        y += 4 + titleLines.length * 6.5 + 2;
 
-    return y + cardH + 1;
-}
+        // Separator rule
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.5);
+        doc.line(ML, y, PW - MR, y);
+        y += 4;
 
-// ── Sub-category loader ────────────────────────────────────────────────────
-async function loadSubs(parentId, targetId, url) {
-    const sel = document.getElementById(targetId);
-    sel.innerHTML = '<option value="0">Loading…</option>';
-    if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">All</option>'; return; }
-    const data = await (await fetch(`${url}?parentId=${parentId}`)).json();
-    sel.innerHTML = '<option value="0">All</option>';
-    data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
-}
-</script>
+        // ── 3-COLUMN DATA GRID ─────────────────────────────────────────────────
+        // Matches reference layout exactly:
+        // Col1: Publication, Category Type, Media Type, Frequency, Media Tier, Language, Picture in article, Article Branding
+        // Col2: Date, Category, Sub Category, Page Number, Size, Tone, Headline Branding
+        // Col3: Ad Value, PR Value, Circulation, Reach, Writer, Generation
+        const gridDef = [
+        [ ['Publication',      d.publication],  ['Date',              d.date],          ['Ad Value',    d.ad]          ],
+        [ ['Category Type',    d.categorytype], ['Category',          d.category],      ['PR Value',    d.pr]          ],
+        [ ['Media Type',       d.mediatype],    ['Sub Category',      d.subcategory],   ['Circulation', d.circulation] ],
+        [ ['Frequency',        d.frequency],    ['Page Number',       d.pages],         ['Reach',       d.reach]       ],
+        [ ['Media Tier',       d.mediatier],    ['Size',              d.size],          ['Writer',      d.writer]      ],
+        [ ['Language',         d.language],     ['Tone',              d.toning],        ['Generation',  d.generation]  ],
+        [ ['Picture In Article', d.picture],    ['Headline Branding', d.headlinebrand], ['',            '']            ],
+        [ ['Article Branding', d.articlebrand], ['',                  ''],              ['',            '']            ],
+        ];
+
+        gridDef.forEach((rowCells, ri) => {
+        const shade = ri % 2 === 1;
+        const gy    = y + ri * ROW_H;
+        drawCell(doc, col1X, gy, rowCells[0][0], rowCells[0][1], shade);
+        drawCell(doc, col2X, gy, rowCells[1][0], rowCells[1][1], shade);
+        drawCell(doc, col3X, gy, rowCells[2][0], rowCells[2][1], shade);
+        });
+
+        y += gridDef.length * ROW_H + 8;
+
+        // ── ARTICLE TITLE (large, bold, centred below grid) ───────────────────
+        // Reference shows the title large in the body area too
+        const bodyTitleFixed = titleArabic ? fixArabic(titleRaw) : titleRaw;
+        if (titleArabic) { useArabicFont(doc, 14, 'normal'); }
+        else { doc.setFont('helvetica', 'bold'); doc.setFontSize(14); }
+        doc.setTextColor(...INK);
+        const bodyTitleLines = doc.splitTextToSize(bodyTitleFixed, CW);
+        bodyTitleLines.forEach((line, li) => {
+        doc.text(line, PW - MR, y + (li + 1) * 8, { align: 'right' });
+        });
+        y += bodyTitleLines.length * 8 + 5;
+
+        // ── ARTICLE IMAGE (centred) ────────────────────────────────────────────
+        const imgSrc  = d.screenshot || '';
+        const imgData = imgSrc ? imgCache[imgSrc] : null;
+        if (imgData) {
+        const imgW = 90, imgH = 60;
+        const imgX = (PW - imgW) / 2;
+        try {
+        doc.addImage(imgData, imgFormat(imgData), imgX, y, imgW, imgH, undefined, 'FAST');
+        y += imgH + 5;
+        } catch (e) { console.warn('Image add failed:', e); }
+        }
+
+        // ── ARTICLE CONTENT ────────────────────────────────────────────────────
+        const contentRaw = decodeContent(d.content || '');
+        if (contentRaw) {
+        const footerReserve = 28;
+        const arabicContent = isArabic(contentRaw);
+        if (arabicContent) { useArabicFont(doc, 9, 'normal'); }
+        else { doc.setFont('helvetica', 'normal'); doc.setFontSize(9); }
+        doc.setTextColor(...INK);
+
+        const fixedContent = arabicContent ? fixArabic(contentRaw) : contentRaw;
+        const contentLines = doc.splitTextToSize(fixedContent, CW);
+
+        // Split into two newspaper-style columns (matching reference layout)
+        const colW     = (CW - 4) / 2;
+        const leftX    = ML;
+        const rightX   = ML + colW + 4;
+        const lineH    = 4.5;
+        const maxLines = Math.floor((PH - y - footerReserve - 5) / lineH);
+
+        let lY = y + 4;
+        const half = Math.ceil(Math.min(contentLines.length, maxLines) / 2);
+
+        contentLines.slice(0, half).forEach(line => {
+        if (lY + lineH > PH - footerReserve) return;
+        if (arabicContent) {
+        doc.text(line, leftX + colW, lY, { align: 'right' });
+        } else {
+        doc.text(line, leftX, lY);
+        }
+        lY += lineH;
+        });
+
+        lY = y + 4;
+        contentLines.slice(half, maxLines).forEach(line => {
+        if (lY + lineH > PH - footerReserve) return;
+        if (arabicContent) {
+        doc.text(line, rightX + colW, lY, { align: 'right' });
+        } else {
+        doc.text(line, rightX, lY);
+        }
+        lY += lineH;
+        });
+        }
+
+        // ── FOOTER ─────────────────────────────────────────────────────────────
+        const fY = PH - 20;
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.5);
+        doc.line(ML, fY, PW - MR, fY);
+
+        // Left — Ahl Masr (Arabic label + English sub)
+        useArabicFont(doc, 11, 'normal');
+        doc.setTextColor(...DARK_RED);
+        doc.text(fixArabic('أهل مصر'), ML + 28, fY + 7, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        doc.setTextColor(...SLATE);
+        doc.text('AHL MASR FOUNDATION', ML, fY + 11);
+
+        // Right — EDITOR
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(...DARK_RED);
+        doc.text('EDITOR', PW - MR, fY + 7, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        doc.setTextColor(...SLATE);
+        doc.text('PR & COMMUNICATIONS', PW - MR, fY + 11, { align: 'right' });
+
+        // Centre — page number
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(...SLATE);
+        doc.text(`${idx + 1} / ${rows.length}`, PW / 2, fY + 9, { align: 'center' });
+        }
+
+        doc.save(`${clientName}_Newspapers_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+    </script>
 }

@@ -12,7 +12,6 @@ namespace EditorWeb.Controllers
         public ClientCategoryController(IClientCategoryService service)
             => _service = service;
 
-        // GET: /ClientCategory?ClientId=5
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
         public async Task<IActionResult> Index(int ClientId)
@@ -22,7 +21,6 @@ namespace EditorWeb.Controllers
             return View(categories);
         }
 
-        // GET: /ClientCategory/Details/5
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
         public async Task<IActionResult> Details(int id)
@@ -32,7 +30,6 @@ namespace EditorWeb.Controllers
             return View(category);
         }
 
-        // GET: /ClientCategory/Create?ClientId=5
         [HttpGet]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Create(int ClientId, int? parentId)
@@ -43,12 +40,10 @@ namespace EditorWeb.Controllers
                 ParentCategory = parentId,
                 Status = "Active"
             };
-
             await PopulateParentDropdown(ClientId, null);
             return View(model);
         }
 
-        // POST: /ClientCategory/Create
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
         [ValidateAntiForgeryToken]
@@ -72,19 +67,16 @@ namespace EditorWeb.Controllers
             return RedirectToAction(nameof(Index), new { ClientId = model.ClientId });
         }
 
-        // GET: /ClientCategory/Edit/5
         [HttpGet]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Edit(int id)
         {
             var category = await _service.GetByIdAsync(id);
             if (category == null) return NotFound();
-
             await PopulateParentDropdown(category.ClientId, id);
             return View(category);
         }
 
-        // POST: /ClientCategory/Edit/5
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
         [ValidateAntiForgeryToken]
@@ -110,38 +102,23 @@ namespace EditorWeb.Controllers
             return RedirectToAction(nameof(Index), new { ClientId = model.ClientId });
         }
 
-        // GET: /ClientCategory/Delete/5
-        [HttpGet]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var category = await _service.GetByIdAsync(id);
-            if (category == null) return NotFound();
-            return View(category);
-        }
-
-        // POST: /ClientCategory/Delete/5
-        [HttpPost, ActionName("Delete")]
+        // POST: /ClientCategory/ToggleStatus
+        [HttpPost]
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id, int ClientId)
+        public async Task<IActionResult> ToggleStatus(int id, int ClientId)
         {
-            var (success, message) = await _service.DeleteAsync(id);
+            var (success, message) = await _service.ToggleStatusAsync(id);
             TempData[success ? "Success" : "Error"] = message;
             return RedirectToAction(nameof(Index), new { ClientId });
         }
 
-        // ── Helpers ────────────────────────────────────────────────────────────
-
         private async Task PopulateParentDropdown(int ClientId, int? excludeId)
         {
             var allCategories = await _service.GetByClientAsync(ClientId);
-            // Exclude the category itself to prevent circular reference
             if (excludeId.HasValue)
                 allCategories = allCategories.Where(c => c.Id != excludeId.Value);
-
             ViewBag.ParentCategories = allCategories;
         }
     }
 }
-

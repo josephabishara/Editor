@@ -1,17 +1,18 @@
 @model EditorViewModelLayer.MediaViewModel.ClientArticleListDTO
 @using EditorViewModelLayer.MediaViewModel
 @using Microsoft.AspNetCore.Mvc.Rendering
+@using System.Text.Encodings.Web
 @{
     ViewData["Title"] = "Website Articles";
-    var clientId  = Model.ClientId > 0 ? Model.ClientId : (ViewBag.ClientId is int v ? v : 0);
+    var clientId = Model.ClientId > 0 ? Model.ClientId : (ViewBag.ClientId is int v ? v : 0);
 
-    var fTitle   = ViewBag.FilterTitle    as string ?? "";
-    var fFrom    = ViewBag.FilterDateFrom as string ?? "";
-    var fTo      = ViewBag.FilterDateTo   as string ?? "";
-    var fCat     = (int)(ViewBag.FilterCategoryId ?? 0);
-    var fSub     = (int)(ViewBag.FilterSubId      ?? 0);
-    var fWriter  = (int)(ViewBag.FilterWriterId   ?? 0);
-    var fWebsite = (int)(ViewBag.FilterWebsiteId  ?? 0);
+    var fTitle = ViewBag.FilterTitle as string ?? "";
+    var fFrom = ViewBag.FilterDateFrom as string ?? "";
+    var fTo = ViewBag.FilterDateTo as string ?? "";
+    var fCat = (int)(ViewBag.FilterCategoryId ?? 0);
+    var fSub = (int)(ViewBag.FilterSubId ?? 0);
+    var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
+    var fWebsite = (int)(ViewBag.FilterWebsiteId ?? 0);
 
     bool isAdmin = User.IsInRole("Admin");
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
@@ -19,35 +20,125 @@
     List<SelectListItem> ToSL(List<MediaSelectOption> src)
         => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
 
-    var webSL    = ToSL(Model.WebsiteOptions);
-    var catSL    = ToSL(Model.CategoryOptions);
-    var subSL    = ToSL(Model.SubCategoryOptions);
+    var webSL = ToSL(Model.WebsiteOptions);
+    var catSL = ToSL(Model.CategoryOptions);
+    var subSL = ToSL(Model.SubCategoryOptions);
     var writerSL = ToSL(Model.WriterOptions);
+
+    // ── Helper: extract first image path from JSON array stored in Images ──────
+    // FIX BUG 1 & 3: build data-screenshot server-side so JS always has a real path
+    string FirstImage(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return "";
+        try
+        {
+            var list = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json);
+            return list?.FirstOrDefault() ?? "";
+        }
+        catch { return ""; }
+    }
 }
 
 @await Html.PartialAsync("_MediaStyles")
 
 <style>
-    .cb-col { width:36px; text-align:center !important; }
-    .row-cb { width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
-    .sel-toolbar { display:none; align-items:center; gap:.75rem; background:#0891b2; color:#fff; border-radius:var(--radius); padding:.65rem 1.2rem; margin-bottom:1rem; flex-wrap:wrap; }
-    .sel-toolbar.visible { display:flex; }
-    .sel-toolbar .sel-count { font-size:.85rem; font-weight:700; flex:1; }
-    .sel-toolbar .sel-count span { background:rgba(255,255,255,.25); border-radius:20px; padding:.15rem .6rem; margin-left:.4rem; }
-    .btn-export { display:inline-flex; align-items:center; gap:.35rem; border:none; border-radius:7px; padding:.42rem 1rem; font-size:.82rem; font-weight:700; cursor:pointer; transition:filter .15s; }
-    .btn-export:hover { filter:brightness(.9); }
-    .btn-xl  { background:#16a34a; color:#fff; }
-    .btn-pdf { background:#dc2626; color:#fff; }
-    .btn-desel { background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); }
+    .cb-col {
+        width: 36px;
+        text-align: center !important;
+    }
+
+    .row-cb {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    .sel-toolbar {
+        display: none;
+        align-items: center;
+        gap: .75rem;
+        background: #0891b2;
+        color: #fff;
+        border-radius: var(--radius);
+        padding: .65rem 1.2rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+        .sel-toolbar.visible {
+            display: flex;
+        }
+
+        .sel-toolbar .sel-count {
+            font-size: .85rem;
+            font-weight: 700;
+            flex: 1;
+        }
+
+            .sel-toolbar .sel-count span {
+                background: rgba(255,255,255,.25);
+                border-radius: 20px;
+                padding: .15rem .6rem;
+                margin-left: .4rem;
+            }
+
+    .btn-export {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        border: none;
+        border-radius: 7px;
+        padding: .42rem 1rem;
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter .15s;
+    }
+
+        .btn-export:hover {
+            filter: brightness(.9);
+        }
+
+    .btn-xl {
+        background: #16a34a;
+        color: #fff;
+    }
+
+    .btn-pdf {
+        background: #dc2626;
+        color: #fff;
+    }
+
+    .btn-desel {
+        background: rgba(255,255,255,.18);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,.35);
+    }
 </style>
 
-@if (TempData["Success"] != null) { <div class="alert alert-success">✓ @TempData["Success"]</div> }
-@if (TempData["Error"]   != null) { <div class="alert alert-danger">✗ @TempData["Error"]</div> }
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        ✅ @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        ❌ @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
 <div class="m-header">
     <div class="m-header-icon" style="background:#cffafe;">🌐</div>
     <div><h1>Website Articles</h1><p>@Model.ClientName</p></div>
-    <div class="ms-auto"><a href="@Url.Action("ClientDashboard","Dashboard", new { id = clientId })" class="btn-dashboard">← Dashboard</a></div>
+    <div class="ms-auto">
+        <a href="@Url.Action("ClientDashboard", "Dashboard", new { id = clientId })" class="btn-dashboard">← Dashboard</a>
+    </div>
+    @await Html.PartialAsync("_navdashboard")
 </div>
 
 <div class="stat-row">
@@ -58,7 +149,9 @@
 
 <div class="filter-card">
     <div class="filter-title">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </svg>
         Filter Articles
     </div>
     <form method="get" action="@Url.Action("Index")">
@@ -69,7 +162,8 @@
             <div class="fg"><label>Date To</label><input type="date" name="dateTo" value="@fTo" /></div>
             <div class="fg">
                 <label>Category</label>
-                <select name="categoryId" id="fCat" asp-items="catSL" onchange="loadSubs(this.value,'fSub','/ClientArticle/GetSubCategories')">
+                <select name="categoryId" id="fCat" asp-items="catSL"
+                        onchange="loadSubs(this.value,'fSub','/ClientArticle/GetSubCategories')">
                     <option value="0">All</option>
                 </select>
             </div>
@@ -86,14 +180,31 @@
 
 <div class="sel-toolbar" id="selToolbar">
     <div class="sel-count">Selected <span id="selCount">0</span> articles</div>
-    <button class="btn-export btn-xl"  onclick="exportExcel()">⬇ Excel</button>
+    <button class="btn-export btn-xl" onclick="exportExcel()">⬇ Excel</button>
     <button class="btn-export btn-pdf" onclick="exportPDF()">⬇ PDF Report</button>
+    <form id="duplicateForm" asp-action="Duplicate" asp-controller="ClientArticle"
+          method="post" style="display:inline;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="clientId" value="@ViewBag.ClientId" />
+        <input type="hidden" name="id" id="hdnSelectedId" value="0" />
+        <button type="submit" id="btnDuplicate" disabled
+                style="display:inline-flex;align-items:center;gap:.35rem;
+            background:#f59e0b;color:#fff;border:none;border-radius:7px;
+            padding:.38rem .85rem;font-size:.82rem;font-weight:600;
+            cursor:pointer;opacity:.5;"
+                onclick="return confirmDuplicate()">
+            📋 Duplicate Selected
+        </button>
+    </form>
     <button class="btn-export btn-desel" onclick="deselectAll()">✕ Deselect All</button>
 </div>
 
 <div class="action-bar">
     <div class="result-count">Showing <strong>@Model.Items.Count()</strong> of <strong>@Model.Total</strong></div>
-    @if (canEdit) { <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add Article</a> }
+    @if (canEdit)
+    {
+        <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add Article</a>
+    }
 </div>
 
 <div class="m-table-wrap">
@@ -106,71 +217,130 @@
         <table class="m-table" id="mainTable">
             <thead>
                 <tr>
-                    <th class="cb-col"><input type="checkbox" class="row-cb" id="cbAll" onchange="toggleAll(this)" /></th>
-                    <th>#</th><th>Date</th><th>Title</th><th>Website</th>
-                    <th>Media Type</th><th>Media Tier</th><th>Impression</th><th>Reach</th>
-                    <th>AD Value</th><th>PR Value</th><th>Toning</th><th>Actions</th>
+                    <th class="cb-col">
+                        <input type="checkbox" class="row-cb" id="cbAll" onchange="toggleAll(this)" />
+                    </th>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Website</th>
+                    <th>Category</th>
+                    <th>Sub-Category</th>
+                    @* <th>Writer</th>
+                    <th class="text-end">AD Value</th>
+                    <th class="text-end">PR Value</th> *@
+                    <th>Created By</th>
+                    <th>Created At</th>
+                    <th class="text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @{ int r = 1; }
+                @{
+                    int rowNum = 1;
+                }
                 @foreach (var item in Model.Items)
                 {
+                    @* ── FIX BUG 1 & 3: extract first image path server-side ── *@
+                    var firstImg = FirstImage(item.Images);
+
+                    @* ── FIX BUG 2 & 4: HTML-encode content for safe data attribute ── *@
+                    var encodedContent = HtmlEncoder.Default.Encode(item.Content ?? "");
+
                     <tr data-id="@item.Id"
                         data-date="@item.Date.ToString("dd MMM yyyy")"
-                        data-title="@item.Title"
+                        data-title="@Html.Raw((item.Title ?? "").Replace("\"", "&quot;"))"
                         data-website="@(item.WebsiteName ?? "")"
+                        data-category="@(item.CategoryName ?? "")"
+                        data-subcategory="@(item.SubCategoryName ?? "")"
+                        data-writer="@(item.WriterName ?? "")"
                         data-mediatype="@(item.MediaType ?? "")"
                         data-mediatier="@(item.MediaTier ?? "")"
                         data-frequency="@(item.Frequency ?? "")"
                         data-language="@(item.Language ?? "")"
                         data-impression="@item.Impression"
                         data-reach="@item.Reach"
-                        data-ad="@item.ADValue.ToString("F2")"
-                        data-pr="@item.PRValue.ToString("F2")"
+                        data-ad="@item.ADValue"
+                        data-pr="@item.PRValue"
                         data-toning="@(item.Toning ?? "")"
-                        data-writer="@(item.WriterName ?? "")"
                         data-articlebrand="@(item.ArticleBranding ?? "")"
                         data-headlinebrand="@(item.HeadlineBranding ?? "")"
                         data-picture="@(item.PictureinArticle ?? "")"
                         data-generation="@(item.Generation ?? "")"
                         data-url="@(item.ArticleURL ?? "")"
-                        data-content="@(System.Web.HttpUtility.HtmlAttributeEncode(item.Content ?? ""))"
-                        data-client="@Model.ClientName">
-                        <td class="cb-col"><input type="checkbox" class="row-cb row-check" onchange="onRowCheck()" /></td>
-                        <td style="color:var(--slate);font-size:.75rem;">@r</td>
-                        <td style="white-space:nowrap;color:var(--slate);">@item.Date.ToString("dd MMM yyyy")</td>
-                        <td><div class="m-title">@item.Title</div></td>
-                        <td style="font-size:.78rem;">@(item.WebsiteName ?? "—")</td>
-                        <td style="font-size:.78rem;">@(item.MediaType ?? "—")</td>
-                        <td style="font-size:.78rem;">@(item.MediaTier ?? "—")</td>
-                        <td style="font-size:.78rem;">@item.Impression.ToString("N0")</td>
-                        <td style="font-size:.78rem;">@item.Reach.ToString("N0")</td>
-                        <td class="val-ad">@item.ADValue.ToString("N2")</td>
-                        <td class="val-pr">@item.PRValue.ToString("N2")</td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(item.Toning) && item.Toning != "None")
-                            {
-                                var dc = item.Toning switch { "Positive"=>"t-pos","Negative"=>"t-neg",_=>"t-neu" };
-                                <span class="toning-dot @dc"></span>@item.Toning
-                            }
-                            else { <span style="color:var(--slate);">—</span> }
+                        data-createdby="@(item.CreatedByUserName ?? "")"
+                        data-createdat="@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")"
+                        data-screenshot="@firstImg"
+                        data-content="@encodedContent">
+
+                        <td class="cb-col">
+                            <input type="checkbox" class="row-cb row-check"
+                                   value="@item.Id" onchange="onRowCheck()" />
                         </td>
+                        <td class="text-muted small">@rowNum</td>
+                        <td class="small text-nowrap">@item.Date.ToString("dd MMM yyyy")</td>
                         <td>
-                            <a href="@Url.Action("Details", new { id=item.Id })" class="act-btn act-view" title="View">👁</a>
-                            @if (canEdit) { <a href="@Url.Action("Edit", new { id=item.Id })" class="act-btn act-edit" title="Edit">✏️</a> }
+                            <a asp-action="Details" asp-route-id="@item.Id"
+                               class="fw-semibold text-decoration-none text-dark"
+                               title="@item.Title">
+                                @(item.Title.Length > 55 ? item.Title[..55] + "…" : item.Title)
+                            </a>
+                            @if (item.Children.Any())
+                            {
+                                <span class="badge bg-warning text-dark ms-1">+@item.Children.Count</span>
+                            }
+                            @if (item.Publish)
+                            {
+                                <span class="badge bg-success ms-1" style="font-size:.7rem;">Published</span>
+                            }
+                        </td>
+                        <td class="small">@(item.WebsiteName ?? "—")</td>
+                        <td class="small">@(item.CategoryName ?? "—")</td>
+                        <td class="small">@(item.SubCategoryName ?? "—")</td>
+                    @*     <td class="small">@(item.WriterName ?? "—")</td>
+                        <td class="text-end small">@item.ADValue.ToString("N0")</td>
+                        <td class="text-end small fw-semibold text-success">@item.PRValue.ToString("N0")</td> *@
+                        <td class="small text-muted">@(item.CreatedByUserName ?? "—")</td>
+                        <td class="small text-nowrap text-muted">
+                            @item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="act-btn act-view" title="View">
+                                <i class="fa fa-eye"></i>
+                            </a>
+                            @if (canEdit)
+                            {
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="act-btn act-edit" title="Edit">
+                                    <i class="fa fa-pencil"></i>
+                                </a>
+                            }
                             @if (isAdmin)
                             {
-                                <form method="post" action="@Url.Action("Delete")" style="display:inline;" onsubmit="return confirm('Delete?')">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@item.Id" />
-                                    <input type="hidden" name="clientId" value="@clientId" />
-                                    <button type="submit" class="act-btn act-del" title="Delete">🗑</button>
-                                </form>
+                                @if (item.Publish)
+                                {
+                                    <form method="post" action="@Url.Action("Unpublish")" style="display:inline;"
+                                          onsubmit="return confirm('Unpublish?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="clientId" value="@clientId" />
+                                        <button type="submit" class="act-btn act-unpub" title="Unpublish">📤</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form method="post" action="@Url.Action("Publish")" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <input type="hidden" name="clientId" value="@clientId" />
+                                        <button type="submit" class="act-btn act-pub" title="Publish">📢</button>
+                                    </form>
+                                }
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="act-btn act-del" title="Delete">
+                                    <i class="fa fa-trash"></i>
+                                </a>
                             }
                         </td>
                     </tr>
-                    r++;
+                    rowNum++;
                 }
             </tbody>
         </table>
@@ -178,153 +348,306 @@
 </div>
 
 @section Scripts {
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script>
-const clientName = "@Model.ClientName";
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        const clientName = "@Model.ClientName";
 
-function toggleAll(cb) {
-    document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
-    onRowCheck();
-}
-function onRowCheck() {
-    const count = document.querySelectorAll('.row-check:checked').length;
-    document.getElementById('selCount').textContent = count;
-    document.getElementById('selToolbar').classList.toggle('visible', count > 0);
-    const all = document.querySelectorAll('.row-check');
-    document.getElementById('cbAll').indeterminate = count > 0 && count < all.length;
-    document.getElementById('cbAll').checked = count === all.length && all.length > 0;
-}
-function deselectAll() {
-    document.querySelectorAll('.row-check, #cbAll').forEach(c => { c.checked = false; c.indeterminate = false; });
-    onRowCheck();
-}
-function getSelectedRows() {
-    const rows = [];
-    document.querySelectorAll('.row-check:checked').forEach(cb => {
-        const d = cb.closest('tr').dataset;
-        rows.push(d);
-    });
-    return rows;
-}
+        // ── Checkbox helpers ──────────────────────────────────────────────────────────
+        function toggleAll(cb) {
+        document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+        onRowCheck();
+        }
+        function deselectAll() {
+        document.querySelectorAll('.row-check, #cbAll').forEach(c => { c.checked = false; c.indeterminate = false; });
+        onRowCheck();
+        }
+        function onRowCheck() {
+        const checked = document.querySelectorAll('.row-check:checked');
+        const count   = checked.length;
+        const all     = document.querySelectorAll('.row-check');
 
-// ── EXCEL ──────────────────────────────────────────────────────────────────
-function exportExcel() {
-    const rows = getSelectedRows();
-    if (!rows.length) { alert('Please select at least one article.'); return; }
+        document.getElementById('selCount').textContent = count;
+        document.getElementById('selToolbar').classList.toggle('visible', count > 0);
 
-    const headers = [
-        'Date','Title','Website','Media Type','Media Tier','Frequency','Language',
-        'Impression','Reach','AD Value','PR Value','Toning',
-        'Writer','Article Branding','Headline Branding','Picture','Generation','URL'
-    ];
-    const data = rows.map(d => [
-        d.date, d.title, d.website, d.mediatype, d.mediatier, d.frequency, d.language,
-        d.impression, d.reach, d.ad, d.pr, d.toning,
-        d.writer, d.articlebrand, d.headlinebrand, d.picture, d.generation, d.url
-    ]);
+        const cbAll = document.getElementById('cbAll');
+        cbAll.indeterminate = count > 0 && count < all.length;
+        cbAll.checked       = count === all.length && all.length > 0;
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    ws['!cols'] = headers.map((_, i) => ({ wch: i === 1 ? 40 : i === 2 ? 25 : 15 }));
-    XLSX.utils.book_append_sheet(wb, ws, 'Articles');
-    XLSX.writeFile(wb, `${clientName}_WebArticles_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
-
-// ── PDF ────────────────────────────────────────────────────────────────────
-function exportPDF() {
-    const rows = getSelectedRows();
-    if (!rows.length) { alert('Please select at least one article.'); return; }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const PW=210, PH=297, ML=15, MR=15, MT=15, CW=210-30;
-    const INK=[15,25,35], ACCENT=[8,145,178], SLATE=[90,106,122], RULE=[221,227,234], GREEN=[22,163,74], AMBER=[217,119,6], BG=[244,246,249];
-
-    rows.forEach((d, idx) => {
-        if (idx > 0) doc.addPage();
-        let y = MT;
-
-        // Header
-        doc.setFillColor(...ACCENT);
-        doc.rect(0, 0, PW, 28, 'F');
-        doc.setTextColor(255,255,255);
-        doc.setFontSize(9); doc.setFont('helvetica','normal');
-        doc.text('WEBSITE ARTICLE REPORT', ML, 10);
-        doc.setFontSize(13); doc.setFont('helvetica','bold');
-        doc.text(doc.splitTextToSize(d.title || 'Untitled', CW - 20), ML, 19);
-        doc.setFontSize(8); doc.setFont('helvetica','normal');
-        doc.text(clientName, PW-MR, 10, { align:'right' });
-        doc.text(d.date, PW-MR, 16, { align:'right' });
-        y = 34;
-
-        y = pdfCard(doc, ML, y, CW, 'Source', [
-            ['Website', d.website], ['Media Type', d.mediatype], ['Media Tier', d.mediatier],
-            ['Frequency', d.frequency], ['Language', d.language], ['Writer', d.writer],
-        ], ACCENT, BG, INK, SLATE, RULE);
-        y += 4;
-
-        y = pdfCard(doc, ML, y, CW, 'Metrics & Values', [
-            ['Impression', d.impression], ['Reach', d.reach],
-            ['AD Value', d.ad], ['PR Value', d.pr],
-        ], GREEN, BG, INK, SLATE, RULE);
-        y += 4;
-
-        y = pdfCard(doc, ML, y, CW, 'Branding & Analysis', [
-            ['Article Branding', d.articlebrand], ['Headline Branding', d.headlinebrand],
-            ['Toning', d.toning], ['Picture in Article', d.picture],
-            ['Generation', d.generation], ['Article URL', d.url],
-        ], AMBER, BG, INK, SLATE, RULE);
-        y += 4;
-
-        if (d.content && d.content.trim()) {
-            doc.setFillColor(...ACCENT); doc.roundedRect(ML,y,CW,6,1,1,'F');
-            doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
-            doc.text('Content', ML+3, y+4.2); y += 8;
-            const ct = doc.splitTextToSize(d.content, CW-6);
-            const ch = Math.min(ct.length*4.5+4, PH-y-MT);
-            doc.setFillColor(...BG); doc.roundedRect(ML,y,CW,ch,1,1,'F');
-            doc.setTextColor(...INK); doc.setFontSize(8); doc.setFont('helvetica','normal');
-            doc.text(ct, ML+3, y+5, { maxWidth: CW-6 });
+        const btnDup = document.getElementById('btnDuplicate');
+        const hdnId  = document.getElementById('hdnSelectedId');
+        if (count === 1) {
+        hdnId.value     = checked[0].value;
+        btnDup.disabled = false;
+        btnDup.style.opacity = '1';
+        } else {
+        hdnId.value     = '0';
+        btnDup.disabled = true;
+        btnDup.style.opacity = '.5';
+        }
+        }
+        function getSelectedRows() {
+        const rows = [];
+        document.querySelectorAll('.row-check:checked').forEach(cb => rows.push(cb.closest('tr').dataset));
+        return rows;
+        }
+        function confirmDuplicate() {
+        const hdnId = document.getElementById('hdnSelectedId');
+        if (!hdnId.value || hdnId.value === '0') return false;
+        return confirm('Duplicate this record and all its children?');
         }
 
-        doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
-        doc.line(ML, PH-12, PW-MR, PH-12);
-        doc.setTextColor(...SLATE); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-        doc.text(`Generated: ${new Date().toLocaleString()}`, ML, PH-8);
-        doc.text(`Page ${idx+1} of ${rows.length}`, PW-MR, PH-8, { align:'right' });
-    });
+        // ── Sub-category cascade ──────────────────────────────────────────────────────
+        async function loadSubs(parentId, targetId, url) {
+        const sel = document.getElementById(targetId);
+        sel.innerHTML = '<option value="0">Loading…</option>';
+        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">All</option>'; return; }
+        const data = await (await fetch(`${url}?parentId=${parentId}`)).json();
+        sel.innerHTML = '<option value="0">All</option>';
+        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+        }
 
-    doc.save(`${clientName}_WebArticles_Report_${new Date().toISOString().slice(0,10)}.pdf`);
-}
+        // ── Excel ─────────────────────────────────────────────────────────────────────
+        function exportExcel() {
+        const rows = getSelectedRows();
+        if (!rows.length) { alert('Please select at least one article.'); return; }
+        const headers = [
+        'Date','Title','Website','Category','Sub-Category','Writer',
+        'Media Type','Media Tier','Frequency','Language',
+        'Impression','Reach','AD Value','PR Value',
+        'Toning','Article Branding','Headline Branding','Picture in Article','Generation','URL'
+        ];
+        const data = rows.map(d => [
+        d.date, d.title, d.website, d.category, d.subcategory, d.writer,
+        d.mediatype, d.mediatier, d.frequency, d.language,
+        d.impression, d.reach, d.ad, d.pr,
+        d.toning, d.articlebrand, d.headlinebrand, d.picture, d.generation, d.url
+        ]);
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        ws['!cols'] = headers.map((_, i) => ({ wch: i === 1 ? 40 : i === 2 ? 22 : 15 }));
+        XLSX.utils.book_append_sheet(wb, ws, 'Articles');
+        XLSX.writeFile(wb, `${clientName}_Articles_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
 
-function pdfCard(doc, x, y, w, title, pairs, hc, bg, ink, slate, rule) {
-    doc.setFillColor(...hc); doc.roundedRect(x,y,w,6,1,1,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    doc.text(title, x+3, y+4.2); y += 7;
-    const vp = pairs.filter(([,v]) => v != null && v !== '');
-    if (!vp.length) return y;
-    const cardH = vp.length * 6 + 3;
-    doc.setFillColor(...bg); doc.roundedRect(x,y,w,cardH,1,1,'F');
-    vp.forEach(([label, val], i) => {
-        const ry = y + 4 + i * 6;
-        doc.setTextColor(...slate); doc.setFontSize(7); doc.setFont('helvetica','bold');
-        doc.text(String(label).toUpperCase(), x+3, ry);
-        doc.setTextColor(...ink); doc.setFontSize(8); doc.setFont('helvetica','normal');
-        doc.text(String(val||'—'), x+55, ry);
-        if (i < vp.length-1) { doc.setDrawColor(...rule); doc.setLineWidth(0.2); doc.line(x+3,ry+2,x+w-3,ry+2); }
-    });
-    return y + cardH + 1;
-}
+        // ══════════════════════════════════════════════════════════════════════════════
+        // PDF EXPORT
+        // ══════════════════════════════════════════════════════════════════════════════
+        async function exportPDF() {
+        const rows = getSelectedRows();
+        if (!rows.length) { alert('Please select at least one article.'); return; }
 
-async function loadSubs(parentId, targetId, url) {
-    const sel = document.getElementById(targetId);
-    sel.innerHTML = '<option value="0">Loading…</option>';
-    if (!parentId || parentId=='0') { sel.innerHTML='<option value="0">All</option>'; return; }
-    const data = await (await fetch(`${url}?parentId=${parentId}`)).json();
-    sel.innerHTML = '<option value="0">All</option>';
-    data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
-}
-</script>
+        const { jsPDF } = window.jspdf;
+
+        // Colours
+        const DARK_RED  = [139,  0,  0];
+        const WHITE     = [255,255,255];
+        const LIGHT_GRY = [245,245,245];
+        const BORDER    = [200,200,200];
+        const INK       = [ 30, 30, 30];
+        const SLATE     = [ 90,106,122];
+
+        // Page & grid dimensions
+        const PW = 210, PH = 297, ML = 14, MR = 14, MT = 14;
+        const CW = PW - ML - MR;           // 182 mm usable
+
+        // FIX BUG 5: C_LW=28, C_VW=32 → each pair=60, 3 pairs + 2 gaps = 182 ✓
+        const C_LW = 28, C_VW = 32;
+        const GAP  = 1;
+        const ROW_H = 7.5;
+
+        // FIX BUG 4: decode the HTML-encoded content attribute
+        function decodeContent(raw) {
+        if (!raw) return '';
+        try {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = raw;                    // browser decodes HTML entities
+        const decoded = txt.value;
+        const div = document.createElement('div');
+        div.innerHTML = decoded;               // strip any remaining HTML tags
+        return (div.textContent || div.innerText || '').replace(/\s+/g,' ').trim();
+        } catch { return ''; }
+        }
+
+        // Draw one label + value cell pair
+        function drawCell(doc, x, y, label, value, shade) {
+        doc.setFillColor(...DARK_RED);
+        doc.rect(x, y, C_LW, ROW_H, 'F');
+        doc.setFillColor(...(shade ? LIGHT_GRY : WHITE));
+        doc.rect(x + C_LW, y, C_VW, ROW_H, 'F');
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.25);
+        doc.rect(x, y, C_LW + C_VW, ROW_H, 'S');
+        // label
+        doc.setTextColor(...WHITE);
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        const lblStr = String(label || '');
+        const lblLines = doc.splitTextToSize(lblStr, C_LW - 3);
+        doc.text(lblLines[0], x + 2, y + 5);
+        // value
+        doc.setTextColor(...INK);
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        const valLines = doc.splitTextToSize(String(value || '—'), C_VW - 4);
+        doc.text(valLines[0], x + C_LW + 2, y + 5);
+        }
+
+        // FIX BUG 7: detect image format from base64 data URI
+        function imgFormat(dataUri) {
+        if (!dataUri) return 'JPEG';
+        if (dataUri.startsWith('data:image/png'))  return 'PNG';
+        if (dataUri.startsWith('data:image/webp')) return 'WEBP';
+        if (dataUri.startsWith('data:image/gif'))  return 'GIF';
+        return 'JPEG';
+        }
+
+        // Load image as base64
+        async function loadImgB64(url) {
+        if (!url) return null;
+        try {
+        const resp = await fetch(url);
+        if (!resp.ok) return null;
+        const blob = await resp.blob();
+        return new Promise(res => {
+        const r = new FileReader();
+        r.onload  = () => res(r.result);
+        r.onerror = () => res(null);
+        r.readAsDataURL(blob);
+        });
+        } catch { return null; }
+        }
+
+        // Pre-load images — FIX BUG 1: d.screenshot is now populated from data-screenshot
+        const imgCache = {};
+        for (const d of rows) {
+        const src = d.screenshot || '';
+        if (src && !imgCache[src]) imgCache[src] = await loadImgB64(src);
+        }
+
+        // Column x positions
+        const col1X = ML;
+        const col2X = ML + C_LW + C_VW + GAP;
+        const col3X = col2X + C_LW + C_VW + GAP;
+
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        for (let idx = 0; idx < rows.length; idx++) {
+        const d = rows[idx];
+        if (idx > 0) doc.addPage();
+
+        doc.setFillColor(255,255,255);
+        doc.rect(0, 0, PW, PH, 'F');
+
+        let y = MT;
+
+        // ── TITLE ─────────────────────────────────────────────────────────────
+        doc.setTextColor(...SLATE);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(clientName, PW - MR, y + 3, { align: 'right' });
+
+        doc.setTextColor(...INK);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        const titleLines = doc.splitTextToSize(d.title || 'Untitled', CW);
+        titleLines.forEach((line, li) => {
+        doc.text(line, PW - MR, y + 3 + (li + 1) * 6.5, { align: 'right' });
+        });
+        y += 4 + titleLines.length * 6.5 + 2;
+
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.5);
+        doc.line(ML, y, PW - MR, y);
+        y += 4;
+
+        // ── DATA GRID ─────────────────────────────────────────────────────────
+        // FIX BUG 6: use correct field names for ClientArticle (d.website not d.publication,
+        //            d.impression not d.circulation)
+        const gridDef = [
+        [ ['Date',             d.date],          ['Category',          d.category],      ['Media Tier',        d.mediatier]    ],
+        [ ['Website',          d.website],        ['Sub Category',      d.subcategory],   ['Media Type',        d.mediatype]    ],
+        [ ['Frequency',        d.frequency],      ['Ad Value',          d.ad],            ['Language',          d.language]     ],
+        [ ['Impression',       d.impression],     ['PR Value',          d.pr],            ['Writer',            d.writer]       ],
+        [ ['Reach',            d.reach],          ['Tone',              d.toning],        ['Article Branding',  d.articlebrand] ],
+        [ ['Headline Branding',d.headlinebrand],  ['Picture In Article',d.picture],      ['Article URL',       d.url]          ],
+        [ ['Generation',       d.generation],     ['Created By',        d.createdby],     ['Created At',        d.createdat]    ],
+        ];
+
+        gridDef.forEach((rowCells, ri) => {
+        const shade = ri % 2 === 1;
+        const gy = y + ri * ROW_H;
+        drawCell(doc, col1X, gy, rowCells[0][0], rowCells[0][1], shade);
+        drawCell(doc, col2X, gy, rowCells[1][0], rowCells[1][1], shade);
+        drawCell(doc, col3X, gy, rowCells[2][0], rowCells[2][1], shade);
+        });
+
+        y += gridDef.length * ROW_H + 7;
+
+        // ── ARTICLE IMAGE ─────────────────────────────────────────────────────
+        // FIX BUG 1: d.screenshot is now the real path from data-screenshot
+        const imgSrc  = d.screenshot || '';
+        const imgData = imgSrc ? imgCache[imgSrc] : null;
+        if (imgData) {
+        const imgW = 95, imgH = 65;
+        const imgX = (PW - imgW) / 2;
+        try {
+        // FIX BUG 7: detect actual format instead of hardcoding JPEG
+        doc.addImage(imgData, imgFormat(imgData), imgX, y, imgW, imgH, undefined, 'FAST');
+        y += imgH + 5;
+        } catch (e) {
+        console.warn('Image add failed:', e);
+        }
+        }
+
+        // ── ARTICLE CONTENT ───────────────────────────────────────────────────
+        // FIX BUG 2 & 4: d.content is now populated from data-content (HTML-encoded)
+        const contentTxt = decodeContent(d.content || '');
+        if (contentTxt) {
+        const footerReserve = 30;
+        doc.setTextColor(...INK);
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        const contentLines = doc.splitTextToSize(contentTxt, CW);
+        let lY = y + 3;
+        for (const line of contentLines) {
+        if (lY + 4.5 > PH - footerReserve) break;
+        doc.text(line, ML, lY);
+        lY += 4.5;
+        }
+        }
+
+        // ── FOOTER ────────────────────────────────────────────────────────────
+        const fY = PH - 20;
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.5);
+        doc.line(ML, fY, PW - MR, fY);
+
+        doc.setTextColor(...DARK_RED);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('أهل مصر', ML, fY + 7);
+        doc.setFontSize(6);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...SLATE);
+        doc.text('AHL MASR FOUNDATION', ML, fY + 11);
+
+        doc.setTextColor(...DARK_RED);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('EDITOR', PW - MR, fY + 7, { align: 'right' });
+        doc.setFontSize(6);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...SLATE);
+        doc.text('PR & COMMUNICATIONS', PW - MR, fY + 11, { align: 'right' });
+
+        doc.setTextColor(...SLATE);
+        doc.setFontSize(7);
+        doc.text(`${idx + 1} / ${rows.length}`, PW / 2, fY + 9, { align: 'center' });
+        }
+
+        doc.save(`${clientName}_Articles_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+    </script>
 }

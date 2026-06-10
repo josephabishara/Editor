@@ -1,0 +1,319 @@
+﻿@model EditorViewModelLayer.MediaViewModel.ClientVideoDTO
+@using EditorViewModelLayer.MediaViewModel
+
+@{
+    ViewData["Title"] = "Video Details";
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<style>
+    .detail-label {
+        font-size: .75rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: .15rem;
+        display: block;
+    }
+
+    .detail-value {
+        font-size: .9rem;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .badge-toning-positive {
+        background: #dcfce7;
+        color: #166534;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-toning-negative {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-toning-neutral {
+        background: #f1f5f9;
+        color: #475569;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .form-wrap {
+            padding: 0 !important;
+        }
+
+        .form-card {
+            box-shadow: none !important;
+            border: 1px solid #ccc !important;
+            break-inside: avoid;
+        }
+
+        .form-card-title {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-size: 11pt;
+        }
+    }
+</style>
+
+<div class="form-wrap">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+        <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+           style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);
+            font-size:.82rem;text-decoration:none;" class="no-print">
+            ← Back to Videos
+        </a>
+        <div style="display:flex;gap:.5rem;" class="no-print">
+            <a href="@Url.Action("Edit", new { id = Model.Id })"
+               style="display:inline-flex;align-items:center;gap:.35rem;
+                background:#f59e0b;color:#fff;border:none;border-radius:7px;
+                padding:.38rem .85rem;font-size:.82rem;text-decoration:none;font-weight:600;">
+                ✏️ Edit
+            </a>
+            <button onclick="window.print()"
+                    style="display:inline-flex;align-items:center;gap:.35rem;
+                background:#1e293b;color:#fff;border:none;border-radius:7px;
+                padding:.38rem .85rem;font-size:.82rem;cursor:pointer;font-weight:600;">
+                🖨️ Print / PDF
+            </button>
+            @await Html.PartialAsync("_navdashboard")
+        </div>
+    </div>
+
+
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#ede9fe;">📺</div>
+        <div>
+            <h1>@Model.Title</h1>
+            <p>@Model.ClientName &mdash; @Model.Date.ToString("dd MMMM yyyy")</p>
+        </div>
+    </div>
+
+    @* ── CARD 1: Source & Classification ── *@
+    <div class="form-card">
+        <div class="form-card-title">📂 Source & Classification</div>
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">Channel</span>
+                <span class="detail-value">@(Model.ChannelName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Category</span>
+                <span class="detail-value">@(Model.CategoryName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Sub Category</span>
+                <span class="detail-value">@(Model.SubCategoryName ?? "—")</span>
+            </div>
+        </div>
+        <div class="fg-4" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Date</span>
+                <span class="detail-value">@Model.Date.ToString("dd MMM yyyy")</span>
+            </div>
+            <div>
+                <span class="detail-label">Program</span>
+                <span class="detail-value">@(Model.Program ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Duration</span>
+                <span class="detail-value">
+                    @if (Model.Duration > 0)
+                    {
+                        var ts = TimeSpan.FromSeconds(Model.Duration);
+                        @(ts.Hours > 0
+                            ? $"{ts.Hours}h {ts.Minutes}m {ts.Seconds}s"
+                            : ts.Minutes > 0
+                                ? $"{ts.Minutes}m {ts.Seconds}s"
+                                : $"{ts.Seconds}s")
+                        <span style="color:#94a3b8;font-size:.8rem;">(@Model.Duration sec)</span>
+                    }
+                    else
+                    {
+
+                        <text>—</text>
+                    }
+                </span>
+            </div>
+            <div>
+                <span class="detail-label">Language</span>
+                <span class="detail-value">@(Model.Language ?? "—")</span>
+            </div>
+        </div>
+        <div class="fg-3" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Toning</span>
+                @{
+                    var toningClass = Model.Toning switch
+                    {
+                        "Positive" => "badge-toning-positive",
+                        "Negative" => "badge-toning-negative",
+                        _ => "badge-toning-neutral"
+                    };
+                }
+                <span class="@toningClass">@(Model.Toning ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Video URL</span>
+                @if (!string.IsNullOrWhiteSpace(Model.VideoUrl))
+                {
+                    <a href="@Model.VideoUrl" target="_blank" rel="noopener"
+                       style="font-size:.88rem;word-break:break-all;">@Model.VideoUrl</a>
+                }
+                else
+                {
+
+                    <span class="detail-value">—</span>
+                }
+            </div>
+            <div></div>
+        </div>
+    </div>
+
+    @* ── CARD 2: Channel Data / Values ── *@
+    <div class="form-card">
+        <div class="form-card-title">🔄 Channel Data</div>
+        <div class="fg-4">
+            <div>
+                <span class="detail-label">Media Tier</span>
+                <span class="detail-value">@(Model.MediaTier ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Impression</span>
+                <span class="detail-value">@Model.Impression.ToString("N0")</span>
+            </div>
+            <div>
+                <span class="detail-label">Reach (× 4)</span>
+                <span class="detail-value">@Model.Reach.ToString("N0")</span>
+            </div>
+            <div></div>
+        </div>
+        <div class="fg-4" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">AD Value</span>
+                <span class="detail-value" style="color:#0ea5e9;font-weight:700;">
+                    @Model.ADValue.ToString("N2")
+                </span>
+            </div>
+            <div>
+                <span class="detail-label">PR Value</span>
+                <span class="detail-value" style="color:#16a34a;font-size:1.05rem;font-weight:700;">
+                    @Model.PRValue.ToString("N2")
+                </span>
+            </div>
+            <div></div><div></div>
+        </div>
+    </div>
+
+    @* ── CARD 3: Files ── *@
+    @{
+        bool hasVideo = !string.IsNullOrEmpty(Model.VideoFile);
+        bool hasShot = !string.IsNullOrEmpty(Model.Screenshot);
+        bool hasUrl = !string.IsNullOrEmpty(Model.VideoUrl);
+    }
+    @if (hasVideo || hasShot || hasUrl)
+    {
+        <div class="form-card">
+            <div class="form-card-title">📁 Files</div>
+            <div class="fg-2">
+
+                @* Video file or embedded player *@
+                <div>
+                    <span class="detail-label">Video</span>
+                    @if (hasVideo)
+                    {
+                        <div style="margin-top:.4rem;">
+                            <video controls
+                                   style="width:100%;max-height:260px;border-radius:8px;
+                                background:#000;border:1px solid #e2e8f0;">
+                                <source src="@Model.VideoFile" />
+                                Your browser does not support the video tag.
+                            </video>
+                            <a href="@Model.VideoFile"
+                               style="font-size:.78rem;color:#64748b;display:block;margin-top:.3rem;">
+                                ↓ Download: @System.IO.Path.GetFileName(Model.ChannelName)
+                            </a>
+                        </div>
+                    }
+                    else if (hasUrl)
+                    {
+
+                        var ytEmbed = "";
+                        if (Model.VideoUrl!.Contains("youtube.com/watch?v="))
+                            ytEmbed = "https://www.youtube.com/embed/" + Model.VideoUrl.Split("v=")[1].Split("&")[0];
+                        else if (Model.VideoUrl.Contains("youtu.be/"))
+                            ytEmbed = "https://www.youtube.com/embed/" + Model.VideoUrl.Split("youtu.be/")[1].Split("?")[0];
+
+                        @if (!string.IsNullOrEmpty(ytEmbed))
+                        {
+                            <iframe src="@ytEmbed" allowfullscreen
+                                    style="width:100%;height:220px;border-radius:8px;
+                                border:1px solid #e2e8f0;margin-top:.4rem;">
+                            </iframe>
+                        }
+                        else
+                        {
+                            <a href="@Model.VideoUrl" target="_blank" rel="noopener"
+                               style="font-size:.88rem;">🔗 Open Video Link</a>
+                        }
+                    }
+                    else
+                    {
+                        <span class="detail-value">—</span>
+                    }
+                </div>
+
+                @* Screenshot *@
+                <div>
+                    <span class="detail-label">Screenshot</span>
+                    @if (hasShot)
+                    {
+                        <a href="@Model.Screenshot" target="_blank" rel="noopener">
+                            <img src="@Model.Screenshot" alt="Screenshot"
+                                 style="width:100%;max-height:260px;object-fit:cover;
+                            border-radius:8px;border:1px solid #e2e8f0;
+                            margin-top:.4rem;transition:transform .15s;"
+                                 
+                                 onmouseover="this.style.transform='scale(1.02)'"
+                                 onmouseout="this.style.transform=''" />
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="detail-value">—</span>
+                    }
+                </div>
+
+            </div>
+        </div>
+    }
+
+    @* ── Audit footer ── *@
+    <div style="text-align:right;font-size:.78rem;color:#94a3b8;margin-top:.5rem;margin-bottom:2rem;">
+        Created by <strong style="color:#64748b;">@(Model.CreatedByUserName ?? "—")</strong>
+        &nbsp;·&nbsp;
+        @Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+    </div>
+
+</div>

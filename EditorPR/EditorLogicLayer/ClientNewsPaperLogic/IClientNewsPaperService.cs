@@ -23,5 +23,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
 
         // AJAX: auto-fill publication fields by publicationId + clientId
         Task<PublicationAutoFillDTO> GetPublicationAutoFillAsync(int publicationId, int clientId);
+        Task<(bool Success, string Message, int NewId)> DuplicateAsync(int id);
     }
 }

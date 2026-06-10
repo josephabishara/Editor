@@ -26,6 +26,9 @@
   <ItemGroup>
     <Folder Include="wwwroot\img\" />
     <Folder Include="wwwroot\lib\tinymce\" />
+    <Folder Include="wwwroot\uploads\articles\" />
+    <Folder Include="wwwroot\uploads\newspapers\" />
+    <Folder Include="wwwroot\uploads\videos\" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,674 @@
+﻿@model EditorViewModelLayer.MediaViewModel.ClientArticleDTO
+@using EditorViewModelLayer.MediaViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Edit Website ";
+
+    List<SelectListItem> ToSL(List<MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var webSL = ToSL(Model.WebsiteOptions);
+    var catSL = ToSL(Model.CategoryOptions);
+    var subSL = ToSL(Model.SubCategoryOptions);
+    var writerSL = ToSL(Model.WriterOptions);
+    var brandSL = ToSL(Model.BrandingOptions);
+    var toningSL = ToSL(Model.ToningOptions);
+    var yesNoSL = ToSL(Model.YesNoOptions);
+    var genSL = ToSL(Model.GenerationOptions);
+
+    var existingImagePaths = new List<string>();
+    if (!string.IsNullOrEmpty(Model.Images))
+    {
+        try
+        {
+            existingImagePaths = System.Text.Json.JsonSerializer
+                                       .Deserialize<List<string>>(Model.Images)
+                                 ?? new List<string>();
+        }
+        catch { }
+    }
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<div class="form-wrap">
+
+    <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+       style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);
+        font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
+        ← Back to Articles
+    </a>
+
+    @await Html.PartialAsync("_navdashboard")
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#cffafe;">✏️</div>
+        <div>
+            <h1>@ViewData["Title"]</h1>
+            <p>@Model.ClientName</p>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="val-summary">
+            <strong>Please fix the errors below:</strong>
+            <ul>
+                @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <li>@e.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form method="post"
+          enctype="multipart/form-data"
+          action="@Url.Action("Edit", new { id = Model.Id })">
+
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ClientId" />
+        <input type="hidden" asp-for="ArticleId" />
+        <input type="hidden" asp-for="ParentId" />
+
+        <input type="hidden" name="Images" id="hdnImages" value="@Model.Images" />
+        <input type="hidden" name="removedImages" id="hdnRemovedImages" value="[]" />
+
+        @* ── CARD 1: Source & Classification ───────────────────────────────── *@
+        <div class="form-card">
+
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="WebsiteId">Website <span style="color:var(--red)">*</span></label>
+                    <select asp-for="WebsiteId" asp-items="webSL"
+                            onchange="autoFillWebsite(this.value)" class="select-search">
+                        <option value="0">— Select —</option>
+                    </select>
+                    <span asp-validation-for="WebsiteId" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="CategoryId">Category</label>
+                    <select asp-for="CategoryId" asp-items="catSL"
+                            id="catSel" onchange="loadSubs(this.value)">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="SubCategoryId">Sub Category</label>
+                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="WriterId">Writer</label>
+                    <select asp-for="WriterId" asp-items="writerSL" class="select-search">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
+                    <input asp-for="Date" type="date" />
+                    <span asp-validation-for="Date" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="ArticleURL">Article URL</label>
+                    <input asp-for="ArticleURL" type="url" placeholder="https://…" />
+                </div>
+            </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="WebsiteType">Website Type</label>
+                    <select asp-for="WebsiteType" class="select-search">
+                        <option value="Web Site">Web Site</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="X (Twitter)">X (Twitter)</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Reddit">Reddit</option>
+                        <option value="Discord">Discord</option>
+                        <option value="Medium">Medium</option>
+                        <option value="YouTube">YouTube</option>
+                        <option value="Blogs">Blogs</option>
+
+                    </select>
+                </div>
+            </div>
+            <br />
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="ArticleBranding">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="HeadlineBranding">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="PictureinArticle">Picture in Article</label>
+                    <select asp-for="PictureinArticle" asp-items="yesNoSL"></select>
+                </div>
+
+            </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Toning">Toning</label>
+                    <select asp-for="Toning" asp-items="toningSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Generation">Generation</label>
+                    <select asp-for="Generation" asp-items="genSL"></select>
+                </div>
+                <div></div>
+            </div>
+            <br />
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
+                <input asp-for="Title" placeholder="Enter article headline…" />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Content">Translation</label>
+                <textarea id="textarea" class="form-control" asp-for="Content"
+                          placeholder="Content"></textarea>
+                <script src="~/lib/tinymce/tinymce.min.js"></script>
+                <script>
+                    tinymce.init({
+                    selector: '#textarea',
+                    plugins: "tooltip print preview fullpage paste searchreplace autolink directionality visualblocks visualchars fullscreen image link media template codesample code table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists textcolor wordcount imagetools contextmenu colorpicker textpattern",
+                    toolbar1: 'formatselect | bold italic strikethrough forecolor backcolor | link | alignleft aligncenter alignright alignjustify | numlist bullist outdent indent | removeformat',
+                    height: "200",
+                    paste_data_images: true
+                    });
+                </script>
+            </div>
+            <br />
+            @* ── Image Upload ─────────────────────────────────────────────────── *@
+            <div class="fg">
+          
+
+                <div id="dropZone"
+                     style="border: 2px dashed var(--rule, #cbd5e1);
+                    border-radius: 10px;
+                    padding: 1.4rem 1rem;
+                    text-align: center;
+                    background: #f8fafc;
+                    cursor: pointer;
+                    min-height: 110px;
+                    transition: border-color .2s, background .2s;">
+                    <div style="font-size:2rem;line-height:1;">📁</div>
+                    <p style="color:#64748b;margin:.4rem 0 .2rem;font-size:.88rem;">
+                        Drag &amp; drop images here, or <strong>click to browse</strong>
+                    </p>
+                    <small style="color:#94a3b8;">
+                        JPG · PNG · GIF · WebP &nbsp;|&nbsp; Multiple selection allowed
+                    </small>
+                    <input type="file"
+                           name="imageFiles"
+                           id="imageFilesInput"
+                           multiple
+                           accept=".jpg,.jpeg,.png,.gif,.webp"
+                           style="display:none;" />
+                </div>
+
+                <div id="newPreviewGrid"
+                     style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
+
+                @if (existingImagePaths.Any())
+                {
+                    <p style="font-size:.8rem;font-weight:600;color:#64748b;
+                    margin:12px 0 6px;">Current Images</p>
+                    <div id="existingGrid"
+                         style="display:flex;flex-wrap:wrap;gap:8px;">
+                        @foreach (var path in existingImagePaths)
+                        {
+                            <div class="existing-thumb"
+                                 data-path="@path"
+                                 style="position:relative;">
+                                <img src="@path"
+                                     style="width:88px;height:88px;object-fit:cover;
+                                border-radius:6px;border:1px solid #e2e8f0;"
+                                     onerror="this.src='/images/no-image.png'" />
+                                <button type="button"
+                                        class="remove-existing"
+                                        data-path="@path"
+                                        title="Remove"
+                                        style="position:absolute;top:2px;right:2px;
+                                    background:#ef4444;color:#fff;border:none;
+                                    border-radius:50%;width:20px;height:20px;
+                                    font-size:11px;line-height:1;cursor:pointer;
+                                    display:flex;align-items:center;
+                                    justify-content:center;">
+                                    ✕
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ── CARD 5: Child Articles ──────────────────────────────────────────── *@
+        <div class="form-card" id="childrenCard">
+            <div class="form-card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>📎   Also Mention (Other Sources)</span>
+                <button type="button" id="btnAddChild"
+                        style="background:var(--blue,#3b82f6);color:#fff;border:none;
+                    border-radius:6px;padding:.3rem .9rem;font-size:.82rem;cursor:pointer;">
+                    +  Also Mention
+                </button>
+            </div>
+
+            <p style="font-size:.8rem;color:#64748b;margin:.2rem 0 .9rem;">
+                Each also mention inherits Title, Content, Images, Branding and Category from this article.
+                Only Website, Writer, Date and Article URL differ per also mention.
+            </p>
+
+            <div id="childRowsContainer"></div>
+
+            <template id="childRowTemplate">
+                <div class="child-row"
+                     data-index="__IDX__"
+                     style="border:1px solid #e2e8f0;border-radius:8px;padding:.9rem;
+                    margin-bottom:.75rem;background:#f8fafc;position:relative;">
+
+                    <div style="position:absolute;top:8px;right:10px;">
+                        <button type="button" class="btn-remove-child"
+                                style="background:#ef4444;color:#fff;border:none;
+                            border-radius:50%;width:22px;height:22px;
+                            font-size:12px;cursor:pointer;line-height:1;">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div style="font-size:.78rem;font-weight:600;color:#64748b;margin-bottom:.6rem;">
+                        Also Mention #<span class="child-number">1</span>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.7rem;">
+                        <div>
+                            <label style="font-size:.8rem;font-weight:600;">
+                                Website <span style="color:#ef4444">*</span>
+                            </label>
+                            <select name="Children[__IDX__].WebsiteId"
+                                    class="child-website-sel select-search "
+                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
+                                border-radius:6px;font-size:.85rem;"
+                                    onchange="autoFillChild(this, __IDX__)">
+                                <option value="0">— Select —</option>
+                                {{WEBSITE_OPTIONS}}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:.8rem;font-weight:600;">Writer</label>
+                            <select name="Children[__IDX__].WriterId" class="select-search"
+                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
+                                border-radius:6px;font-size:.85rem;">
+                                <option value="0">— None —</option>
+                                {{WRITER_OPTIONS}}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:.8rem;font-weight:600;">
+                                Date <span style="color:#ef4444">*</span>
+                            </label>
+                            <input type="date"
+                                   name="Children[__IDX__].Date"
+                                   value="@DateTime.Today.ToString("yyyy-MM-dd")"
+                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
+                            border-radius:6px;font-size:.85rem;" />
+                        </div>
+                        <div>
+                            <label style="font-size:.8rem;font-weight:600;">Article URL</label>
+                            <input type="url"
+                                   name="Children[__IDX__].ArticleURL"
+                                   placeholder="https://…"
+                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
+                            border-radius:6px;font-size:.85rem;" />
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-top:.6rem;display:none;">
+                        <div>
+                            <label style="font-size:.75rem;color:#64748b;">AD Value</label>
+                            <input type="number" step="0.01"
+                                   name="Children[__IDX__].ADValue"
+                                   class="child-ad"
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;
+                            border-radius:6px;font-size:.83rem;background:#f1f5f9;"
+                                   oninput="recalcChildPR(this, __IDX__)" />
+                        </div>
+                        <div>
+                            <label style="font-size:.75rem;color:#64748b;">PR Value (×3.5)</label>
+                            <input type="number" step="0.01"
+                                   name="Children[__IDX__].PRValue"
+                                   class="child-pr"
+                                   readonly
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;
+                            border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
+                        </div>
+                        <div>
+                            <label style="font-size:.75rem;color:#64748b;">Media Tier</label>
+                            <input type="text"
+                                   name="Children[__IDX__].MediaTier"
+                                   class="child-tier"
+                                   readonly
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;
+                            border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
+                        </div>
+                        <div>
+                            <label style="font-size:.75rem;color:#64748b;">Language</label>
+                            <input type="text"
+                                   name="Children[__IDX__].Language"
+                                   class="child-lang"
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;
+                            border-radius:6px;font-size:.83rem;" />
+                        </div>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+        @* ── CARD 3: Auto-filled from Website ───────────────────────────────── *@
+        <div class="form-card" style="display:none">
+            <div class="form-card-title">
+                🔄 Website Data
+                <span class="badge-autofill">Auto-filled on Website change</span>
+            </div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="MediaType">Media Type</label>
+                    <input asp-for="MediaType" class="autofill" id="afMediaType" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="MediaTier">Media Tier</label>
+                    <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Frequency">Frequency</label>
+                    <input asp-for="Frequency" class="autofill" id="afFrequency" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Language">Language</label>
+                    <input asp-for="Language" class="autofill" id="afLanguage" readonly />
+                </div>
+            </div>
+            <div class="fg-4" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Impression">Impression</label>
+                    <input asp-for="Impression" type="number" id="afImpression"
+                           oninput="recalcReach()" class="autofill" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Reach">Reach (Impression × 4)</label>
+                    <input asp-for="Reach" class="autofill" id="afReach" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="ADValue">AD Value (Unit Price)</label>
+                    <input asp-for="ADValue" type="number" step="0.01" id="afAD"
+                           oninput="recalcPR()" class="autofill" />
+                </div>
+                <div class="fg">
+                    <label asp-for="PRValue">PR Value (AD × 3.5)</label>
+                    <input asp-for="PRValue" class="autofill" id="afPR" readonly />
+                </div>
+            </div>
+        </div>
+
+      
+        @* ── Footer ─────────────────────────────────────────────────────────── *@
+        <div class="form-footer">
+            <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+               class="btn-cancel">Cancel</a>
+            <button type="submit" class="btn-save">💾 Save </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        const clientId = @Model.ClientId;
+
+        async function autoFillWebsite(webId) {
+        if (!webId || webId == '0') return;
+        const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
+        document.getElementById('afMediaType').value  = d.mediaType  ?? '';
+        document.getElementById('afMediaTier').value  = d.mediaTier  ?? '';
+        document.getElementById('afFrequency').value  = d.frequency  ?? '';
+        document.getElementById('afLanguage').value   = d.language   ?? '';
+        document.getElementById('afImpression').value = d.impression ?? '';
+        document.getElementById('afReach').value      = d.reach      ?? '';
+        document.getElementById('afAD').value         = d.adValue    ?? '';
+        document.getElementById('afPR').value         = d.prValue    ?? '';
+        }
+
+        function recalcReach() {
+        const imp = parseInt(document.getElementById('afImpression').value) || 0;
+        document.getElementById('afReach').value = imp * 4;
+        document.querySelector('[name="Reach"]').value = imp * 4;
+        }
+
+        function recalcPR() {
+        const ad = parseFloat(document.getElementById('afAD').value) || 0;
+        document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
+        document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
+        }
+
+        async function loadSubs(parentId) {
+        const sel = document.getElementById('subSel');
+        sel.innerHTML = '<option value="0">Loading…</option>';
+        if (!parentId || parentId == '0') {
+        sel.innerHTML = '<option value="0">— None —</option>';
+        return;
+        }
+        const data = await (await fetch(`/ClientArticle/GetSubCategories?parentId=${parentId}`)).json();
+        sel.innerHTML = '<option value="0">— None —</option>';
+        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+        }
+
+        $(document).ready(function () {
+        $('.select-search').select2({ placeholder: 'Search...', allowClear: true });
+        });
+
+        // ── Image Upload ──────────────────────────────────────────────────────────
+        (function () {
+        const dropZone   = document.getElementById('dropZone');
+        const fileInput  = document.getElementById('imageFilesInput');
+        const newGrid    = document.getElementById('newPreviewGrid');
+        const hdnImages  = document.getElementById('hdnImages');
+        const hdnRemoved = document.getElementById('hdnRemovedImages');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#3b82f6';
+        dropZone.style.background  = '#eff6ff';
+        });
+        ['dragleave', 'dragend'].forEach(evt =>
+        dropZone.addEventListener(evt, () => {
+        dropZone.style.borderColor = '';
+        dropZone.style.background  = '';
+        })
+        );
+
+        dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.style.borderColor = '';
+        dropZone.style.background  = '';
+        mergeFiles(e.dataTransfer.files);
+        renderPreviews(fileInput.files);
+        });
+
+        fileInput.addEventListener('change', () => renderPreviews(fileInput.files));
+
+        function renderPreviews(files) {
+        newGrid.innerHTML = '';
+        Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;';
+        wrap.innerHTML = `
+        <img src="${ev.target.result}"
+        style="width:88px;height:88px;object-fit:cover;
+        border-radius:6px;border:1px solid #e2e8f0;" />
+        <span style="position:absolute;bottom:0;left:0;right:0;
+        background:rgba(0,0,0,.55);color:#fff;
+        font-size:9px;padding:2px 4px;border-radius:0 0 6px 6px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        ${file.name}
+        </span>`;
+        newGrid.appendChild(wrap);
+        };
+        reader.readAsDataURL(file);
+        });
+        }
+
+        function mergeFiles(droppedFiles) {
+        const dt = new DataTransfer();
+        if (fileInput.files) {
+        Array.from(fileInput.files).forEach(f => dt.items.add(f));
+        }
+        Array.from(droppedFiles).forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+        }
+
+        document.querySelectorAll('.remove-existing').forEach(btn => {
+        btn.addEventListener('click', function () {
+        const path = this.dataset.path;
+        this.closest('.existing-thumb').remove();
+        let current = [];
+        try { current = JSON.parse(hdnImages.value || '[]'); } catch {}
+        current = current.filter(p => p !== path);
+        hdnImages.value = JSON.stringify(current);
+        let removed = [];
+        try { removed = JSON.parse(hdnRemoved.value || '[]'); } catch {}
+        if (!removed.includes(path)) removed.push(path);
+        hdnRemoved.value = JSON.stringify(removed);
+        });
+        });
+        })();
+
+        // ── Children management ───────────────────────────────────────────────────
+        (function () {
+        const websiteOptions = @Html.Raw(
+                        System.Text.Json.JsonSerializer.Serialize(
+                            Model.WebsiteOptions.Select(o => new { value = o.Value, text = o.Text })));
+
+        const writerOptions = @Html.Raw(
+                        System.Text.Json.JsonSerializer.Serialize(
+                            Model.WriterOptions.Select(o => new { value = o.Value, text = o.Text })));
+
+        function buildOptions(list, selectedVal) {
+        return list.map(o =>
+        `<option value="${o.value}" ${o.value == selectedVal ? 'selected' : ''}>${o.text}</option>`
+        ).join('');
+        }
+
+        let childIndex = 0;
+        const container = document.getElementById('childRowsContainer');
+        const template  = document.getElementById('childRowTemplate');
+
+        document.getElementById('btnAddChild').addEventListener('click', () => {
+        addChildRow(childIndex++);
+        });
+
+        function addChildRow(idx, data) {
+        let html = template.innerHTML
+        .replaceAll('__IDX__', idx)
+        .replace('{{WEBSITE_OPTIONS}}', buildOptions(websiteOptions, data?.websiteId ?? 0))
+        .replace('{{WRITER_OPTIONS}}',  buildOptions(writerOptions,  data?.writerId  ?? 0));
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        const row = wrapper.firstElementChild;
+
+        row.querySelector('.child-number').textContent = idx + 1;
+
+        if (data?.date) {
+        row.querySelector(`[name="Children[${idx}].Date"]`).value = data.date;
+        }
+
+        if (data?.id > 0) {
+        const hdnId = document.createElement('input');
+        hdnId.type  = 'hidden';
+        hdnId.name  = `Children[${idx}].Id`;
+        hdnId.value = data.id;
+        row.appendChild(hdnId);
+        }
+
+        row.querySelector('.btn-remove-child').addEventListener('click', function () {
+        row.remove();
+        renumberChildren();
+        });
+
+        container.appendChild(row);
+        }
+
+        function renumberChildren() {
+        container.querySelectorAll('.child-row').forEach((row, i) => {
+        row.querySelector('.child-number').textContent = i + 1;
+        });
+        }
+
+        window.autoFillChild = async function (sel, idx) {
+        const webId = sel.value;
+        if (!webId || webId == '0') return;
+        const d = await (await fetch(
+        `/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`
+        )).json();
+        const row = sel.closest('.child-row');
+        row.querySelector(`[name="Children[${idx}].ADValue"]`).value   = d.adValue   ?? '';
+        row.querySelector(`[name="Children[${idx}].PRValue"]`).value   = d.prValue   ?? '';
+        row.querySelector(`[name="Children[${idx}].MediaTier"]`).value = d.mediaTier ?? '';
+        row.querySelector(`[name="Children[${idx}].Language"]`).value  = d.language  ?? '';
+        };
+
+        window.recalcChildPR = function (adInput, idx) {
+        const ad  = parseFloat(adInput.value) || 0;
+        const row = adInput.closest('.child-row');
+        row.querySelector(`[name="Children[${idx}].PRValue"]`).value = (ad * 3.5).toFixed(2);
+        };
+
+        // ── Re-populate existing children (Edit mode) ─────────────────────────
+        @if (Model.Children != null && Model.Children.Any())
+        {
+            <text>
+                const existingChildren = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                            Model.Children.Select(c => new
+                                            {
+                                                id = c.Id,
+                                                websiteId = c.WebsiteId,
+                                                writerId = c.WriterId,
+                                                date = c.Date.ToString("yyyy-MM-dd"),
+                                                articleURL = c.ArticleURL ?? "",
+                                                adValue = c.ADValue,
+                                                prValue = c.PRValue,
+                                                mediaTier = c.MediaTier ?? "",
+                                                language = c.Language ?? ""
+                                            })));
+
+                existingChildren.forEach(child => {
+                addChildRow(childIndex, child);
+                const row = container.lastElementChild;
+                const idx = childIndex;
+                row.querySelector(`[name="Children[${idx}].ArticleURL"]`).value = child.articleURL;
+                row.querySelector(`[name="Children[${idx}].ADValue"]`).value    = child.adValue;
+                row.querySelector(`[name="Children[${idx}].PRValue"]`).value    = child.prValue;
+                row.querySelector(`[name="Children[${idx}].MediaTier"]`).value  = child.mediaTier;
+                row.querySelector(`[name="Children[${idx}].Language"]`).value   = child.language;
+                childIndex++;
+                });
+            </text>
+        }
+        })();
+    </script>
+}

@@ -35,24 +35,19 @@ namespace EditorLogicLayer.Publication
         public async Task<(bool Success, string Message)> CreateAsync(PublicationDTO model)
         {
             var entity = MapToEntity(model);
-            entity.CreatedAt = DateTime.UtcNow;
             entity.IsActive = true;
+            entity.CreatedAt = DateTime.UtcNow;
             entity.Deleted = 0;
 
             await _repo.AddAsync(entity);
-
-            // Fan-out: create one PublicationCustomerCategory row per active client,
-            // inheriting this publication's MediaTier as the default (editable later).
-            await FanOutToClientsAsync(entity.Id, entity.MediaTier);
-
+            await FanOutToClientsAsync(entity);
             return (true, "Publication created successfully.");
         }
 
         public async Task<(bool Success, string Message)> UpdateAsync(PublicationDTO model)
         {
             var existing = await _repo.GetByIdAsync(model.Id);
-            if (existing == null)
-                return (false, "Publication not found.");
+            if (existing == null) return (false, "Publication not found.");
 
             existing.PublicationName = model.PublicationName;
             existing.MediaType = model.MediaType;
@@ -62,8 +57,6 @@ namespace EditorLogicLayer.Publication
             existing.Language = model.Language;
             existing.CmPrice = model.CmPrice;
             existing.Circulation = model.Circulation;
-
-            // ✅ BaseEntity field — UpdatedAt (not UpdatedDate, not UpdatedAt mismatch)
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _repo.UpdateAsync(existing);
@@ -73,10 +66,8 @@ namespace EditorLogicLayer.Publication
         public async Task<(bool Success, string Message)> DeleteAsync(int id)
         {
             var existing = await _repo.GetByIdAsync(id);
-            if (existing == null)
-                return (false, "Publication not found.");
+            if (existing == null) return (false, "Publication not found.");
 
-            // ✅ Soft delete — BaseEntity fields: Deleted, IsActive, DeletedAt
             existing.Deleted = 1;
             existing.IsActive = false;
             existing.DeletedAt = DateTime.UtcNow;
@@ -84,19 +75,14 @@ namespace EditorLogicLayer.Publication
             await _repo.UpdateAsync(existing);
             return (true, "Publication deleted successfully.");
         }
-        // ── Export to Excel ────────────────────────────────────────────────────
+
+        // ── Export ─────────────────────────────────────────────────────────────
 
         public byte[] ExportToExcel(IEnumerable<PublicationDTO> publications)
         {
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Publications");
-
-            // ── Header row ────────────────────────────────────────────────────
-            var headers = new[]
-            {
-                "Id", "Publication Name", "URL", "Media Type", "Media Tier",
-                "Frequency", "Reach", "Distribution", "Language", "CM Price" ,"Circulation"
-            };
+            var headers = new[] { "Id", "Publication Name", "Media Type", "Media Tier", "Frequency", "Distribution", "Language", "CM Price", "Circulation" };
 
             for (int col = 1; col <= headers.Length; col++)
             {
@@ -110,50 +96,38 @@ namespace EditorLogicLayer.Publication
                 cell.Style.Border.OutsideBorderColor = XLColor.White;
             }
 
-            // ── Data rows ─────────────────────────────────────────────────────
             int row = 2;
-            foreach (var w in publications)
+            foreach (var p in publications)
             {
-                ws.Cell(row, 1).Value = w.Id;
-                ws.Cell(row, 2).Value = w.PublicationName;
-                ws.Cell(row, 4).Value = w.MediaType ?? "";
-                ws.Cell(row, 5).Value = w.MediaTier ?? "";
-                ws.Cell(row, 6).Value = w.Frequency ?? "";
-                ws.Cell(row, 8).Value = w.Distribution ?? "";
-                ws.Cell(row, 9).Value = w.Language ?? "";
-                ws.Cell(row, 10).Value = w.CmPrice;
-                ws.Cell(row, 10).Style.NumberFormat.Format = "#,##0.00";
-                ws.Cell(row, 11).Value = w.Circulation.HasValue ? w.Circulation.Value.ToString("N0") : "—";
-
-                // Alternate row shading
-                if (row % 2 == 0)
-                    ws.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#EBF3FB");
-
-                ws.Range(row, 1, row, 11).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-
+                ws.Cell(row, 1).Value = p.Id;
+                ws.Cell(row, 2).Value = p.PublicationName;
+                ws.Cell(row, 3).Value = p.MediaType ?? "";
+                ws.Cell(row, 4).Value = p.MediaTier ?? "";
+                ws.Cell(row, 5).Value = p.Frequency ?? "";
+                ws.Cell(row, 6).Value = p.Distribution ?? "";
+                ws.Cell(row, 7).Value = p.Language ?? "";
+                ws.Cell(row, 8).Value = p.CmPrice;
+                ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 9).Value = p.Circulation.HasValue ? p.Circulation.Value.ToString("N0") : "";
+                if (row % 2 == 0) ws.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#EBF3FB");
+                ws.Range(row, 1, row, 9).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 row++;
             }
 
             ws.Columns().AdjustToContents();
             ws.SheetView.FreezeRows(1);
-
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             return stream.ToArray();
         }
 
-        // ── Import from Excel ──────────────────────────────────────────────────
-        // ✅ Receives Stream + fileName — NOT IFormFile
-        // IFormFile is an ASP.NET Core type — LogicLayer must not reference it
-        // Conversion from IFormFile → Stream happens in the Controller only
+        // ── Import ─────────────────────────────────────────────────────────────
 
         public async Task<(bool Success, string Message, int ImportedCount)> ImportFromExcelAsync(
             Stream fileStream, string fileName)
         {
-            // Validate extension
-            var extension = Path.GetExtension(fileName).ToLowerInvariant();
-            if (extension != ".xlsx" && extension != ".xls")
-                return (false, "Only .xlsx and .xls files are supported.", 0);
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls") return (false, "Only .xlsx and .xls files are supported.", 0);
 
             var toImport = new List<EditorEntitiesLayer.Entities.Publication>();
             var errors = new List<string>();
@@ -162,81 +136,76 @@ namespace EditorLogicLayer.Publication
             {
                 using var workbook = new XLWorkbook(fileStream);
                 var ws = workbook.Worksheet(1);
-                var rows = ws.RangeUsed()?.RowsUsed().Skip(1).ToList(); // skip header
+                var rows = ws.RangeUsed()?.RowsUsed().Skip(1).ToList();
+                if (rows == null || rows.Count == 0) return (false, "The file has no data rows.", 0);
 
-                if (rows == null || rows.Count == 0)
-                    return (false, "The file has no data rows.", 0);
-
-                int rowNumber = 2;
+                int rowNum = 2;
                 foreach (var row in rows)
                 {
-                    var publicationName = row.Cell(2).GetString().Trim();
-                    var url = row.Cell(3).GetString().Trim();
+                    var name = row.Cell(2).GetString().Trim();
+                    //var url = row.Cell(3).GetString().Trim();
+                    if (string.IsNullOrWhiteSpace(name)) { errors.Add($"Row {rowNum}: Publication Name is required."); rowNum++; continue; }
+                   // if (string.IsNullOrWhiteSpace(url)) { errors.Add($"Row {rowNum}: URL is required."); rowNum++; continue; }
 
-                    if (string.IsNullOrWhiteSpace(publicationName))
-                    {
-                        errors.Add($"Row {rowNumber}: Publication Name is required.");
-                        rowNumber++;
-                        continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(url))
-                    {
-                        errors.Add($"Row {rowNumber}: URL is required.");
-                        rowNumber++;
-                        continue;
-                    }
-
-                    decimal.TryParse(row.Cell(9).GetString().Trim(), out decimal cmPrice);
+                    decimal.TryParse(row.Cell(10).GetString().Trim(), out decimal cmPrice);
+                    int.TryParse(row.Cell(11).GetString().Trim().Replace(",", ""), out int circulation);
 
                     toImport.Add(new EditorEntitiesLayer.Entities.Publication
                     {
-                        PublicationName = publicationName,
-                        MediaType = row.Cell(4).GetString().Trim(),
-                        MediaTier = row.Cell(5).GetString().Trim(),
-                        Frequency = row.Cell(6).GetString().Trim(),
-                        Distribution = row.Cell(8).GetString().Trim(),
-                        Language = row.Cell(9).GetString().Trim(),
+                        PublicationName = name,
+                        //URL = url,
+                        MediaType = row.Cell(3).GetString().Trim().NullIfEmpty(),
+                        MediaTier = row.Cell(4).GetString().Trim().NullIfEmpty(),
+                        Frequency = row.Cell(5).GetString().Trim().NullIfEmpty(),
+                     //   Reach = row.Cell(7).GetString().Trim().NullIfEmpty(),
+                        Distribution = row.Cell(6).GetString().Trim().NullIfEmpty(),
+                        Language = row.Cell(7).GetString().Trim().NullIfEmpty(),
                         CmPrice = cmPrice,
+                        Circulation = circulation > 0 ? circulation : null,
                         IsActive = true,
+                        Deleted = 0,
                         CreatedAt = DateTime.UtcNow
                     });
-
-                    rowNumber++;
+                    rowNum++;
                 }
             }
-            catch (Exception ex)
-            {
-                return (false, $"Failed to read file: {ex.Message}", 0);
-            }
+            catch (Exception ex) { return (false, $"Failed to read file: {ex.Message}", 0); }
 
-            if (errors.Any())
-                return (false, string.Join(" | ", errors), 0);
+            if (errors.Any()) return (false, string.Join(" | ", errors), 0);
 
             foreach (var entity in toImport)
+            {
                 await _repo.AddAsync(entity);
+                await FanOutToClientsAsync(entity);
+            }
 
             return (true, $"{toImport.Count} publication(s) imported successfully.", toImport.Count);
         }
-        // ── Mappers ────────────────────────────────────────────────────────────
-        /// <summary>
-        /// For a newly persisted publication, creates one <see cref="PublicationCustomerCategory"/>
-        /// row for every active client, defaulting MediaTier from the publication itself.
-        /// </summary>
-        private async Task FanOutToClientsAsync(int publicationId, string? mediaTier)
+
+        // ── Fan-out helper ─────────────────────────────────────────────────────
+
+        private async Task FanOutToClientsAsync(EditorEntitiesLayer.Entities.Publication p)
         {
             var clients = await _clientRepo.GetActiveClientsAsync();
             if (!clients.Any()) return;
 
-            var categories = clients.Select(c => new PublicationCustomerCategory
+            var rows = clients.Select(c => new PublicationCustomerCategory
             {
                 CustomerId = c.Id,
-                PublicationId = publicationId,
-                MediaTier = mediaTier   // default from publication — editable per-client later
+                PublicationId = p.Id,
+                MediaType = p.MediaType,
+                MediaTier = p.MediaTier,
+                Frequency = p.Frequency,
+                Distribution = p.Distribution,
+                Language = p.Language,
+                UnitPrice = p.CmPrice,   // source field is CmPrice
+                Circulation = p.Circulation
             }).ToList();
 
-            await _categoryRepo.AddRangeAsync(categories);
+            await _categoryRepo.AddRangeAsync(rows);
         }
+
+        // ── Mappers ────────────────────────────────────────────────────────────
 
         private static PublicationDTO MapToDTO(EditorEntitiesLayer.Entities.Publication p) => new()
         {
@@ -263,5 +232,11 @@ namespace EditorLogicLayer.Publication
             CmPrice = dto.CmPrice,
             Circulation = dto.Circulation
         };
+    }
+
+    internal static class PubStringEx
+    {
+        public static string? NullIfEmpty(this string? s)
+            => string.IsNullOrWhiteSpace(s) ? null : s;
     }
 }

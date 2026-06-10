@@ -29,14 +29,20 @@ namespace EditorLogicLayer.Client
         // ── Website Categories ─────────────────────────────────────────────────
         Task<IEnumerable<WebsiteCustomerCategoryDTO>> GetClientCategoriesAsync(int clientId);
         Task<(bool Success, string Message)> UpdateClientCategoriesAsync(UpdateClientCategoriesDTO model);
+        byte[] ExportWebsiteCategoriesToExcel(IEnumerable<WebsiteCustomerCategoryDTO> categories, string clientName);
+        Task<(bool Success, string Message, int UpdatedCount)> ImportWebsiteCategoriesFromExcelAsync(int clientId, Stream fileStream, string fileName);
 
         // ── Publication Categories ─────────────────────────────────────────────
         Task<IEnumerable<PublicationCustomerCategoryDTO>> GetClientPublicationCategoriesAsync(int clientId);
         Task<(bool Success, string Message)> UpdateClientPublicationCategoriesAsync(UpdateClientPublicationCategoriesDTO model);
+        byte[] ExportPublicationCategoriesToExcel(IEnumerable<PublicationCustomerCategoryDTO> categories, string clientName);
+        Task<(bool Success, string Message, int UpdatedCount)> ImportPublicationCategoriesFromExcelAsync(int clientId, Stream fileStream, string fileName);
 
         // ── Channel Categories ─────────────────────────────────────────────────
         Task<IEnumerable<ChannelCustomerCategoryDTO>> GetClientChannelCategoriesAsync(int clientId);
         Task<(bool Success, string Message)> UpdateClientChannelCategoriesAsync(UpdateClientChannelCategoriesDTO model);
+        byte[] ExportChannelCategoriesToExcel(IEnumerable<ChannelCustomerCategoryDTO> categories, string clientName);
+        Task<(bool Success, string Message, int UpdatedCount)> ImportChannelCategoriesFromExcelAsync(int clientId, Stream fileStream, string fileName);
 
     }
 }

@@ -18,7 +18,7 @@ namespace EditorViewModelLayer.ChannelViewModel
         public string? MediaTier { get; set; }       // A, B, C
 
         [Display(Name = "Reach")]
-        public string? ChannelReach { get; set; }
+        public int ChannelReach { get; set; }
 
         [Display(Name = "Distribution")]
         public string? Distribution { get; set; }

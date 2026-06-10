@@ -231,9 +231,8 @@ namespace EditorDataLayer.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("ChannelReach")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<int>("ChannelReach")
+                        .HasColumnType("int");
 
                     b.Property<int>("CreateId")
                         .HasColumnType("int");
@@ -295,9 +294,27 @@ namespace EditorDataLayer.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Distribution")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("MediaTier")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("Reach")
+                        .HasMaxLength(200)
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitCurrency")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -476,8 +493,14 @@ namespace EditorDataLayer.Migrations
                     b.Property<decimal?>("PRValue")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
                     b.Property<string>("PictureinArticle")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Publish")
+                        .HasColumnType("bit");
 
                     b.Property<int>("Reach")
                         .HasColumnType("int");
@@ -501,6 +524,9 @@ namespace EditorDataLayer.Migrations
                     b.Property<int>("WebsiteId")
                         .HasColumnType("int");
 
+                    b.Property<string>("WebsiteType")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("Writed")
                         .HasColumnType("int");
 
@@ -513,6 +539,8 @@ namespace EditorDataLayer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("ParentId");
 
                     b.ToTable("ClientArticles");
                 });
@@ -703,7 +731,7 @@ namespace EditorDataLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("ADValue")
+                    b.Property<decimal?>("ADValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ArticleBranding")
@@ -712,6 +740,9 @@ namespace EditorDataLayer.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Circulation")
                         .HasColumnType("int");
 
                     b.Property<int>("ClientId")
@@ -738,6 +769,9 @@ namespace EditorDataLayer.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Frequency")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("Generation")
                         .HasColumnType("bit");
 
@@ -749,16 +783,31 @@ namespace EditorDataLayer.Migrations
                     b.Property<decimal>("Height")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("Images")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Language")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MediaTier")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MediaType")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("NewsPaperId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("PRValue")
+                    b.Property<decimal?>("PRValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Pages")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ParentId")
                         .HasColumnType("int");
 
                     b.Property<int>("PublicationId")
@@ -766,6 +815,9 @@ namespace EditorDataLayer.Migrations
 
                     b.Property<bool>("Publish")
                         .HasColumnType("bit");
+
+                    b.Property<int>("Reach")
+                        .HasColumnType("int");
 
                     b.Property<int>("SubCategoryId")
                         .HasColumnType("int");
@@ -801,6 +853,8 @@ namespace EditorDataLayer.Migrations
                     b.HasIndex("ClientId");
 
                     b.HasIndex("NewsPaperId");
+
+                    b.HasIndex("ParentId");
 
                     b.HasIndex("WriterId");
 
@@ -974,6 +1028,10 @@ namespace EditorDataLayer.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("WebsiteId");
+
+                    b.HasIndex("WriterId");
 
                     b.ToTable("GeneralArticles");
                 });
@@ -1178,6 +1236,9 @@ namespace EditorDataLayer.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("Images")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1291,15 +1352,37 @@ namespace EditorDataLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("Circulation")
+                        .HasColumnType("int");
+
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Distribution")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Frequency")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("MediaTier")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<string>("MediaType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<int>("PublicationId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -1308,6 +1391,165 @@ namespace EditorDataLayer.Migrations
                     b.HasIndex("PublicationId");
 
                     b.ToTable("PublicationCustomerCategories");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.Report", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CreateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DeleteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Deleted")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Publish")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReportName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("ReportType")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("Writed")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("Reports");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ReportArticle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArticleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CreateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DeleteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Deleted")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ReportId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("Writed")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArticleId");
+
+                    b.HasIndex("ReportId");
+
+                    b.ToTable("ReportArticles");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ReportNewspaper", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CreateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DeleteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Deleted")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("NewspaperId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReportId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("Writed")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NewspaperId");
+
+                    b.HasIndex("ReportId");
+
+                    b.ToTable("ReportNewspapers");
                 });
 
             modelBuilder.Entity("EditorEntitiesLayer.Entities.WebsiteCustomerCategory", b =>
@@ -1321,9 +1563,28 @@ namespace EditorDataLayer.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Distribution")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Frequency")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("MediaTier")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Reach")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("WebsiteId")
                         .HasColumnType("int");
@@ -1366,8 +1627,8 @@ namespace EditorDataLayer.Migrations
                     b.Property<string>("Frequency")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Impression")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Impression")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1590,6 +1851,13 @@ namespace EditorDataLayer.Migrations
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.ClientArticle", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientCategories", b =>
@@ -1651,6 +1919,11 @@ namespace EditorDataLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("EditorEntitiesLayer.Entities.ClientNewsPaper", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("EditorEntitiesLayer.Entities.Writer", "Writer")
                         .WithMany()
                         .HasForeignKey("WriterId")
@@ -1660,6 +1933,8 @@ namespace EditorDataLayer.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("NewsPaper");
+
+                    b.Navigation("Parent");
 
                     b.Navigation("Writer");
                 });
@@ -1679,6 +1954,25 @@ namespace EditorDataLayer.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.GeneralArticle", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.Websites", "Website")
+                        .WithMany()
+                        .HasForeignKey("WebsiteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.Writer", "Writer")
+                        .WithMany()
+                        .HasForeignKey("WriterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Website");
+
+                    b.Navigation("Writer");
+                });
+
             modelBuilder.Entity("EditorEntitiesLayer.Entities.PublicationCustomerCategory", b =>
                 {
                     b.HasOne("EditorEntitiesLayer.Entities.Client", "Client")
@@ -1696,6 +1990,55 @@ namespace EditorDataLayer.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("Publication");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.Report", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.Client", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ReportArticle", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.GeneralArticle", "Article")
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.Report", "Report")
+                        .WithMany("ReportArticles")
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Article");
+
+                    b.Navigation("Report");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ReportNewspaper", b =>
+                {
+                    b.HasOne("EditorEntitiesLayer.Entities.NewsPaper", "NewsPaper")
+                        .WithMany()
+                        .HasForeignKey("NewspaperId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EditorEntitiesLayer.Entities.Report", "Report")
+                        .WithMany("ReportNewspapers")
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("NewsPaper");
+
+                    b.Navigation("Report");
                 });
 
             modelBuilder.Entity("EditorEntitiesLayer.Entities.WebsiteCustomerCategory", b =>
@@ -1779,7 +2122,17 @@ namespace EditorDataLayer.Migrations
                     b.Navigation("WebsiteCategories");
                 });
 
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientArticle", b =>
+                {
+                    b.Navigation("Children");
+                });
+
             modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientCategories", b =>
+                {
+                    b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.ClientNewsPaper", b =>
                 {
                     b.Navigation("Children");
                 });
@@ -1787,6 +2140,13 @@ namespace EditorDataLayer.Migrations
             modelBuilder.Entity("EditorEntitiesLayer.Entities.News", b =>
                 {
                     b.Navigation("ClientNewsList");
+                });
+
+            modelBuilder.Entity("EditorEntitiesLayer.Entities.Report", b =>
+                {
+                    b.Navigation("ReportArticles");
+
+                    b.Navigation("ReportNewspapers");
                 });
 #pragma warning restore 612, 618
         }

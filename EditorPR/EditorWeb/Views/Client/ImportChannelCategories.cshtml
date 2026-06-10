@@ -1,0 +1,105 @@
+@{
+    ViewData["Title"] = "Import Channel Categories";
+    int clientId      = (int)ViewBag.ClientId;
+    string clientName = (string)ViewBag.ClientName;
+}
+
+<div class="container-fluid py-4">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a asp-action="EditChannelCategories" asp-route-id="@clientId"
+           class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Channel Categories
+        </a>
+        <h4 class="mb-0">Import Channel Categories — <strong>@clientName</strong></h4>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-primary text-white fw-semibold">
+                    <i class="bi bi-info-circle me-2"></i>Instructions
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        The export file contains <strong>all channel rows</strong> for this client.
+                        Only columns <strong>D – I</strong> will be updated on import.
+                        Columns A – C are used as the update key — do not modify them.
+                    </p>
+
+                    <table class="table table-sm table-bordered mb-4">
+                        <thead class="table-light">
+                            <tr><th>Col</th><th>Field</th><th>Editable</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>A</td><td>Id</td>           <td class="text-danger">🔒 Key</td></tr>
+                            <tr><td>B</td><td>ChannelId</td>    <td class="text-danger">🔒 Key</td></tr>
+                            <tr><td>C</td><td>Channel Name</td> <td class="text-danger">🔒 Key</td></tr>
+                            <tr class="table-success"><td>D</td><td>Media Tier</td>    <td>✅ Editable</td></tr>
+                            <tr class="table-success"><td>E</td><td>Reach</td>         <td>✅ Editable</td></tr>
+                            <tr class="table-success"><td>F</td><td>Distribution</td>  <td>✅ Editable</td></tr>
+                            <tr class="table-success"><td>G</td><td>Language</td>      <td>✅ Editable</td></tr>
+                            <tr class="table-success"><td>H</td><td>Unit Price</td>    <td>✅ Editable</td></tr>
+                            <tr class="table-success"><td>I</td><td>Unit Currency</td> <td>✅ Editable</td></tr>
+                        </tbody>
+                    </table>
+
+                    <a asp-action="ExportChannelCategories" asp-route-id="@clientId"
+                       class="btn btn-success w-100">
+                        <i class="bi bi-download me-2"></i>Download Current Data (Template)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom fw-semibold">
+                    <i class="bi bi-upload me-2 text-primary"></i>Upload Modified File
+                </div>
+                <div class="card-body">
+                    <form asp-action="ImportChannelCategories"
+                          asp-route-id="@clientId"
+                          method="post"
+                          enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="file">
+                                Select Excel File <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" id="file" name="file"
+                                   class="form-control" accept=".xlsx,.xls" required />
+                            <div class="form-text">Accepted formats: .xlsx, .xls</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-upload me-2"></i>Import
+                            </button>
+                            <a asp-action="EditChannelCategories" asp-route-id="@clientId"
+                               class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

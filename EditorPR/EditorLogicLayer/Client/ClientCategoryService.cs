@@ -1,9 +1,6 @@
 ﻿using EditorEntitiesLayer.Entities;
 using EditorRepositoryLayer.IRepositories;
 using EditorViewModelLayer.ClientViewModel;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace EditorLogicLayer.Client
 {
@@ -41,7 +38,7 @@ namespace EditorLogicLayer.Client
         public async Task<(bool Success, string Message)> CreateAsync(ClientCategoryDTO model)
         {
             if (await _repo.CategoryNameExistsAsync(model.ClientId, model.CategoryName))
-                return (false, "A category with this name already exists for this client .");
+                return (false, "A category with this name already exists for this client.");
 
             var entity = new ClientCategories
             {
@@ -49,7 +46,7 @@ namespace EditorLogicLayer.Client
                 CategoryName = model.CategoryName,
                 ParentCategory = model.ParentCategory,
                 CategoryType = model.CategoryType,
-                Status = model.Status,
+                Status = "Active",
                 Order = model.Order,
                 IsActive = true,
                 Deleted = 0,
@@ -66,24 +63,47 @@ namespace EditorLogicLayer.Client
             if (existing == null)
                 return (false, "Category not found.");
 
-            // Prevent circular parent reference
             if (model.ParentCategory.HasValue && model.ParentCategory == model.Id)
                 return (false, "A category cannot be its own parent.");
 
             if (await _repo.CategoryNameExistsAsync(model.ClientId, model.CategoryName, model.Id))
-                return (false, "Another category with this name already exists for this client  .");
+                return (false, "Another category with this name already exists for this client.");
 
             existing.CategoryName = model.CategoryName;
             existing.ParentCategory = model.ParentCategory;
             existing.CategoryType = model.CategoryType;
-            existing.Status = model.Status;
             existing.Order = model.Order;
             existing.UpdatedAt = DateTime.UtcNow;
+            // Status and IsActive are managed exclusively by ToggleStatusAsync — not by Edit
 
             await _repo.UpdateAsync(existing);
             return (true, "Category updated successfully.");
         }
 
+        // ToggleStatus: flips Active <-> Inactive. Never touches Deleted.
+        public async Task<(bool Success, string Message)> ToggleStatusAsync(int id)
+        {
+            var existing = await _repo.GetByIdAsync(id);
+            if (existing == null)
+                return (false, "Category not found.");
+
+            if (existing.IsActive)
+            {
+                existing.IsActive = false;
+                existing.Status = "Inactive";
+                existing.UpdatedAt = DateTime.UtcNow;
+                await _repo.UpdateAsync(existing);
+                return (true, $"Category \"{existing.CategoryName}\" has been disabled.");
+            }
+            else
+            {
+                existing.IsActive = true;
+                existing.Status = "Active";
+                existing.UpdatedAt = DateTime.UtcNow;
+                await _repo.UpdateAsync(existing);
+                return (true, $"Category \"{existing.CategoryName}\" has been enabled.");
+            }
+        }
         public async Task<(bool Success, string Message)> DeleteAsync(int id)
         {
             var existing = await _repo.GetByIdAsync(id);
@@ -98,7 +118,6 @@ namespace EditorLogicLayer.Client
             await _repo.UpdateAsync(existing);
             return (true, "Category deleted successfully.");
         }
-
         private static ClientCategoryDTO MapToDTO(ClientCategories c) => new()
         {
             Id = c.Id,
@@ -110,9 +129,9 @@ namespace EditorLogicLayer.Client
             CategoryType = c.CategoryType,
             Status = c.Status,
             Order = c.Order,
-           // ArticleCount = c.Articles?.Count ?? 0,
-            SubCategories = c.Children?.Where(ch => ch.IsActive && ch.Deleted == 0)
-                                            .Select(MapToDTO)
+            SubCategories = c.Children?
+                                   .Where(ch => ch.Deleted == 0)   // show all non-deleted children (active + inactive)
+                                   .Select(MapToDTO)
                                  ?? Enumerable.Empty<ClientCategoryDTO>()
         };
     }

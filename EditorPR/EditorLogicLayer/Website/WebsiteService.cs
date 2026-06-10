@@ -23,23 +23,14 @@ namespace EditorLogicLayer.Website
         }
 
         public async Task<IEnumerable<WebsiteDTO>> GetAllAsync()
-        {
-            var websites = await _repo.GetActiveWebsitesAsync();
-            return websites.Select(MapToViewModel);
-        }
+            => (await _repo.GetActiveWebsitesAsync()).Select(MapToViewModel);
 
         public async Task<WebsiteDTO?> GetByIdAsync(int id)
         {
-            var website = await _repo.GetByIdAsync(id);
-            return website == null ? null : MapToViewModel(website);
+            var w = await _repo.GetByIdAsync(id);
+            return w == null ? null : MapToViewModel(w);
         }
 
-        //public async Task<(bool Success, string Message)> CreateAsync(WebsiteDTO model)
-        //{
-        //    var entity = MapToEntity(model);
-        //    await _repo.AddAsync(entity);
-        //    return (true, "Website created successfully.");
-        //}
         public async Task<(bool Success, string Message)> CreateAsync(WebsiteDTO model)
         {
             var entity = MapToEntity(model);
@@ -48,27 +39,23 @@ namespace EditorLogicLayer.Website
             entity.Deleted = 0;
 
             await _repo.AddAsync(entity);
-
-            // Fan-out: create one WebsiteCustomerCategory row per active client,
-            // inheriting this website's MediaTier as the default (editable later).
-            await FanOutToClientsAsync(entity.Id, entity.MediaTier);
-
+            await FanOutToClientsAsync(entity);
             return (true, "Website created successfully.");
         }
+
         public async Task<(bool Success, string Message)> UpdateAsync(WebsiteDTO model)
         {
             var existing = await _repo.GetByIdAsync(model.Id);
-            if (existing == null)
-                return (false, "Website not found.");
+            if (existing == null) return (false, "Website not found.");
 
             existing.WebsiteName = model.WebsiteName;
             existing.URL = model.URL;
             existing.MediaTier = model.MediaTier;
             existing.Frequency = model.Frequency;
-            existing.Impression = model.Impression;
             existing.Distribution = model.Distribution;
             existing.Language = model.Language;
             existing.UnitPrice = model.UnitPrice;
+            existing.UpdatedAt = DateTime.UtcNow;
 
             await _repo.UpdateAsync(existing);
             return (true, "Website updated successfully.");
@@ -76,26 +63,18 @@ namespace EditorLogicLayer.Website
 
         public async Task<(bool Success, string Message)> DeleteAsync(int id)
         {
-            if (!await _repo.ExistsAsync(id))
-                return (false, "Website not found.");
-
+            if (!await _repo.ExistsAsync(id)) return (false, "Website not found.");
             await _repo.DeleteAsync(id);
             return (true, "Website deleted successfully.");
         }
 
-        // ── Export to Excel ────────────────────────────────────────────────────
+        // ── Export ─────────────────────────────────────────────────────────────
 
         public byte[] ExportToExcel(IEnumerable<WebsiteDTO> websites)
         {
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Websites");
-
-            // ── Header row ────────────────────────────────────────────────
-            var headers = new[]
-            {
-                "Id", "Website Name", "URL", "Media Tier",
-                "Frequency", "Reach", "Distribution", "Language", "Unit Price"
-            };
+            var headers = new[] { "Id", "Website Name", "URL", "Media Tier", "Frequency",  "Distribution", "Language", "Unit Price" };
 
             for (int i = 0; i < headers.Length; i++)
             {
@@ -108,7 +87,6 @@ namespace EditorLogicLayer.Website
                 cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             }
 
-            // ── Data rows ─────────────────────────────────────────────────
             int row = 2;
             foreach (var w in websites)
             {
@@ -117,141 +95,99 @@ namespace EditorLogicLayer.Website
                 ws.Cell(row, 3).Value = w.URL;
                 ws.Cell(row, 4).Value = w.MediaTier ?? "";
                 ws.Cell(row, 5).Value = w.Frequency ?? "";
-                ws.Cell(row, 6).Value = w.Impression ?? "";
                 ws.Cell(row, 7).Value = w.Distribution ?? "";
                 ws.Cell(row, 8).Value = w.Language ?? "";
                 ws.Cell(row, 9).Value = w.UnitPrice;
                 ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
-
-                // Alternate row color
-                if (row % 2 == 0)
-                {
-                    ws.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#EBF3FB");
-                }
-
-                // Border on all cells
+                if (row % 2 == 0) ws.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#EBF3FB");
                 ws.Range(row, 1, row, 9).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-
                 row++;
             }
 
-            // ── Auto-fit columns ──────────────────────────────────────────
             ws.Columns().AdjustToContents();
-
-            // ── Freeze header row ─────────────────────────────────────────
             ws.SheetView.FreezeRows(1);
-
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             return stream.ToArray();
         }
 
-        // ── Import from Excel ──────────────────────────────────────────────────
+        // ── Import ─────────────────────────────────────────────────────────────
 
         public async Task<(bool Success, string Message, int ImportedCount)> ImportFromExcelAsync(IFormFile file)
         {
-            // Validate file
-            if (file == null || file.Length == 0)
-                return (false, "Please select an Excel file.", 0);
+            if (file == null || file.Length == 0) return (false, "Please select an Excel file.", 0);
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls") return (false, "Only .xlsx and .xls files are supported.", 0);
 
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (extension != ".xlsx" && extension != ".xls")
-                return (false, "Only .xlsx and .xls files are supported.", 0);
-
-            var importedRows = new List<Websites>();
+            var toImport = new List<Websites>();
             var errors = new List<string>();
 
-            using var stream = new MemoryStream();
-            await file.CopyToAsync(stream);
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            using var workbook = new XLWorkbook(ms);
+            var ws = workbook.Worksheet(1);
+            var rows = ws.RangeUsed()?.RowsUsed().Skip(1).ToList();
+            if (rows == null || rows.Count == 0) return (false, "The Excel file has no data rows.", 0);
 
-            using var workbook = new XLWorkbook(stream);
-            var ws = workbook.Worksheet(1); // First sheet
-
-            var rows = ws.RangeUsed()?.RowsUsed().Skip(1).ToList(); // Skip header row
-            if (rows == null || rows.Count == 0)
-                return (false, "The Excel file has no data rows.", 0);
-
-            int rowNumber = 2; // Start after header
+            int rowNum = 2;
             foreach (var row in rows)
             {
-                try
+                var name = row.Cell(2).GetString().Trim();
+                var url = row.Cell(3).GetString().Trim();
+                if (string.IsNullOrWhiteSpace(name)) { errors.Add($"Row {rowNum}: Website Name is required."); rowNum++; continue; }
+                if (string.IsNullOrWhiteSpace(url)) { errors.Add($"Row {rowNum}: URL is required."); rowNum++; continue; }
+
+                decimal.TryParse(row.Cell(9).GetString().Trim(), out decimal price);
+
+                toImport.Add(new Websites
                 {
-                    var websiteName = row.Cell(2).GetString().Trim();
-                    var url = row.Cell(3).GetString().Trim();
-
-                    // Required field validation
-                    if (string.IsNullOrWhiteSpace(websiteName))
-                    {
-                        errors.Add($"Row {rowNumber}: Website Name is required.");
-                        rowNumber++;
-                        continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(url))
-                    {
-                        errors.Add($"Row {rowNumber}: URL is required.");
-                        rowNumber++;
-                        continue;
-                    }
-
-                    // Parse UnitPrice safely
-                    decimal unitPrice = 0;
-                    var priceCell = row.Cell(9).GetString().Trim();
-                    if (!string.IsNullOrWhiteSpace(priceCell))
-                        decimal.TryParse(priceCell, out unitPrice);
-
-                    importedRows.Add(new Websites
-                    {
-                        WebsiteName = websiteName,
-                        URL = url,
-                        MediaTier = row.Cell(4).GetString().Trim(),
-                        Frequency = row.Cell(5).GetString().Trim(),
-                        Impression = row.Cell(6).GetString().Trim(),
-                        Distribution = row.Cell(7).GetString().Trim(),
-                        Language = row.Cell(8).GetString().Trim(),
-                        UnitPrice = unitPrice,
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow
-                    });
-                }
-                catch (Exception ex)
-                {
-                    errors.Add($"Row {rowNumber}: {ex.Message}");
-                }
-
-                rowNumber++;
+                    WebsiteName = name,
+                    URL = url,
+                    MediaTier = row.Cell(4).GetString().Trim().NullIfEmpty(),
+                    Frequency = row.Cell(5).GetString().Trim().NullIfEmpty(),
+                    Distribution = row.Cell(6).GetString().Trim().NullIfEmpty(),
+                    Language = row.Cell(7).GetString().Trim().NullIfEmpty(),
+                    UnitPrice = price,
+                    IsActive = true,
+                    Deleted = 0,
+                    CreatedAt = DateTime.UtcNow
+                });
+                rowNum++;
             }
 
-            if (errors.Any())
-                return (false, string.Join(" | ", errors), 0);
+            if (errors.Any()) return (false, string.Join(" | ", errors), 0);
 
-            // Bulk insert
-            foreach (var entity in importedRows)
+            foreach (var entity in toImport)
+            {
                 await _repo.AddAsync(entity);
+                await FanOutToClientsAsync(entity);
+            }
 
-            return (true, $"{importedRows.Count} website(s) imported successfully.", importedRows.Count);
+            return (true, $"{toImport.Count} website(s) imported successfully.", toImport.Count);
         }
 
-        /// <summary>
-        /// For a newly persisted website, creates one <see cref="WebsiteCustomerCategory"/>
-        /// row for every active client, defaulting MediaTier from the website itself.
-        /// Clients that already have a row for this website are skipped (safe to call on
-        /// re-import scenarios, though normally each website is new).
-        /// </summary>
-        private async Task FanOutToClientsAsync(int websiteId, string? mediaTier)
+        // ── Fan-out helper ─────────────────────────────────────────────────────
+
+        private async Task FanOutToClientsAsync(Websites w)
         {
             var clients = await _clientRepo.GetActiveClientsAsync();
             if (!clients.Any()) return;
 
-            var categories = clients.Select(c => new WebsiteCustomerCategory
+            var rows = clients.Select(c => new WebsiteCustomerCategory
             {
                 CustomerId = c.Id,
-                WebsiteId = websiteId,
-                MediaTier = mediaTier   // default from website — editable per-client later
+                WebsiteId = w.Id,
+                MediaTier = w.MediaTier,
+                Frequency = w.Frequency,
+                Distribution = w.Distribution,
+                Language = w.Language,
+                UnitPrice = w.UnitPrice
             }).ToList();
 
-            await _categoryRepo.AddRangeAsync(categories);
+            await _categoryRepo.AddRangeAsync(rows);
         }
+
+        // ── Mappers ────────────────────────────────────────────────────────────
 
         private static WebsiteDTO MapToViewModel(Websites w) => new()
         {
@@ -260,7 +196,6 @@ namespace EditorLogicLayer.Website
             URL = w.URL,
             MediaTier = w.MediaTier,
             Frequency = w.Frequency,
-            Impression = w.Impression,
             Distribution = w.Distribution,
             Language = w.Language,
             UnitPrice = w.UnitPrice
@@ -273,10 +208,16 @@ namespace EditorLogicLayer.Website
             URL = vm.URL,
             MediaTier = vm.MediaTier,
             Frequency = vm.Frequency,
-            Impression = vm.Impression,
             Distribution = vm.Distribution,
             Language = vm.Language,
             UnitPrice = vm.UnitPrice
         };
+    }
+
+    // ── String helper (local to LogicLayer) ────────────────────────────────────
+    internal static class StringEx
+    {
+        public static string? NullIfEmpty(this string? s)
+            => string.IsNullOrWhiteSpace(s) ? null : s;
     }
 }

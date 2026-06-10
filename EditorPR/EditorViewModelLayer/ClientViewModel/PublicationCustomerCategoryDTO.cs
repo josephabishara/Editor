@@ -11,13 +11,34 @@ namespace EditorViewModelLayer.ClientViewModel
         public int CustomerId { get; set; }
         public int PublicationId { get; set; }
 
-        // Display only — from Publication navigation
+        // ── Read-only display ────────────────────────────────────────────────────
         public string PublicationName { get; set; } = string.Empty;
-        public string PublicationURL { get; set; } = string.Empty;
+        public string? PublicationURL { get; set; } = string.Empty;
 
-        // Editable
+        // ── Editable ─────────────────────────────────────────────────────────────
+        [Display(Name = "Media Type")]
+        public string? MediaType { get; set; }
+
         [Display(Name = "Media Tier")]
         public string? MediaTier { get; set; }
+
+        [Display(Name = "Frequency")]
+        public string? Frequency { get; set; }
+
+       
+
+        [Display(Name = "Distribution")]
+        public string? Distribution { get; set; }
+
+        [Display(Name = "Language")]
+        public string? Language { get; set; }
+
+        [Display(Name = "Unit Price")]
+        [Range(0, double.MaxValue, ErrorMessage = "Unit Price must be positive.")]
+        public decimal UnitPrice { get; set; }
+
+        [Display(Name = "Circulation")]
+        public int? Circulation { get; set; }
     }
 
     public class UpdateClientPublicationCategoriesDTO

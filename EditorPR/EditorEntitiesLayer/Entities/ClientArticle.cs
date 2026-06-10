@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection.Metadata;
 using System.Text;
 using static System.Net.Mime.MediaTypeNames;
@@ -12,9 +13,15 @@ namespace EditorEntitiesLayer.Entities
         public int ClientId { get; set; } // FK → Client and Required
         public DateTime Date { get; set; } // from view
         public int WebsiteId { get; set; } // only Website’s Foreign Key  
+        public string? WebsiteType { get; set; }
         public int CategoryId { get; set; } // FK → ClientCategories
         public int SubCategoryId { get; set; } // FK → ClientCategories (child)
         public int WriterId { get; set; } // FK → Writer
+
+        // ── Publish flag (Admin only) ───────────────────────────────────────────
+
+        public bool Publish { get; set; } = false;
+        public int? ParentId { get; set; }
         public string? Frequency { get; set; } //	is the Frequency of Website
         public string? MediaType { get; set; } // newspaper, magazine, journal, newsletter (get from Website => by id )
         public int Impression { get; set; } // is the Impression  of Website
@@ -33,6 +40,13 @@ namespace EditorEntitiesLayer.Entities
         public string? Title { get; set; } // is the Header of article 
         public string? Content { get; set; } // is a text area as  TinyMCE free edition 
         public string? Images { get; set; } // can select multi images
+
+        // ── Navigation ─────────────────────────────────────────────────────────
+        [ForeignKey(nameof(ParentId))]
+        public ClientArticle? Parent { get; set; }
+
+        public ICollection<ClientArticle> Children { get; set; } = new List<ClientArticle>();
+
 
     }
 }

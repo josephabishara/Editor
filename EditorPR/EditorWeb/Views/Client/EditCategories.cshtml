@@ -12,6 +12,10 @@
             <h4 class="mb-0 fw-semibold">Website Media Tiers</h4>
             <small class="text-muted">Client: <strong>@clientName</strong></small>
         </div>
+
+            <a asp-action="ImportWebsiteCategories" asp-route-id="@Model.CustomerId" class="btn btn-success px-4">
+                <i class="bi bi-upload me-1"></i> Import Excel
+            </a>
     </div>
 
     @if (TempData["Error"] != null)
@@ -35,7 +39,7 @@
                         <tr>
                             <th style="width:40px;">#</th>
                             <th>Website</th>
-                            <th>URL</th>
+                            <th>Price</th>
                             <th style="width:160px;">Media Tier</th>
                         </tr>
                     </thead>
@@ -58,18 +62,13 @@
                             <input type="hidden" name="Categories[@i].CustomerId" value="@cat.CustomerId" />
                             <input type="hidden" name="Categories[@i].WebsiteId" value="@cat.WebsiteId" />
                             <input type="hidden" name="Categories[@i].WebsiteName" value="@cat.WebsiteName" />
-                            <input type="hidden" name="Categories[@i].WebsiteURL" value="@cat.WebsiteURL" />
+                            <input type="hidden" name="Categories[@i].UnitPrice" value="@cat.UnitPrice" />
 
                             <tr>
                                 <td class="text-muted small">@(i + 1)</td>
                                 <td class="fw-semibold">@cat.WebsiteName</td>
-                                <td>
-                                    <a href="@cat.WebsiteURL" target="_blank"
-                                       class="text-decoration-none text-truncate d-inline-block"
-                                       style="max-width:220px;">
-                                        @cat.WebsiteURL
-                                    </a>
-                                </td>
+                                <td class="fw-semibold">@cat.UnitPrice</td>
+                                
                                 <td>
                                     @* ✅ Editable dropdown per row *@
                                     <select name="Categories[@i].MediaTier" class="form-select form-select-sm">
@@ -77,7 +76,7 @@
                                         <option value="A" selected="@(cat.MediaTier == "A" ? "selected" : null)">A</option>
                                         <option value="B" selected="@(cat.MediaTier == "B" ? "selected" : null)">B</option>
                                         <option value="C" selected="@(cat.MediaTier == "C" ? "selected" : null)">C</option>
-                                     </select>
+                                    </select>
                                 </td>
                             </tr>
                         }
@@ -90,8 +89,12 @@
                         <button type="submit" class="btn btn-success px-4">Save Changes</button>
                         <a asp-action="Details" asp-route-id="@Model.CustomerId"
                            class="btn btn-outline-secondary">Cancel</a>
+
                     </div>
                 }
+               
+                   
+                
             </form>
         </div>
     </div>

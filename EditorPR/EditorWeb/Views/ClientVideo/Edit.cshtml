@@ -1,0 +1,311 @@
+﻿@model EditorViewModelLayer.MediaViewModel.ClientVideoDTO
+@using EditorViewModelLayer.MediaViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Edit Video";
+
+    List<SelectListItem> ToSL(List<MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var chSL = ToSL(Model.ChannelOptions);
+    var catSL = ToSL(Model.CategoryOptions);
+    var subSL = ToSL(Model.SubCategoryOptions);
+    var toningSL = ToSL(Model.ToningOptions);
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<style>
+    .file-drop {
+        border: 2px dashed var(--rule);
+        border-radius: 9px;
+        padding: 1.25rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+        background: var(--bg);
+    }
+
+        .file-drop:hover {
+            border-color: var(--accent);
+            background: #f0f4ff;
+        }
+
+        .file-drop input[type=file] {
+            display: none;
+        }
+
+        .file-drop .drop-icon {
+            font-size: 1.8rem;
+            margin-bottom: .35rem;
+        }
+
+        .file-drop p {
+            font-size: .8rem;
+            color: var(--slate);
+            margin: 0;
+        }
+
+    .file-preview {
+        margin-top: .6rem;
+        font-size: .78rem;
+        color: var(--ink-2);
+    }
+
+        .file-preview img {
+            max-height: 80px;
+            border-radius: 6px;
+            margin-top: .4rem;
+            object-fit: cover;
+        }
+</style>
+
+<div class="form-wrap">
+
+    <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+       style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);
+        font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
+        ← Back to Videos
+    </a>
+
+    @await Html.PartialAsync("_navdashboard")
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#ede9fe;">✏️</div>
+        <div>
+            <h1>@ViewData["Title"]</h1>
+            <p>@Model.ClientName</p>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="val-summary">
+            <strong>Please fix the errors below:</strong>
+            <ul>@foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) {
+                <li>@e.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+<form method="post" enctype="multipart/form-data"
+      action="@Url.Action("Edit", new { id = Model.Id })">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ClientId" />
+    <input type="hidden" asp-for="VideoId" />
+
+    @* ── CARD 1: Source & Classification ── *@
+    <div class="form-card">
+        <div class="form-card-title">📂 Source & Classification</div>
+        <div class="fg-3">
+            <div class="fg">
+                <label asp-for="ChannelId">Channel <span style="color:var(--red)">*</span></label>
+                <select asp-for="ChannelId" asp-items="chSL"
+                        onchange="autoFillChannel(this.value)" class="select-search">
+                    <option value="0">— Select —</option>
+                </select>
+                <span asp-validation-for="ChannelId" class="field-error"></span>
+            </div>
+            <div class="fg">
+                <label asp-for="CategoryId">Category</label>
+                <select asp-for="CategoryId" asp-items="catSL"
+                        id="catSel" onchange="loadSubs(this.value)">
+                    <option value="0">— None —</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label asp-for="SubCategoryId">Sub Category</label>
+                <select asp-for="SubCategoryId" asp-items="subSL" id="subSel">
+                    <option value="0">— None —</option>
+                </select>
+            </div>
+        </div>
+        <div class="fg-4" style="margin-top:.9rem;">
+            <div class="fg">
+                <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
+                <input asp-for="Date" type="date" />
+                <span asp-validation-for="Date" class="field-error"></span>
+            </div>
+            <div class="fg">
+                <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
+                <input asp-for="Title" placeholder="Video title…" />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+            <div class="fg">
+                <label asp-for="Program">Program</label>
+                <input asp-for="Program" placeholder="Program name…" />
+            </div>
+            <div class="fg">
+                <label asp-for="Duration">Duration (sec)</label>
+                <input asp-for="Duration" type="number" min="0" />
+            </div>
+        </div>
+        <div class="fg-3" style="margin-top:.9rem;">
+            <div class="fg">
+                <label asp-for="Language">Language</label>
+                <input asp-for="Language" placeholder="e.g. Arabic, English…" />
+            </div>
+            <div class="fg">
+                <label asp-for="Toning">Toning</label>
+                <select asp-for="Toning" asp-items="toningSL">
+                    <option value="">— Select —</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label asp-for="VideoUrl">Video URL</label>
+                <input asp-for="VideoUrl" type="url" placeholder="https://…" />
+            </div>
+        </div>
+    </div>
+
+    @* ── CARD 2: Channel Auto-fill ── *@
+    <div class="form-card" style="display:none">
+        <div class="form-card-title">
+            🔄 Channel Data
+            <span class="badge-autofill">Auto-filled on Channel change</span>
+        </div>
+        <div class="fg-4">
+            <div class="fg">
+                <label asp-for="MediaTier">Media Tier</label>
+                <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
+            </div>
+            <div class="fg">
+                <label asp-for="Impression">Impression</label>
+                <input asp-for="Impression" type="number" id="afImpression"
+                       oninput="recalcReach()" class="autofill" />
+            </div>
+            <div class="fg">
+                <label asp-for="Reach">Reach (Impression × 4)</label>
+                <input asp-for="Reach" class="autofill" id="afReach" readonly />
+            </div>
+            <div class="fg"></div>
+        </div>
+        <div class="fg-4" style="margin-top:.9rem;">
+            <div class="fg">
+                <label asp-for="ADValue">AD Value (Unit Price)</label>
+                <input asp-for="ADValue" type="number" step="0.01" id="afAD"
+                       oninput="recalcPR()" class="autofill" />
+            </div>
+            <div class="fg">
+                <label asp-for="PRValue">PR Value (AD × 3.5)</label>
+                <input asp-for="PRValue" class="autofill" id="afPR" readonly />
+            </div>
+            <div></div><div></div>
+        </div>
+    </div>
+
+    @* ── CARD 3: File Uploads ── *@
+    <div class="form-card">
+        <div class="form-card-title">📁 Files</div>
+        <div class="fg-2">
+            <div class="fg">
+                <label>Video File</label>
+                <div class="file-drop" onclick="document.getElementById('videoFileInput').click()">
+                    <div class="drop-icon">🎬</div>
+                    <p>Click to upload video file</p>
+                    <input type="file" id="videoFileInput" name="videoFile"
+                           accept="video/*" onchange="previewFile(this,'videoPreview')" />
+                    <div class="file-preview" id="videoPreview">
+                        @if (!string.IsNullOrEmpty(Model.VideoFile))
+                        {
+                            <span>📎 Current: @System.IO.Path.GetFileName(Model.VideoFile)</span>
+                        }
+                    </div>
+                </div>
+                <input type="hidden" asp-for="VideoFile" />
+            </div>
+            <div class="fg">
+                <label>Screenshot</label>
+                <div class="file-drop" onclick="document.getElementById('screenshotInput').click()">
+                    <div class="drop-icon">📸</div>
+                    <p>Click to upload screenshot</p>
+                    <input type="file" id="screenshotInput" name="screenshotFile"
+                           accept="image/*" onchange="previewFile(this,'shotPreview')" />
+                    <div class="file-preview" id="shotPreview">
+                        @if (!string.IsNullOrEmpty(Model.Screenshot))
+                        {
+                            <img src="@Model.Screenshot" alt="screenshot" />
+                        }
+                    </div>
+                </div>
+                <input type="hidden" asp-for="Screenshot" />
+            </div>
+        </div>
+    </div>
+
+    @* ── Footer ── *@
+    <div class="form-footer">
+        <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
+        <button type="submit" class="btn-save">💾 Save Changes</button>
+    </div>
+</form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        const clientId = @Model.ClientId;
+
+        async function autoFillChannel(chId) {
+            if (!chId || chId == '0') return;
+            const d = await (await fetch(`/ClientVideo/GetChannelAutoFill?channelId=${chId}&clientId=${clientId}`)).json();
+            document.getElementById('afMediaTier').value  = d.mediaTier  ?? '';
+            document.getElementById('afImpression').value = d.impression ?? '';
+            document.getElementById('afReach').value      = d.reach      ?? '';
+            document.getElementById('afAD').value         = d.adValue    ?? '';
+            document.getElementById('afPR').value         = d.prValue    ?? '';
+            document.querySelector('[name="MediaTier"]').value = d.mediaTier ?? '';
+        }
+
+        function recalcReach() {
+            const imp   = parseInt(document.getElementById('afImpression').value) || 0;
+            const reach = imp * 4;
+            document.getElementById('afReach').value = reach;
+            document.querySelector('[name="Reach"]').value = reach;
+        }
+
+        function recalcPR() {
+            const ad = parseFloat(document.getElementById('afAD').value) || 0;
+            const pr = (ad * 3.5).toFixed(2);
+            document.getElementById('afPR').value = pr;
+            document.querySelector('[name="PRValue"]').value = pr;
+        }
+
+        async function loadSubs(parentId) {
+            const sel = document.getElementById('subSel');
+            sel.innerHTML = '<option value="0">Loading…</option>';
+            if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
+            const data = await (await fetch(`/ClientVideo/GetSubCategories?parentId=${parentId}`)).json();
+            sel.innerHTML = '<option value="0">— None —</option>';
+            data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+        }
+
+        function previewFile(input, previewId) {
+            const preview = document.getElementById(previewId);
+            preview.innerHTML = '';
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.cssText = 'max-height:80px;border-radius:6px;margin-top:.4rem;object-fit:cover;';
+                    preview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = `<span>📎 ${file.name}</span>`;
+            }
+        }
+
+        $(document).ready(function () {
+            $('.select-search').select2({ placeholder: 'Search...', allowClear: true });
+        });
+    </script>
+}

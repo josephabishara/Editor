@@ -39,23 +39,81 @@ namespace EditorLogicLayer.ClientVideoLogic
 
         // ── List ───────────────────────────────────────────────────────────────
 
+
         public async Task<ClientVideoListDTO> GetListAsync(int clientId)
         {
             var client = await _clientRepo.GetByIdAsync(clientId);
-            var items = await _clientVideoRepo.GetByClientIdAsync(clientId);
+            var rawItems = (await _clientVideoRepo.GetByClientIdAsync(clientId)).ToList();
+
+            if (!rawItems.Any())
+                return new ClientVideoListDTO { ClientId = clientId, ClientName = client?.Name ?? string.Empty };
+
+            var categoryIds = rawItems.Select(a => a.CategoryId).Distinct().ToList();
+            var subCategoryIds = rawItems.Select(a => a.SubCategoryId).Distinct().ToList();
+            var channelIds = rawItems.Select(a => a.ChannelId).Distinct().ToList();
+            var userIds = rawItems.Select(a => a.CreateId).Distinct().ToList();
+
+            var categoryMap = await _context.Set<ClientCategories>()
+                .Where(c => categoryIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.CategoryName);
+
+            var subCategoryMap = await _context.Set<ClientCategories>()
+                .Where(c => subCategoryIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.CategoryName);
+
+            var channelMap = await _context.Set<EditorEntitiesLayer.Entities.Channel>()
+                .Where(c => channelIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.ChannelName);
+
+            var userMap = await _context.Set<ApplicationUser>()
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName ?? u.UserName ?? string.Empty);
+
+            var dtos = rawItems
+                .Select(e => MapToDTOWithLookups(e, categoryMap, subCategoryMap, channelMap, userMap))
+                .ToList();
+
             return new ClientVideoListDTO
             {
                 ClientId = clientId,
                 ClientName = client?.Name ?? string.Empty,
-                Items = items.Select(MapToDTO).ToList()
+                Items = dtos
             };
         }
+
 
         public async Task<ClientVideoDTO?> GetByIdAsync(int id)
         {
             var e = await _clientVideoRepo.GetByIdWithDetailsAsync(id);
-            return e == null ? null : MapToDTO(e);
+            if (e == null) return null;
+
+            var dto = MapToDTO(e);
+
+            if (e.ChannelId > 0)
+            {
+                var ch = await _context.Set<EditorEntitiesLayer.Entities.Channel>().FindAsync(e.ChannelId);
+                dto.ChannelName = ch?.ChannelName;
+            }
+            if (e.CategoryId > 0)
+            {
+                var cat = await _context.Set<ClientCategories>().FindAsync(e.CategoryId);
+                dto.CategoryName = cat?.CategoryName;
+            }
+            if (e.SubCategoryId > 0)
+            {
+                var sub = await _context.Set<ClientCategories>().FindAsync(e.SubCategoryId);
+                dto.SubCategoryName = sub?.CategoryName;
+            }
+            if (e.CreateId > 0)
+            {
+                var user = await _context.Set<ApplicationUser>().FindAsync(e.CreateId);
+                dto.CreatedByUserName = user?.FullName ?? user?.UserName;
+            }
+            dto.CreatedAt = e.CreatedAt;
+
+            return dto;
         }
+
 
         // ── Create ─────────────────────────────────────────────────────────────
         // Step 1: Insert GeneralVideos master
@@ -224,8 +282,8 @@ namespace EditorLogicLayer.ClientVideoLogic
             var ccc = await _context.Set<ChannelCustomerCategory>()
                 .FirstOrDefaultAsync(c => c.ChannelId == channelId && c.CustomerId == clientId);
 
-            var adValue = channel.UnitPrice;
-            var impression = 0; // extend Channel entity with Impression if needed
+            var adValue = ccc.UnitPrice;
+            var impression = ccc.Reach; // extend Channel entity with Impression if needed
 
             return new ChannelAutoFillDTO
             {
@@ -264,6 +322,37 @@ namespace EditorLogicLayer.ClientVideoLogic
 
         // ── Mapper ─────────────────────────────────────────────────────────────
 
+        private static ClientVideoDTO MapToDTOWithLookups(
+            ClientVideo e,
+            Dictionary<int, string> categoryMap,
+            Dictionary<int, string> subCategoryMap,
+            Dictionary<int, string> channelMap,
+            Dictionary<int, string> userMap) => new()
+            {
+                Id = e.Id,
+                VideoId = e.VideoId,
+                ClientId = e.ClientId,
+                Date = e.Date,
+                ChannelId = e.ChannelId,
+                ChannelName = channelMap.GetValueOrDefault(e.ChannelId),
+                CategoryId = e.CategoryId,
+                CategoryName = categoryMap.GetValueOrDefault(e.CategoryId),
+                SubCategoryId = e.SubCategoryId,
+                SubCategoryName = subCategoryMap.GetValueOrDefault(e.SubCategoryId),
+                Title = e.Title ?? string.Empty,
+                Program = e.description,
+                Duration = (int)e.Duration,
+                Toning = e.Toning,
+                VideoUrl = e.VideoUrl,
+                VideoFile = e.VideoFileFile,
+                Screenshot = e.ScreenshotFile,
+                ADValue = e.ADValue ?? 0,
+                PRValue = e.PRValue ?? 0,
+                CreatedAt = e.CreatedAt,
+                CreatedByUserName = userMap.GetValueOrDefault(e.CreateId)
+            };
+
+
         private static ClientVideoDTO MapToDTO(ClientVideo e) => new()
         {
             Id = e.Id,
@@ -279,7 +368,10 @@ namespace EditorLogicLayer.ClientVideoLogic
             Toning = e.Toning,
             VideoUrl = e.VideoUrl,
             VideoFile = e.VideoFileFile,
-            Screenshot = e.ScreenshotFile
+            Screenshot = e.ScreenshotFile,
+            ADValue = e.ADValue ?? 0,
+            PRValue = e.PRValue ?? 0,
+            CreatedAt = e.CreatedAt
         };
     }
 

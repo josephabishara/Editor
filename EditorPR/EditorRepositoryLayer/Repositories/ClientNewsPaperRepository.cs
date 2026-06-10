@@ -33,6 +33,12 @@ namespace EditorRepositoryLayer.Repositories
             => await _dbSet
                 .Where(c => c.NewsPaperId == newsPaperId && c.IsActive && c.Deleted == 0)
                 .ToListAsync();
+
+        public async Task<IEnumerable<ClientNewsPaper>> GetChildrenAsync(int parentId)
+            => await _dbSet
+                .Where(n => n.ParentId == parentId && n.IsActive && n.Deleted == 0)
+                .OrderBy(n => n.Date)
+                .ToListAsync();
     }
 
 

@@ -1,0 +1,523 @@
+﻿@model EditorViewModelLayer.MediaViewModel.ClientNewsPaperDTO
+@using EditorViewModelLayer.MediaViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Edit Newspaper ";
+
+    List<SelectListItem> ToSL(List<MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var pubSL = ToSL(Model.PublicationOptions);
+    var catSL = ToSL(Model.CategoryOptions);
+    var subSL = ToSL(Model.SubCategoryOptions);
+    var writerSL = ToSL(Model.WriterOptions);
+    var brandSL = ToSL(Model.BrandingOptions);
+    var toningSL = ToSL(Model.ToningOptions);
+    var yesNoSL = ToSL(Model.YesNoOptions);
+    var genSL = ToSL(Model.GenerationOptions);
+
+    var existingImagePaths = new List<string>();
+    if (!string.IsNullOrEmpty(Model.Images))
+    {
+        try { existingImagePaths = System.Text.Json.JsonSerializer.Deserialize<List<string>>(Model.Images) ?? new(); }
+        catch { }
+    }
+
+    if (Model.Children == null) Model.Children = new List<ChildNewsPaperDTO>();
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<div class="form-wrap">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem;">
+        <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+           style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;">
+            ← Back to Newspapers
+        </a>  @await Html.PartialAsync("_navdashboard")
+       
+    </div>
+
+  
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#fef9c3;">✏️</div>
+        <div>
+            <h1>Edit Newspaper </h1>
+            <p>@Model.ClientName</p>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="val-summary">
+            <strong>Please fix the errors below:</strong>
+            <ul>
+                @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <li>@e.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form method="post"
+          enctype="multipart/form-data"
+          action="@Url.Action("Edit", new { id = Model.Id })">
+
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ClientId" />
+        <input type="hidden" asp-for="NewsPaperId" />
+        <input type="hidden" asp-for="ParentId" />
+
+        <input type="hidden" name="Images" id="hdnImages" value="@Model.Images" />
+        <input type="hidden" name="removedImages" id="hdnRemovedImages" value="[]" />
+
+        @* ── CARD 1: Source & Classification ─────────────────────────────────── *@
+        <div class="form-card">
+           
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="PublicationId">Publication <span style="color:var(--red)">*</span></label>
+                    <select asp-for="PublicationId" asp-items="pubSL" required
+                            onchange="autoFillPublication(this.value)" class="select-search">
+                        <option value="0">— Select —</option>
+                    </select>
+                    <span asp-validation-for="PublicationId" class="field-error"></span>
+                </div>
+                <div class="fg">
+                    <label asp-for="CategoryId">Category</label>
+                    <select asp-for="CategoryId" asp-items="catSL" required class="select-search">
+                            id="catSel" onchange="loadSubs(this.value)">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="SubCategoryId">Sub Category</label>
+                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel" class="select-search">
+                        required>
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="WriterId">Writer</label>
+                    <select asp-for="WriterId" asp-items="writerSL" class="select-search">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
+                    <input asp-for="Date" type="date" />
+                    <span asp-validation-for="Date" class="field-error"></span>
+                </div>
+               
+            </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Pages">Pages</label>
+                    <input asp-for="Pages" type="number" min="1" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Height">Height (cm)</label>
+                    <input asp-for="Height" type="number" step="0.1" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Width">Width (cm)</label>
+                    <input asp-for="Width" type="number" step="0.1" />
+                </div>
+            </div>
+            <br />
+            <div class="fg-3">
+                <div class="fg">
+                    <label asp-for="ArticleBranding">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="HeadlineBranding">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="brandSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="PictureinArticle">Picture in Article</label>
+                    <select asp-for="PictureinArticle" asp-items="yesNoSL"></select>
+                </div>
+
+            </div>
+            <br />
+            <div class="fg-3">
+
+               
+                <div class="fg">
+                    <label asp-for="Toning">Toning</label>
+                    <select asp-for="Toning" asp-items="toningSL"></select>
+                </div>
+                <div class="fg">
+                    <label asp-for="Generation">Generation</label>
+                    <select asp-for="Generation" asp-items="genSL"></select>
+                </div>
+            </div>
+            <br />
+     
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
+                <input asp-for="Title" placeholder="Enter article headline…" />
+                <span asp-validation-for="Title" class="field-error"></span>
+            </div>
+
+            <div class="fg" style="margin-bottom:.9rem;">
+                <label asp-for="Content">Translation</label>
+                <textarea id="textarea" class="form-control" asp-for="Content" placeholder="Content"></textarea>
+                <script src="~/lib/tinymce/tinymce.min.js"></script>
+                <script>
+                    tinymce.init({
+                    selector: '#textarea',
+                    plugins: "paste searchreplace autolink visualblocks fullscreen image link media table code lists wordcount",
+                    toolbar1: 'formatselect | bold italic forecolor backcolor | link | alignleft aligncenter alignright | numlist bullist | removeformat',
+                    height: "200",
+                    paste_data_images: true
+                    });
+                </script>
+            </div>
+
+            <br />
+            <div class="fg">
+                 <div id="dropZone"
+                     style="border:2px dashed var(--rule,#cbd5e1);border-radius:10px;
+                    padding:1.4rem 1rem;text-align:center;background:#f8fafc;
+                    cursor:pointer;min-height:110px;transition:border-color .2s,background .2s;">
+                    <div style="font-size:2rem;line-height:1;">📁</div>
+                    <p style="color:#64748b;margin:.4rem 0 .2rem;font-size:.88rem;">
+                        Drag &amp; drop to add more images, or <strong>click to browse</strong>
+                    </p>
+                    <small style="color:#94a3b8;">JPG · PNG · GIF · WebP &nbsp;|&nbsp; Multiple allowed</small>
+                    <input type="file" name="imageFiles" id="imageFilesInput"
+                           multiple accept=".jpg,.jpeg,.png,.gif,.webp" style="display:none;" />
+                </div>
+                <div id="newPreviewGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
+
+                @if (existingImagePaths.Any())
+                {
+                    <p style="font-size:.8rem;font-weight:600;color:#64748b;margin:12px 0 6px;">
+                        Current Images — click ✕ to remove
+                    </p>
+                    <div id="existingGrid" style="display:flex;flex-wrap:wrap;gap:8px;">
+                        @foreach (var path in existingImagePaths)
+                        {
+                            <div class="existing-thumb" data-path="@path" style="position:relative;">
+                                <img src="@path"
+                                     style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;"
+                                     onerror="this.src='/images/no-image.png'" />
+                                <button type="button" class="remove-existing" data-path="@path" title="Remove"
+                                        style="position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;
+                                    border:none;border-radius:50%;width:20px;height:20px;font-size:11px;
+                                    line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                                    ✕
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+ 
+          <br />
+     
+
+            @for (int i = 0; i < Model.Children.Count; i++)
+            {
+                var child = Model.Children[i];
+
+                var childPubSL = ToSL(Model.PublicationOptions
+                    .Select(o => new MediaSelectOption
+                    {
+                        Value = o.Value,
+                        Text = o.Text,
+                        Selected = o.Value == child.PublicationId.ToString()
+                    }).ToList());
+
+                var childWriterSL = ToSL(Model.WriterOptions
+                    .Select(o => new MediaSelectOption
+                    {
+                        Value = o.Value,
+                        Text = o.Text,
+                        Selected = o.Value == child.WriterId.ToString()
+                    }).ToList());
+
+                <div class="form-card"
+                     style="background:#f8fafc;border:1px solid #e2e8f0;
+                    margin-bottom:.75rem;padding:.9rem;border-radius:8px;position:relative;">
+
+                    <input type="hidden" name="Children[@i].Id" value="@child.Id" />
+
+                    <div style="position:absolute;top:10px;right:12px;display:flex;gap:.4rem;align-items:center;">
+                        @if (child.Id > 0)
+                        {
+                            <a href="@Url.Action("Details", new { id = child.Id })" target="_blank"
+                               style="font-size:.75rem;color:#3b82f6;text-decoration:none;" title="View">👁</a>
+                        }
+                        <button type="submit" name="removeChild" value="@i" formnovalidate
+                                style="background:#ef4444;color:#fff;border:none;border-radius:50%;
+                            width:22px;height:22px;font-size:12px;cursor:pointer;line-height:1;"
+                                title="Remove">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div style="font-size:.78rem;font-weight:700;color:#64748b;margin-bottom:.7rem;">
+                        Child #@(i + 1)
+                        @if (child.Id > 0)
+                        {
+                            <span style="color:#94a3b8;font-weight:400;margin-left:.3rem;">(ID: @child.Id)</span>
+                        }
+                        else
+                        {
+                            <span style="color:#22c55e;font-weight:400;margin-left:.3rem;">New</span>
+                        }
+                    </div>
+
+                    
+                    <div class="fg-3" style="margin-bottom:.6rem;">
+                        <div class="fg">
+                            <label style="font-size:.8rem;font-weight:600;">
+                                Publication <span style="color:var(--red)">*</span>
+                            </label>
+                            <select name="Children[@i].PublicationId"
+                                    asp-items="childPubSL"
+                                    onchange="autoFillChild(this, @i)"
+                                    class="select-search-child">
+                                <option value="0">— Select —</option>
+                            </select>
+                        </div>
+                        <div class="fg">
+                            <label style="font-size:.8rem;font-weight:600;">Writer</label>
+                            <select name="Children[@i].WriterId"
+                                    asp-items="childWriterSL"
+                                    class="select-search-child">
+                                <option value="0">— None —</option>
+                            </select>
+                        </div>
+                        <div class="fg">
+                            <label style="font-size:.8rem;font-weight:600;">
+                                Date <span style="color:var(--red)">*</span>
+                            </label>
+                            <input type="date"
+                                   name="Children[@i].Date"
+                                   value="@child.Date.ToString("yyyy-MM-dd")" />
+                        </div>
+                    </div>
+
+                    
+                    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.7rem;">
+                        <div class="fg">
+                            <label style="font-size:.75rem;color:#64748b;">Pages</label>
+                            <input type="number" name="Children[@i].Pages" value="@child.Pages" min="1" />
+                        </div>
+                        <div class="fg">
+                            <label style="font-size:.75rem;color:#64748b;">Height (cm)</label>
+                            <input type="number" step="0.1" name="Children[@i].Height" value="@child.Height" />
+                        </div>
+                        <div class="fg">
+                            <label style="font-size:.75rem;color:#64748b;">Width (cm)</label>
+                            <input type="number" step="0.1" name="Children[@i].Width" value="@child.Width" />
+                        </div>
+
+                    </div>
+                    <div style="display:none">
+                        <div class="fg">
+                            <label style="font-size:.75rem;color:#64748b;">AD Value</label>
+                            <input type="number" step="0.01"
+                                   name="Children[@i].ADValue"
+                                   id="childAD_@i"
+                                   value="@child.ADValue"
+                                   oninput="recalcChildPR(@i)"
+                                   style="background:#f8fafc;" />
+                        </div>
+                        <div class="fg">
+                            <label style="font-size:.75rem;color:#64748b;">PR Value (×3.5)</label>
+                            <input type="number" step="0.01"
+                                   name="Children[@i].PRValue"
+                                   id="childPR_@i"
+                                   value="@child.PRValue"
+                                   readonly
+                                   style="background:#e2e8f0;" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <button type="submit" name="addChild" value="true" formnovalidate
+                    style="background:transparent;border:1px dashed #cbd5e1;border-radius:8px;
+                width:100%;padding:.6rem;color:#64748b;font-size:.85rem;
+                cursor:pointer;margin-top:.3rem;">
+                + Add Also Mention
+            </button>
+        </div>
+
+        @* ── CARD 3: Publication Data ──────────────────────────────────────────── *@
+        <div class="form-card" style="display:none">
+            <div class="form-card-title">
+                🔄 Publication Data
+                <span class="badge-autofill">Auto-filled on Publication change</span>
+            </div>
+            <div class="fg-4">
+                <div class="fg">
+                    <label asp-for="MediaType">Media Type</label>
+                    <input asp-for="MediaType" class="autofill" id="afMediaType" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="MediaTier">Media Tier</label>
+                    <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Frequency">Frequency</label>
+                    <input asp-for="Frequency" class="autofill" id="afFrequency" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Language">Language</label>
+                    <input asp-for="Language" class="autofill" id="afLanguage" readonly />
+                </div>
+            </div>
+            <div class="fg-4" style="margin-top:.9rem;">
+                <div class="fg">
+                    <label asp-for="Circulation">Circulation</label>
+                    <input asp-for="Circulation" class="autofill" id="afCirculation" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Reach">Reach (Circulation × 4)</label>
+                    <input asp-for="Reach" class="autofill" id="afReach" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="ADValue">AD Value (CM Price)</label>
+                    <input asp-for="ADValue" type="number" step="0.01" id="afAD"
+                           oninput="recalcPR()" class="autofill" />
+                </div>
+                <div class="fg">
+                    <label asp-for="PRValue">PR Value (AD × 3.5)</label>
+                    <input asp-for="PRValue" class="autofill" id="afPR" readonly />
+                </div>
+            </div>
+        </div>
+
+   
+        @* ── Footer ──────────────────────────────────────────────────────────── *@
+        <div class="form-footer">
+            <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
+            <button type="submit" name="save" value="true" class="btn-save">💾 Save </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        const clientId = @Model.ClientId;
+
+        async function autoFillPublication(pubId) {
+        if (!pubId || pubId == '0') return;
+        const d = await (await fetch(
+        `/ClientNewsPaper/GetPublicationAutoFill?publicationId=${pubId}&clientId=${clientId}`
+        )).json();
+        document.getElementById('afMediaType').value   = d.mediaType   ?? '';
+        document.getElementById('afMediaTier').value   = d.mediaTier   ?? '';
+        document.getElementById('afFrequency').value   = d.frequency   ?? '';
+        document.getElementById('afLanguage').value    = d.language    ?? '';
+        document.getElementById('afCirculation').value = d.circulation ?? '';
+        document.getElementById('afReach').value       = d.reach       ?? '';
+        document.getElementById('afAD').value          = d.adValue     ?? '';
+        document.getElementById('afPR').value          = d.prValue     ?? '';
+        }
+
+        function recalcPR() {
+        const ad = parseFloat(document.getElementById('afAD').value) || 0;
+        document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
+        document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
+        }
+
+        async function loadSubs(parentId) {
+        const sel = document.getElementById('subSel');
+        sel.innerHTML = '<option value="0">Loading…</option>';
+        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
+        const data = await (await fetch(`/ClientNewsPaper/GetSubCategories?parentId=${parentId}`)).json();
+        sel.innerHTML = '<option value="0">— None —</option>';
+        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+        }
+
+        async function autoFillChild(sel, idx) {
+        const pubId = sel.value;
+        if (!pubId || pubId == '0') return;
+        const d = await (await fetch(
+        `/ClientNewsPaper/GetPublicationAutoFill?publicationId=${pubId}&clientId=${clientId}`
+        )).json();
+        document.getElementById(`childAD_${idx}`).value = d.adValue ?? '';
+        document.getElementById(`childPR_${idx}`).value = ((d.adValue ?? 0) * 3.5).toFixed(2);
+        }
+
+        function recalcChildPR(idx) {
+        const ad = parseFloat(document.getElementById(`childAD_${idx}`).value) || 0;
+        document.getElementById(`childPR_${idx}`).value = (ad * 3.5).toFixed(2);
+        }
+
+        $(document).ready(function () {
+        $('.select-search').select2({ placeholder: 'Search...', allowClear: true });
+        $('.select-search-child').select2({ placeholder: 'Search...', allowClear: true });
+        });
+
+        // ── Image upload ──────────────────────────────────────────────────────
+        (function () {
+        const dropZone   = document.getElementById('dropZone');
+        const fileInput  = document.getElementById('imageFilesInput');
+        const newGrid    = document.getElementById('newPreviewGrid');
+        const hdnImages  = document.getElementById('hdnImages');
+        const hdnRemoved = document.getElementById('hdnRemovedImages');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor='#3b82f6'; dropZone.style.background='#eff6ff'; });
+        ['dragleave','dragend'].forEach(evt => dropZone.addEventListener(evt, () => { dropZone.style.borderColor=''; dropZone.style.background=''; }));
+        dropZone.addEventListener('drop', e => {
+        e.preventDefault(); dropZone.style.borderColor=''; dropZone.style.background='';
+        mergeFiles(e.dataTransfer.files); renderPreviews(fileInput.files);
+        });
+        fileInput.addEventListener('change', () => renderPreviews(fileInput.files));
+
+        function renderPreviews(files) {
+        newGrid.innerHTML = '';
+        Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;';
+        wrap.innerHTML = `<img src="${ev.target.result}"
+        style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;" />
+        <span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);
+        color:#fff;font-size:9px;padding:2px 4px;border-radius:0 0 6px 6px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${file.name}</span>`;
+        newGrid.appendChild(wrap);
+        };
+        reader.readAsDataURL(file);
+        });
+        }
+
+        function mergeFiles(dropped) {
+        const dt = new DataTransfer();
+        if (fileInput.files) Array.from(fileInput.files).forEach(f => dt.items.add(f));
+        Array.from(dropped).forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+        }
+
+        document.querySelectorAll('.remove-existing').forEach(btn => {
+        btn.addEventListener('click', function () {
+        const path = this.dataset.path;
+        this.closest('.existing-thumb').remove();
+        let current = []; try { current = JSON.parse(hdnImages.value || '[]'); } catch {}
+        current = current.filter(p => p !== path);
+        hdnImages.value = JSON.stringify(current);
+        let removed = []; try { removed = JSON.parse(hdnRemoved.value || '[]'); } catch {}
+        if (!removed.includes(path)) removed.push(path);
+        hdnRemoved.value = JSON.stringify(removed);
+        });
+        });
+        })();
+    </script>
+}

@@ -23,7 +23,8 @@ namespace EditorEntitiesLayer.Entities
         public bool Generation { get; set; } =false;
         public string? Toning { get; set; } // None, Positive,  Neutral, Negative
         public string? Content { get; set; } // text content of the news article, optional
-        
+        public string? Images { get; set; }  // ← added: JSON array of paths
+
 
     }
 }

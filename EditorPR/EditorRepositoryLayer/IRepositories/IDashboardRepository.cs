@@ -8,9 +8,11 @@ namespace EditorRepositoryLayer.IRepositories
     {
         Task<int> GetArticleCountAsync(int clientId);
         Task<decimal> GetArticleTotalPRAsync(int clientId);
+        Task<decimal> GetArticleTotalADAsync(int clientId);
 
         Task<int> GetNewsPaperCountAsync(int clientId);
         Task<decimal> GetNewsPaperTotalPRAsync(int clientId);
+        Task<decimal> GetNewsPaperTotalADAsync(int clientId);
 
         Task<int> GetVideoCountAsync(int clientId);
         Task<decimal> GetVideoTotalADAsync(int clientId);

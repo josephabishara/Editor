@@ -5,7 +5,8 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a asp-action="Details" asp-controller="Client" asp-route-Id="@clientId" class="btn btn-sm btn-outline-secondary">&larr;</a>
+    <a asp-action="Details" asp-controller="Client" asp-route-Id="@clientId"
+       class="btn btn-sm btn-outline-secondary">&larr;</a>
     <h2>Categories</h2>
     <a asp-action="Create" asp-route-clientId="@clientId" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> New Category
@@ -14,11 +15,17 @@
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger alert-dismissible fade show">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 }
 
 <table class="table table-bordered table-hover align-middle">
@@ -37,7 +44,7 @@
     <tbody>
         @foreach (var cat in Model)
         {
-            <tr>
+            <tr class="@(cat.Status != "Active" ? "table-secondary text-muted" : "")">
                 <td>@cat.Order</td>
                 <td><strong>@cat.CategoryName</strong></td>
                 <td>@cat.CategoryType</td>
@@ -50,17 +57,37 @@
                 <td>@cat.ArticleCount</td>
                 <td>@cat.SubCategories.Count()</td>
                 <td>
-                    <a asp-action="Details" asp-route-id="@cat.Id" class="btn btn-sm btn-outline-info">Details</a>
-                    <a asp-action="Edit" asp-route-id="@cat.Id" class="btn btn-sm btn-outline-warning">Edit</a>
+                    <a asp-action="Details" asp-route-id="@cat.Id"
+                       class="btn btn-sm btn-outline-info">Details</a>
+                    <a asp-action="Edit" asp-route-id="@cat.Id"
+                       class="btn btn-sm btn-outline-warning">Edit</a>
                     <a asp-action="Create" asp-route-clientId="@clientId" asp-route-parentId="@cat.Id"
                        class="btn btn-sm btn-outline-primary" title="Add sub-category">+ Sub</a>
-                    <a asp-action="Delete" asp-route-id="@cat.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                    <form asp-action="ToggleStatus" method="post" style="display:inline">
+                        <input type="hidden" name="id" value="@cat.Id" />
+                        <input type="hidden" name="ClientId" value="@clientId" />
+                        @Html.AntiForgeryToken()
+                        @if (cat.Status == "Active")
+                        {
+                            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                    onclick="return confirm('Disable @cat.CategoryName?')">
+                                <i class="bi bi-slash-circle"></i> Disable
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn btn-sm btn-outline-success"
+                                    onclick="return confirm('Enable @cat.CategoryName?')">
+                                <i class="bi bi-check-circle"></i> Enable
+                            </button>
+                        }
+                    </form>
                 </td>
             </tr>
-            @* Render sub-categories inline *@
+
             @foreach (var sub in cat.SubCategories)
             {
-                <tr class="table-light">
+                <tr class="@(sub.Status != "Active" ? "table-secondary text-muted" : "table-light")">
                     <td class="ps-4">@sub.Order</td>
                     <td class="ps-4">↳ @sub.CategoryName</td>
                     <td>@sub.CategoryType</td>
@@ -73,8 +100,27 @@
                     <td>@sub.ArticleCount</td>
                     <td>—</td>
                     <td>
-                        <a asp-action="Edit" asp-route-id="@sub.Id" class="btn btn-sm btn-outline-warning">Edit</a>
-                        <a asp-action="Delete" asp-route-id="@sub.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                        <a asp-action="Edit" asp-route-id="@sub.Id"
+                           class="btn btn-sm btn-outline-warning">Edit</a>
+                        <form asp-action="ToggleStatus" method="post" style="display:inline">
+                            <input type="hidden" name="id" value="@sub.Id" />
+                            <input type="hidden" name="ClientId" value="@clientId" />
+                            @Html.AntiForgeryToken()
+                            @if (sub.Status == "Active")
+                            {
+                                <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                        onclick="return confirm('Disable @sub.CategoryName?')">
+                                    <i class="bi bi-slash-circle"></i> Disable
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-sm btn-outline-success"
+                                        onclick="return confirm('Enable @sub.CategoryName?')">
+                                    <i class="bi bi-check-circle"></i> Enable
+                                </button>
+                            }
+                        </form>
                     </td>
                 </tr>
             }

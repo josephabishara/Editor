@@ -1,0 +1,415 @@
+﻿@model EditorViewModelLayer.MediaViewModel.ClientNewsPaperDTO
+@using EditorViewModelLayer.MediaViewModel
+
+@{
+    ViewData["Title"] = "Newspaper Details";
+
+    var existingImagePaths = new List<string>();
+    if (!string.IsNullOrEmpty(Model.Images))
+    {
+        try
+        {
+            existingImagePaths = System.Text.Json.JsonSerializer
+                                       .Deserialize<List<string>>(Model.Images)
+                                 ?? new List<string>();
+        }
+        catch { }
+    }
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<style>
+    .detail-label {
+        font-size: .75rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: .15rem;
+        display: block;
+    }
+
+    .detail-value {
+        font-size: .9rem;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .article-content {
+        font-size: .95rem;
+        line-height: 1.75;
+        color: #1e293b;
+    }
+
+    .badge-toning-positive {
+        background: #dcfce7;
+        color: #166534;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-toning-negative {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-toning-neutral {
+        background: #f1f5f9;
+        color: #475569;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-published {
+        background: #d1fae5;
+        color: #065f46;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-unpublished {
+        background: #f1f5f9;
+        color: #475569;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .form-wrap {
+            padding: 0 !important;
+        }
+
+        .form-card {
+            box-shadow: none !important;
+            border: 1px solid #ccc !important;
+            break-inside: avoid;
+        }
+
+        .form-card-title {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-size: 11pt;
+        }
+    }
+</style>
+
+<div class="form-wrap">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+        <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+           style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);
+            font-size:.82rem;text-decoration:none;" class="no-print">
+            ← Back to Articles
+        </a>
+        <div style="display:flex;gap:.5rem;" class="no-print">
+            <a href="@Url.Action("Edit", new { id = Model.Id })"
+               style="display:inline-flex;align-items:center;gap:.35rem;
+                background:#f59e0b;color:#fff;border:none;border-radius:7px;
+                padding:.38rem .85rem;font-size:.82rem;text-decoration:none;font-weight:600;">
+                ✏️ Edit
+            </a>
+            <button onclick="window.print()"
+                    style="display:inline-flex;align-items:center;gap:.35rem;
+                background:#1e293b;color:#fff;border:none;border-radius:7px;
+                padding:.38rem .85rem;font-size:.82rem;cursor:pointer;font-weight:600;">
+                🖨️ Print / PDF
+            </button>    @await Html.PartialAsync("_navdashboard")
+        </div>
+    </div>
+
+
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#dbeafe;">📰</div>
+        <div>
+            <h1>@Model.Title</h1>
+            <p>@Model.ClientName &mdash; @Model.Date.ToString("dd MMMM yyyy")</p>
+        </div>
+    </div>
+
+    @* ── CARD 1: Source & Classification ── *@
+    <div class="form-card">
+
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">Publication</span>
+                <span class="detail-value">@(Model.PublicationName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Category</span>
+                <span class="detail-value">@(Model.CategoryName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Sub Category</span>
+                <span class="detail-value">@(Model.SubCategoryName ?? "—")</span>
+            </div>
+        </div>
+        <div class="fg-3" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Writer</span>
+                <span class="detail-value">@(Model.WriterName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Date</span>
+                <span class="detail-value">@Model.Date.ToString("dd MMM yyyy")</span>
+            </div>
+            <div>
+                <span class="detail-label">Pages</span>
+                <span class="detail-value">@(Model.Pages > 0 ? Model.Pages.ToString() : "—")</span>
+            </div>
+        </div>
+        <div class="fg-3" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Height (cm)</span>
+                <span class="detail-value">@(Model.Height > 0 ? Model.Height.ToString("N2") : "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Width (cm)</span>
+                <span class="detail-value">@(Model.Width > 0 ? Model.Width.ToString("N2") : "—")</span>
+            </div>
+        </div>
+        <br />
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">Article Branding</span>
+                <span class="detail-value">@(Model.ArticleBranding ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Headline Branding</span>
+                <span class="detail-value">@(Model.HeadlineBranding ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Toning</span>
+                @{
+                    var toningClass = Model.Toning switch
+                    {
+                        "Positive" => "badge-toning-positive",
+                        "Negative" => "badge-toning-negative",
+                        _ => "badge-toning-neutral"
+                    };
+                }
+                <span class="@toningClass">@(Model.Toning ?? "—")</span>
+            </div>
+        </div>
+        <div class="fg-3" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Published</span>
+                @if (Model.Publish)
+                {
+                    <span class="badge-published">✓ Published</span>
+                }
+                else
+                {
+                    <span class="badge-unpublished">Draft</span>
+                }
+            </div>
+            <div></div>
+        </div>
+        <br />
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">Media Type</span>
+                <span class="detail-value">@(Model.MediaType ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Media Tier</span>
+                <span class="detail-value">@(Model.MediaTier ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Frequency</span>
+                <span class="detail-value">@(Model.Frequency ?? "—")</span>
+            </div>
+        </div>
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">Language</span>
+                <span class="detail-value">@(Model.Language ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Circulation</span>
+                <span class="detail-value">@(Model.Circulation.HasValue ? Model.Circulation.Value.ToString("N0") : "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Reach (× 4)</span>
+                <span class="detail-value">@Model.Reach.ToString("N0")</span>
+            </div>
+        </div>
+        <div class="fg-3" style="margin-top:.9rem;">
+
+            <div>
+                <span class="detail-label">AD Value</span>
+                <span class="detail-value" style="color:#0ea5e9;font-weight:700;">
+                    @Model.ADValue.ToString("N2")
+                </span>
+            </div>
+            <div>
+                <span class="detail-label">PR Value</span>
+                <span class="detail-value" style="color:#16a34a;font-size:1.05rem;font-weight:700;">
+                    @Model.PRValue.ToString("N2")
+                </span>
+            </div>
+            <div></div>
+        </div>
+        <br />
+        @* ── CARD 4: Article Content ── *@
+        @if (!string.IsNullOrWhiteSpace(Model.Content))
+        {
+
+        
+            <div style="margin-bottom:.6rem;">
+                <span class="detail-label">Title</span>
+                <span style="font-size:1rem;font-weight:600;color:#1e293b;">@Model.Title</span>
+            </div>
+            <div class="article-content">
+                @Html.Raw(Model.Content)
+            </div>
+
+        }
+        <br />
+
+        @* ── CARD 5: Images ── *@
+        @if (existingImagePaths.Any())
+        {
+
+       
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                @foreach (var path in existingImagePaths)
+                {
+                    <a href="@path" target="_blank" rel="noopener">
+                        <img src="@path"
+                             style="width:130px;height:100px;object-fit:cover;
+                        border-radius:8px;border:1px solid #e2e8f0;
+                        transition:transform .15s;"
+                             onerror="this.src='/images/no-image.png'"
+                             onmouseover="this.style.transform='scale(1.04)'"
+                             onmouseout="this.style.transform=''" />
+                    </a>
+                }
+            </div>
+
+        }
+
+    </div>
+
+    <div style="display:none;">
+        @if (Model.Children != null && Model.Children.Any())
+        {
+            <div class="detail-card">
+                <div class="detail-card-title">
+                    📎 Child Clippings (@Model.Children.Count)
+                </div>
+
+                @{
+                    // Aggregate totals across all children
+                    var totalChildPR = Model.Children.Sum(c => c.PRValue);
+                    var totalChildAD = Model.Children.Sum(c => c.ADValue);
+                }
+
+            
+                <div style="display:flex;gap:2rem;background:#f0f9ff;border-radius:8px;
+                    padding:.6rem 1rem;margin-bottom:1rem;font-size:.83rem;">
+                    <div>
+                        <span style="color:#64748b;">Total Child PR</span>
+                        <strong style="margin-left:.4rem;color:#0ea5e9;">@totalChildPR.ToString("N2")</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;">Total Child AD</span>
+                        <strong style="margin-left:.4rem;color:#64748b;">@totalChildAD.ToString("N2")</strong>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;">Combined PR (Parent + Children)</span>
+                        <strong style="margin-left:.4rem;color:#7c3aed;">
+                            @((Model.PRValue + totalChildPR).ToString("N2"))
+                        </strong>
+                    </div>
+                </div>
+
+                @foreach (var (child, idx) in Model.Children.Select((c, i) => (c, i + 1)))
+                {
+                    <div class="child-detail-card">
+                        <div class="child-header">
+                            <div style="display:flex;align-items:center;gap:.5rem;">
+                                <span class="child-badge">Child #@idx</span>
+                                <span style="font-size:.85rem;font-weight:600;color:#1e293b;">
+                                    @(child.PublicationName ?? $"Publication #{child.PublicationId}")
+                                </span>
+                            </div>
+                            <div style="font-size:.82rem;color:#64748b;">
+                                @child.Date.ToString("dd MMM yyyy")
+                            </div>
+                        </div>
+
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <label>Writer</label>
+                                <span>@(child.WriterName ?? "—")</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Pages</label>
+                                <span>@child.Pages</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Height (cm)</label>
+                                <span>@child.Height.ToString("N1")</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Width (cm)</label>
+                                <span>@child.Width.ToString("N1")</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>AD Value</label>
+                                <span>@child.ADValue.ToString("N2")</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>PR Value</label>
+                                <span class="pr-value" style="font-size:.92rem;">
+                                    @child.PRValue.ToString("N2")
+                                </span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(child.MediaTier))
+                            {
+                                <div class="detail-item">
+                                    <label>Media Tier</label>
+                                    <span>@child.MediaTier</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(child.Language))
+                            {
+                                <div class="detail-item">
+                                    <label>Language</label>
+                                    <span>@child.Language</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* ── Audit footer ── *@
+    <div style="text-align:right;font-size:.78rem;color:#94a3b8;margin-top:.5rem;margin-bottom:2rem;">
+        Created by <strong style="color:#64748b;">@(Model.CreatedByUserName ?? "—")</strong>
+        &nbsp;·&nbsp;
+        @Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+    </div>
+
+</div>

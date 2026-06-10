@@ -33,7 +33,11 @@ namespace EditorDataLayer.Data
         public DbSet<GeneralVideos> GeneralVideos { get; set; }
         public DbSet<ClientVideo> ClientVideos { get; set; }
 
+        // ── Reports Module ─────────────────────────────────────────────────────────────
 
+        public DbSet<Report> Reports { get; set; }
+        public DbSet<ReportArticle> ReportArticles { get; set; }
+        public DbSet<ReportNewspaper> ReportNewspapers { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -252,6 +256,24 @@ namespace EditorDataLayer.Data
                       .WithMany()
                       .HasForeignKey(e => e.ChannelId)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<ClientArticle>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Parent)
+                      .WithMany(e => e.Children)
+                      .HasForeignKey(e => e.ParentId)
+                      .OnDelete(DeleteBehavior.Restrict);  // prevent cascade on self-ref
+            });
+
+            builder.Entity<ClientNewsPaper>(entity =>
+            {
+                entity.HasOne(e => e.Parent)
+                      .WithMany(e => e.Children)
+                      .HasForeignKey(e => e.ParentId)
+                      .OnDelete(DeleteBehavior.Restrict);  // prevent cascade on self-reference
             });
         }
     }

@@ -1,0 +1,83 @@
+@model EditorViewModelLayer.ReportViewModel.ReportDTO
+
+@{
+    ViewData["Title"] = "Edit Report";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Edit Report</h5>
+                <div>
+                    <a asp-action="SelectArticles" asp-route-id="@Model.Id"
+                       class="btn btn-sm btn-outline-light me-1">
+                        <i class="bi bi-newspaper me-1"></i> Edit Articles
+                    </a>
+                    <a asp-action="SelectNewspapers" asp-route-id="@Model.Id"
+                       class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-journal-text me-1"></i> Edit Newspapers
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger">
+                        <asp-validation-summary asp-validation-summary="ModelOnly" />
+                    </div>
+                }
+
+                <form asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="Publish" />
+
+                    <div class="mb-3">
+                        <label asp-for="CustomerId" class="form-label fw-semibold">
+                            Customer <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="CustomerId" asp-items="ViewBag.Customers" class="form-select">
+                            <option value="">-- Select Customer --</option>
+                        </select>
+                        <span asp-validation-for="CustomerId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReportName" class="form-label fw-semibold">
+                            Report Name <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="ReportName" class="form-control" />
+                        <span asp-validation-for="ReportName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReportDate" class="form-label fw-semibold">Report Date</label>
+                        <input asp-for="ReportDate" type="date" class="form-control" />
+                        <span asp-validation-for="ReportDate" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReportType" class="form-label fw-semibold">Report Type</label>
+                        <select asp-for="ReportType" asp-items="ViewBag.ReportTypes" class="form-select"></select>
+                        <span asp-validation-for="ReportType" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

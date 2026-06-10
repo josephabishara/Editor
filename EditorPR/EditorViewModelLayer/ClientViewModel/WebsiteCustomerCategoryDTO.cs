@@ -12,13 +12,29 @@ namespace EditorViewModelLayer.ClientViewModel
         public int CustomerId { get; set; }
         public int WebsiteId { get; set; }
 
-        // Display only — comes from Website navigation
+        // ── Read-only display (from Website navigation) ──────────────────────────
         public string WebsiteName { get; set; } = string.Empty;
         public string WebsiteURL { get; set; } = string.Empty;
 
-        // Editable
+        // ── Editable ─────────────────────────────────────────────────────────────
         [Display(Name = "Media Tier")]
         public string? MediaTier { get; set; }
+
+        [Display(Name = "Frequency")]
+        public string? Frequency { get; set; }
+
+        [Display(Name = "Reach")]
+        public string? Reach { get; set; }
+
+        [Display(Name = "Distribution")]
+        public string? Distribution { get; set; }
+
+        [Display(Name = "Language")]
+        public string? Language { get; set; }
+
+        [Display(Name = "Unit Price")]
+        [Range(0, double.MaxValue, ErrorMessage = "Unit Price must be positive.")]
+        public decimal UnitPrice { get; set; }
     }
 
     // ── Used when submitting the full categories list for a client ─────────────

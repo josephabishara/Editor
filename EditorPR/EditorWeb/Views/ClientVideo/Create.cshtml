@@ -36,7 +36,7 @@
        style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
         ← Back to Videos
     </a>
-
+    @await Html.PartialAsync("_navdashboard")
     <div class="m-header" style="margin-bottom:1.4rem;">
         <div class="m-header-icon" style="background:#ede9fe;">@(isEdit ? "✏️" : "📺")</div>
         <div>
@@ -62,63 +62,61 @@
 
         @* ── CARD 1: Source & Details ── *@
         <div class="form-card">
-            <div class="form-card-title">📂 Source & Classification</div>
+            
             <div class="fg-3">
                 <div class="fg">
                     <label asp-for="ChannelId">Channel <span style="color:var(--red)">*</span></label>
-                    <select asp-for="ChannelId" asp-items="chSL" onchange="autoFillChannel(this.value)">
+                    <select asp-for="ChannelId" asp-items="chSL" onchange="autoFillChannel(this.value)" required class="select-search"> 
                         <option value="0">— Select —</option>
                     </select>
                     <span asp-validation-for="ChannelId" class="field-error"></span>
                 </div>
                 <div class="fg">
                     <label asp-for="CategoryId">Category</label>
-                    <select asp-for="CategoryId" asp-items="catSL" id="catSel" onchange="loadSubs(this.value)">
+                <select asp-for="CategoryId" asp-items="catSL" id="catSel" class="select-search" onchange="loadSubs(this.value)" required>
                         <option value="0">— None —</option>
                     </select>
                 </div>
                 <div class="fg">
                     <label asp-for="SubCategoryId">Sub Category</label>
-                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel">
+                <select asp-for="SubCategoryId" asp-items="subSL" class="select-search" id="subSel" required>
                         <option value="0">— None —</option>
                     </select>
                 </div>
             </div>
-            <div class="fg-4" style="margin-top:.9rem;">
-                <div class="fg">
-                    <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
-                    <input asp-for="Date" type="date" />
-                    <span asp-validation-for="Date" class="field-error"></span>
-                </div>
+            <div class="fg-3" style="margin-top:.9rem;">
+              
                 <div class="fg">
                     <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
-                    <input asp-for="Title" placeholder="Video title…" />
+                <input asp-for="Title" placeholder="Video title…" required />
                     <span asp-validation-for="Title" class="field-error"></span>
                 </div>
                 <div class="fg">
                     <label asp-for="Program">Program</label>
-                    <input asp-for="Program" placeholder="Program name…" />
+                <input asp-for="Program" placeholder="Program name…" required />
                 </div>
-                <div class="fg">
-                    <label asp-for="Duration">Duration (sec)</label>
-                    <input asp-for="Duration" type="number" min="0" />
-                </div>
+            <div class="fg">
+                <label asp-for="VideoUrl">Video URL</label>
+                <input asp-for="VideoUrl" type="url" required placeholder="https://…" />
+            </div>
             </div>
             <div class="fg-3" style="margin-top:.9rem;">
-                <div class="fg">
-                    <label asp-for="Language">Language</label>
-                    <input asp-for="Language" placeholder="e.g. Arabic, English…" />
-                </div>
+            <div class="fg">
+                <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
+                <input asp-for="Date" type="date" required />
+                <span asp-validation-for="Date" class="field-error"></span>
+            </div>
+            <div class="fg">
+                <label asp-for="Duration">Duration (sec)</label>
+                <input asp-for="Duration" type="number" min="0" />
+            </div>
                 <div class="fg">
                     <label asp-for="Toning">Toning</label>
                     <select asp-for="Toning" asp-items="toningSL">
                         <option value="">— Select —</option>
                     </select>
                 </div>
-                <div class="fg">
-                    <label asp-for="VideoUrl">Video URL</label>
-                    <input asp-for="VideoUrl" type="url" placeholder="https://…" />
-                </div>
+               
             </div>
         </div>
 
@@ -129,6 +127,10 @@
                 <span class="badge-autofill">Auto-filled on Channel change</span>
             </div>
             <div class="fg-4">
+            <div class="fg">
+                <label asp-for="Language">Language</label>
+                <input asp-for="Language" placeholder="e.g. Arabic, English…" />
+            </div>
                 <div class="fg">
                     <label asp-for="MediaTier">Media Tier</label>
                     <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
@@ -160,8 +162,9 @@
 
         @* ── CARD 3: File Uploads ── *@
         <div class="form-card">
-            <div class="form-card-title">📁 Files</div>
+            
             <div class="fg-2">
+
                 <div class="fg">
                     <label>Video File</label>
                     <div class="file-drop" onclick="document.getElementById('videoFileInput').click()">
@@ -178,7 +181,7 @@
                     </div>
                     <input type="hidden" asp-for="VideoFile" />
                 </div>
-                <div class="fg">
+                <div class="fg" style="display:none;">
                     <label>Screenshot</label>
                     <div class="file-drop" onclick="document.getElementById('screenshotInput').click()">
                         <div class="drop-icon">📸</div>
@@ -199,7 +202,7 @@
 
         <div class="form-footer">
             <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
-            <button type="submit" class="btn-save">@(isEdit ? "💾 Save Changes" : "✅ Create Video")</button>
+        <button type="submit" class="btn-save">@(isEdit ? "💾 Save " : "✅ Save")</button>
         </div>
     </form>
 </div>
@@ -259,5 +262,12 @@
             preview.innerHTML = `<span>📎 ${file.name}</span>`;
         }
     }
+
+          $(document).ready(function () {
+                $('.select-search').select2({
+                    placeholder: 'Search...',
+                    allowClear: true
+                });
+            });
 </script>
 }

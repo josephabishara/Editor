@@ -8,11 +8,16 @@
     <div class="d-flex align-items-center gap-2 mb-4">
         <a asp-action="Details" asp-route-id="@Model.CustomerId"
            class="btn btn-sm btn-outline-secondary">&larr;</a>
+        
         <div>
             <h4 class="mb-0 fw-semibold">Publication Media Tiers</h4>
             <small class="text-muted">Client: <strong>@clientName</strong></small>
         </div>
+        <a asp-action="ImportPublicationCategories" asp-route-id="@Model.CustomerId" class="btn btn-outline-success px-4">
+            <i class="bi bi-upload me-1"></i> Import Excel
+        </a>
     </div>
+   
 
     @if (TempData["Error"] != null)
     {
@@ -22,19 +27,20 @@
         </div>
     }
 
+
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <form asp-action="EditPublicationCategories" method="post">
                 @Html.AntiForgeryToken()
 
                 <input type="hidden" name="CustomerId" value="@Model.CustomerId" />
-
+               
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-dark">
                         <tr>
                             <th style="width:40px;">#</th>
                             <th>Publication</th>
-                            <th>URL</th>
+                            <th>Price</th>
                             <th style="width:160px;">Media Tier</th>
                         </tr>
                     </thead>
@@ -56,16 +62,13 @@
                             <input type="hidden" name="Categories[@i].CustomerId" value="@cat.CustomerId" />
                             <input type="hidden" name="Categories[@i].PublicationId" value="@cat.PublicationId" />
                             <input type="hidden" name="Categories[@i].PublicationName" value="@cat.PublicationName" />
-                            <input type="hidden" name="Categories[@i].PublicationURL" value="@cat.PublicationURL" />
+                            <input type="hidden" name="Categories[@i].UnitPrice" value="@cat.UnitPrice" />
 
                             <tr>
                                 <td class="text-muted small">@(i + 1)</td>
                                 <td class="fw-semibold">@cat.PublicationName</td>
-                                <td>
-                                    <a href="@cat.PublicationURL" target="_blank"
-                                       class="text-decoration-none text-truncate d-inline-block"
-                                       style="max-width:220px;">@cat.PublicationURL</a>
-                                </td>
+                                <td class="fw-semibold">@cat.UnitPrice</td>
+                                
                                 <td>
                                     <select name="Categories[@i].MediaTier" class="form-select form-select-sm">
                                         <option value="">-- None --</option>
@@ -85,6 +88,7 @@
                         <button type="submit" class="btn btn-success px-4">Save Changes</button>
                         <a asp-action="Details" asp-route-id="@Model.CustomerId"
                            class="btn btn-outline-secondary">Cancel</a>
+                      
                     </div>
                 }
             </form>

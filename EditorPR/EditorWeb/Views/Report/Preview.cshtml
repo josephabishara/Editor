@@ -1,0 +1,690 @@
+@model EditorViewModelLayer.ReportViewModel.ReportDetailsDTO
+@using EditorEntitiesLayer.Entities
+@{
+    Layout = null;
+    var grandPR = Model.Articles.Sum(a => a.PRValue) + Model.TotalPRValue;
+    var grandAD = Model.Articles.Sum(a => a.ADValue) + Model.TotalADValue;
+    var grandItems = Model.ArticleCount + Model.NewspaperCount;
+}
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@Model.ReportName — Media Report</title>
+    <style>
+            /* ── Reset ───────────────────────────────────────────────────────────────── */
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0
+            }
+
+            html {
+                font-size: 13px
+            }
+
+            body {
+                font-family: 'Segoe UI',Arial,sans-serif;
+                color: #721a24;
+                background: #fff;
+                padding: 0
+            }
+
+            /* ── Toolbar (screen only) ───────────────────────────────────────────────── */
+            .toolbar {
+                background: #721a24;
+                color: #fff;
+                padding: 10px 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+
+            .toolbar-brand {
+                font-size: 12px;
+                opacity: .7;
+                letter-spacing: .5px;
+                text-transform: uppercase
+            }
+
+            .toolbar-actions {
+                display: flex;
+                gap: 8px
+            }
+
+            .btn {
+                padding: 6px 16px;
+                border-radius: 5px;
+                border: 1px solid rgba(255,255,255,.25);
+                font-size: 12px;
+                font-weight: 500;
+                cursor: pointer;
+                background: rgba(255,255,255,.1);
+                color: #fff;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                text-decoration: none;
+                transition: background .15s;
+            }
+
+                .btn:hover {
+                    background: rgba(255,255,255,.2)
+                }
+
+            .btn-print {
+                background: #c0392b;
+                border-color: #c0392b
+            }
+
+                .btn-print:hover {
+                    background: #a93226
+                }
+
+            .btn-close-w {
+                background: transparent
+            }
+
+            /* ── Page wrapper ────────────────────────────────────────────────────────── */
+            .page {
+                max-width: 900px;
+                margin: 32px auto;
+                padding: 0 24px 48px;
+            }
+
+            /* ── Report title block ──────────────────────────────────────────────────── */
+            .report-title-block {
+                border-bottom: 2px solid #721a24;
+                padding-bottom: 14px;
+                margin-bottom: 20px;
+            }
+
+                .report-title-block h1 {
+                    font-size: 20px;
+                    font-weight: 700;
+                    line-height: 1.4;
+                    color: #721a24;
+                    margin-bottom: 8px;
+                }
+
+            .report-meta-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+                font-size: 11.5px;
+                color: #555;
+            }
+
+                .report-meta-row strong {
+                    color: #721a24
+                }
+
+            .badge {
+                display: inline-block;
+                padding: 2px 10px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+
+            .badge-daily {
+                background: #d1ecf1;
+                color: #0c5460
+            }
+
+            .badge-weekly {
+                background: #cce5ff;
+                color: #004085
+            }
+
+            .badge-monthly {
+                background: #fff3cd;
+                color: #856404
+            }
+
+            .badge-pub {
+                background: #d4edda;
+                color: #155724
+            }
+
+            .badge-draft {
+                background: #fff3cd;
+                color: #856404
+            }
+
+            /* ── Meta grid (mimics reference: label-col + value-col, 3 columns) ──────── */
+            .meta-grid {
+                display: grid;
+                grid-template-columns: repeat(3,1fr);
+                gap: 0;
+                border: 1px solid #ddd;
+                margin-bottom: 24px;
+            }
+
+            .meta-row {
+                display: contents;
+            }
+
+            .meta-cell {
+                display: flex;
+            }
+
+            .meta-label {
+                background: #721a24;
+                color: #fff;
+                padding: 7px 12px;
+                font-size: 12px;
+                font-weight: 500;
+                min-width: 130px;
+                white-space: nowrap;
+            }
+
+            .meta-value {
+                background: #fff;
+                color: #721a24;
+                padding: 7px 12px;
+                font-size: 12px;
+                border-bottom: 1px solid #e8e8e8;
+                flex: 1;
+            }
+
+            .meta-cell:not(:last-child) .meta-value {
+                border-right: 1px solid #e8e8e8;
+            }
+
+            /* ── Section heading ─────────────────────────────────────────────────────── */
+            .section {
+                margin-bottom: 28px
+            }
+
+            .section-heading {
+                background: #721a24;
+                color: #fff;
+                padding: 7px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: .4px;
+                text-transform: uppercase;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0;
+            }
+
+                .section-heading .section-sub {
+                    font-size: 11px;
+                    font-weight: 400;
+                    opacity: .8;
+                    text-transform: none;
+                    letter-spacing: 0;
+                }
+
+            /* ── Article card (matches reference: title bar + 3-col meta grid) ────────── */
+            .article-card {
+                border: 1px solid #ddd;
+                margin-bottom: 20px;
+            }
+
+            .article-card-title {
+                background: #f7f7f7;
+                border-bottom: 1px solid #ddd;
+                padding: 10px 14px;
+                font-size: 13.5px;
+                font-weight: 700;
+                line-height: 1.45;
+                color: #721a24;
+                text-align: right; /* RTL titles */
+                direction: rtl;
+            }
+
+                .article-card-title a {
+                    color: #721a24;
+                    text-decoration: none
+                }
+
+                    .article-card-title a:hover {
+                        color: #c0392b;
+                        text-decoration: underline
+                    }
+
+            /* same label/value pattern as reference image */
+            .article-meta-grid {
+                display: grid;
+                grid-template-columns: repeat(3,1fr);
+                border-collapse: collapse;
+            }
+
+            .article-meta-cell {
+                display: flex;
+                border-right: 1px solid #e8e8e8;
+                border-bottom: 1px solid #e8e8e8;
+            }
+
+                .article-meta-cell:nth-child(3n) {
+                    border-right: none
+                }
+
+            .article-meta-label {
+                background: #721a24;
+                color: #fff;
+                padding: 6px 10px;
+                font-size: 11.5px;
+                font-weight: 500;
+                min-width: 120px;
+                white-space: nowrap;
+            }
+
+            .article-meta-value {
+                background: #fff;
+                color: #721a24;
+                padding: 6px 10px;
+                font-size: 11.5px;
+                flex: 1;
+            }
+
+                .article-meta-value a {
+                    color: #c0392b;
+                    text-decoration: none;
+                    word-break: break-all
+                }
+
+                    .article-meta-value a:hover {
+                        text-decoration: underline
+                    }
+
+            /* ── Newspaper card ──────────────────────────────────────────────────────── */
+            .newspaper-card {
+                border: 1px solid #ddd;
+                margin-bottom: 20px;
+            }
+
+            .newspaper-card-title {
+                background: #f7f7f7;
+                border-bottom: 1px solid #ddd;
+                padding: 10px 14px;
+                font-size: 13.5px;
+                font-weight: 700;
+                line-height: 1.45;
+                color: #721a24;
+            }
+
+            /* ── Grand total table ───────────────────────────────────────────────────── */
+            .totals-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 12px
+            }
+
+                .totals-table th {
+                    background: #721a24;
+                    color: #fff;
+                    padding: 7px 12px;
+                    text-align: left;
+                    font-weight: 600;
+                }
+
+                    .totals-table th.r {
+                        text-align: right
+                    }
+
+                .totals-table td {
+                    padding: 7px 12px;
+                    border-bottom: 1px solid #e8e8e8;
+                    color: #721a24;
+                }
+
+                    .totals-table td.r {
+                        text-align: right
+                    }
+
+                .totals-table tr:nth-child(even) td {
+                    background: #f9f9f9
+                }
+
+                .totals-table tfoot td {
+                    background: #721a24;
+                    color: #fff;
+                    font-weight: 700;
+                    border: none;
+                    padding: 8px 12px;
+                }
+
+                    .totals-table tfoot td.r {
+                        text-align: right
+                    }
+
+            /* ── Footer ──────────────────────────────────────────────────────────────── */
+            .report-footer {
+                margin-top: 36px;
+                border-top: 2px solid #721a24;
+                padding-top: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 11px;
+                color: #888;
+            }
+
+                .report-footer strong {
+                    color: #721a24
+                }
+
+            /* ── Print ───────────────────────────────────────────────────────────────── */
+            @@media print {
+                .toolbar {
+                    display: none !important
+                }
+
+                .page {
+                    margin: 0;
+                    padding: 16px
+                }
+
+                .article-card, .newspaper-card {
+                    page-break-inside: avoid
+                }
+            }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="toolbar no-print">
+        <span class="toolbar-brand">EditorPR &mdash; Media Report Preview</span>
+        <div class="toolbar-actions">
+            <button class="btn btn-print" onclick="window.print()">
+                &#x1F5A8; Print / Save PDF
+            </button>
+            <button class="btn btn-close-w" onclick="window.close()">
+                &#x2715; Close
+            </button>
+        </div>
+    </div>
+
+    <div class="page">
+
+        <!-- ── Report title ──────────────────────────────────────────────────── -->
+        <div class="report-title-block">
+            <h1>@Model.ReportName</h1>
+            <div class="report-meta-row">
+                <span><strong>Customer:</strong> @Model.CustomerName</span>
+                <span><strong>Date:</strong> @Model.ReportDate.ToString("dd-MM-yyyy")</span>
+                <span>
+                    @{
+                        var typeBadge = Model.ReportType switch
+                        {
+                            ReportType.Daily => "badge-daily",
+                            ReportType.Weekly => "badge-weekly",
+                            ReportType.Monthly => "badge-monthly",
+                            _ => "badge-draft"
+                        };
+                    }
+                    <span class="badge @typeBadge">@Model.ReportType</span>
+                </span>
+                @if (Model.Publish)
+                {
+                    <span class="badge badge-pub">Published</span>
+                }
+                else
+                {
+                    <span class="badge badge-draft">Draft</span>
+                }
+                <span><strong>Generated:</strong> @DateTime.Now.ToString("dd-MM-yyyy HH:mm")</span>
+            </div>
+        </div>
+
+        <!-- ── Report summary meta grid ──────────────────────────────────────── -->
+        <div class="meta-grid">
+            <div class="meta-cell">
+                <div class="meta-label">Customer</div>
+                <div class="meta-value">@Model.CustomerName</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Report Date</div>
+                <div class="meta-value">@Model.ReportDate.ToString("dd-MM-yyyy")</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Report Type</div>
+                <div class="meta-value">@Model.ReportType</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Total Articles</div>
+                <div class="meta-value">@Model.ArticleCount</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Total Newspapers</div>
+                <div class="meta-value">@Model.NewspaperCount</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Status</div>
+                <div class="meta-value">@(Model.Publish ? "Published" : "Draft")</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Grand PR Value</div>
+                <div class="meta-value"><strong>@grandPR.ToString("N2")</strong></div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Grand AD Value</div>
+                <div class="meta-value"><strong>@grandAD.ToString("N2")</strong></div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Total Items</div>
+                <div class="meta-value"><strong>@grandItems</strong></div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- ONLINE ARTICLES                                                      -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        @if (Model.Articles.Any())
+        {
+            <div class="section">
+                <div class="section-heading">
+                    <span>Online Articles</span>
+                    <span class="section-sub">
+                        @Model.ArticleCount item(s) &nbsp;&nbsp;
+                        PR Value: @Model.Articles.Sum(a => a.PRValue).ToString("N2") &nbsp;&nbsp;
+                        AD Value: @Model.Articles.Sum(a => a.ADValue).ToString("N2")
+                    </span>
+                </div>
+
+                @foreach (var a in Model.Articles)
+                {
+                    <div class="article-card">
+
+                        <!-- Title bar — mirrors reference image header -->
+                        <div class="article-card-title">
+                            @if (!string.IsNullOrEmpty(a.ArticleURL))
+                            {
+                                <a href="@a.ArticleURL" target="_blank" rel="noopener">@a.Title</a>
+                            }
+                            else
+                            {
+                                @a.Title
+                            }
+                        </div>
+
+                        <!-- 3-column label/value grid — mirrors reference exactly -->
+                        <div class="article-meta-grid">
+
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Date</div>
+                                <div class="article-meta-value">@a.Date.ToString("dd-MM-yyyy")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Language</div>
+                                <div class="article-meta-value">@(a.Language ?? "—")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Media Tier</div>
+                                <div class="article-meta-value">—</div>
+                            </div>
+
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Website</div>
+                                <div class="article-meta-value">@(a.WebsiteName ?? "—")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Article Branding</div>
+                                <div class="article-meta-value">@(a.ArticleBranding ?? "—")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Media Type</div>
+                                <div class="article-meta-value">—</div>
+                            </div>
+
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Writer</div>
+                                <div class="article-meta-value">@(a.WriterName ?? "—")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">AD Value</div>
+                                <div class="article-meta-value">@a.ADValue.ToString("N2")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">PR Value</div>
+                                <div class="article-meta-value">@a.PRValue.ToString("N2")</div>
+                            </div>
+
+                            <div class="article-meta-cell" style="grid-column:span 3">
+                                <div class="article-meta-label">Article URL</div>
+                                <div class="article-meta-value">
+                                    @if (!string.IsNullOrEmpty(a.ArticleURL))
+                                    {
+                                        <a href="@a.ArticleURL" target="_blank" rel="noopener">@a.ArticleURL</a>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="article-meta-cell">
+                                
+                        </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- PRINT NEWSPAPERS                                                     -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        @if (Model.Newspapers.Any())
+        {
+            <div class="section">
+                <div class="section-heading">
+                    <span>Print Newspapers</span>
+                    <span class="section-sub">
+                        @Model.NewspaperCount item(s) &nbsp;&nbsp;
+                        PR Value: @Model.TotalPRValue.ToString("N2") &nbsp;&nbsp;
+                        AD Value: @Model.TotalADValue.ToString("N2")
+                    </span>
+                </div>
+
+                @foreach (var n in Model.Newspapers)
+                {
+                    <div class="newspaper-card">
+
+                        <div class="newspaper-card-title">@n.Title</div>
+
+                        <div class="article-meta-grid">
+
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Date</div>
+                                <div class="article-meta-value">@n.Date.ToString("dd-MM-yyyy")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Publication</div>
+                                <div class="article-meta-value">@(n.PublicationName ?? "—")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Toning</div>
+                                <div class="article-meta-value">@(n.Toning ?? "—")</div>
+                            </div>
+
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Article Branding</div>
+                                <div class="article-meta-value">@(n.ArticleBranding ?? "—")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">Headline Branding</div>
+                                <div class="article-meta-value">@(n.HeadlineBranding ?? "—")</div>
+                            </div>
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">AD Value</div>
+                                <div class="article-meta-value">@n.ADValue.ToString("N2")</div>
+                            </div>
+
+                            <div class="article-meta-cell">
+                                <div class="article-meta-label">PR Value</div>
+                                <div class="article-meta-value">@n.PRValue.ToString("N2")</div>
+                            </div>
+                            <div class="article-meta-cell" style="grid-column:span 2">
+                                <div class="article-meta-label" style="min-width:120px">Publication ID</div>
+                                <div class="article-meta-value">@n.PublicationId</div>
+                            </div>
+
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- GRAND TOTAL                                                          -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <div class="section">
+            <div class="section-heading">
+                <span>Grand Total</span>
+            </div>
+            <table class="totals-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th class="r">Items</th>
+                        <th class="r">PR Value</th>
+                        <th class="r">AD Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Online Articles</td>
+                        <td class="r">@Model.ArticleCount</td>
+                        <td class="r">@Model.Articles.Sum(a => a.PRValue).ToString("N2")</td>
+                        <td class="r">@Model.Articles.Sum(a => a.ADValue).ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td>Print Newspapers</td>
+                        <td class="r">@Model.NewspaperCount</td>
+                        <td class="r">@Model.TotalPRValue.ToString("N2")</td>
+                        <td class="r">@Model.TotalADValue.ToString("N2")</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Total</td>
+                        <td class="r">@grandItems</td>
+                        <td class="r">@grandPR.ToString("N2")</td>
+                        <td class="r">@grandAD.ToString("N2")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- ── Footer ──────────────────────────────────────────────────────── -->
+        <div class="report-footer">
+            <span><strong>EditorPR</strong> — Media Monitoring &amp; PR Management</span>
+            <span>@Model.CustomerName &nbsp;|&nbsp; @Model.ReportDate.ToString("MMMM yyyy")</span>
+        </div>
+
+    </div>
+</body>
+</html>

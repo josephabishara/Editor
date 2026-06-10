@@ -12,6 +12,9 @@
             <h4 class="mb-0 fw-semibold">Channel Media Tiers</h4>
             <small class="text-muted">Client: <strong>@clientName</strong></small>
         </div>
+        <a asp-action="ImportChannelCategories" asp-route-id="@Model.CustomerId" class="btn btn-success px-4">
+            <i class="bi bi-upload me-1"></i> Import Excel
+        </a>
     </div>
 
     @if (TempData["Error"] != null)
@@ -24,6 +27,9 @@
 
     <div class="card shadow-sm">
         <div class="card-body p-0">
+           
+               
+            
             <form asp-action="EditChannelCategories" method="post">
                 @Html.AntiForgeryToken()
 
@@ -34,6 +40,7 @@
                         <tr>
                             <th style="width:40px;">#</th>
                             <th>Channel</th>
+                            <th>Price</th>
                             <th style="width:160px;">Media Tier</th>
                         </tr>
                     </thead>
@@ -45,7 +52,9 @@
                                     No channels found. Add channels first.
                                 </td>
                             </tr>
+                           
                         }
+                        
 
                         @for (int i = 0; i < Model.Categories.Count; i++)
                         {
@@ -55,10 +64,12 @@
                             <input type="hidden" name="Categories[@i].CustomerId" value="@cat.CustomerId" />
                             <input type="hidden" name="Categories[@i].ChannelId" value="@cat.ChannelId" />
                             <input type="hidden" name="Categories[@i].ChannelName" value="@cat.ChannelName" />
+                            <input type="hidden" name="Categories[@i].UnitPrice" value="@cat.UnitPrice" />
 
                             <tr>
                                 <td class="text-muted small">@(i + 1)</td>
                                 <td class="fw-semibold">@cat.ChannelName</td>
+                                <td class="fw-semibold">@cat.UnitPrice</td>
                                 <td>
                                     <select name="Categories[@i].MediaTier" class="form-select form-select-sm">
                                         <option value="">-- None --</option>
@@ -78,8 +89,12 @@
                         <button type="submit" class="btn btn-success px-4">Save Changes</button>
                         <a asp-action="Details" asp-route-id="@Model.CustomerId"
                            class="btn btn-outline-secondary">Cancel</a>
+                       
                     </div>
                 }
+                
+                  
+               
             </form>
         </div>
     </div>

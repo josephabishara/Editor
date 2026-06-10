@@ -74,6 +74,15 @@ namespace EditorViewModelLayer.MediaViewModel
         [Display(Name = "Screenshot")]
         public string? Screenshot { get; set; }   // saved path
 
+
+        // In the // ── Source ── region, after ChannelName:
+        public string? CategoryName { get; set; }   // ← add
+        public string? SubCategoryName { get; set; }   // ← add
+
+        // In the // ── Dropdown lists ── region bottom, add:
+        public string? CreatedByUserName { get; set; } // ← add
+        public DateTime CreatedAt { get; set; } // ← add
+
         // ── Dropdown lists ────────────────────────────────────────────────────
         public List<MediaSelectOption> ChannelOptions { get; set; } = new();
         public List<MediaSelectOption> CategoryOptions { get; set; } = new();

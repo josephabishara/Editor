@@ -1,0 +1,385 @@
+﻿@model EditorViewModelLayer.MediaViewModel.ClientArticleDTO
+@using EditorViewModelLayer.MediaViewModel
+
+@{
+    ViewData["Title"] = "Website Details";
+
+    var existingImagePaths = new List<string>();
+    if (!string.IsNullOrEmpty(Model.Images))
+    {
+        try
+        {
+            existingImagePaths = System.Text.Json.JsonSerializer
+                                       .Deserialize<List<string>>(Model.Images)
+                                 ?? new List<string>();
+        }
+        catch { }
+    }
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<style>
+    .detail-label {
+        font-size: .75rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: .15rem;
+        display: block;
+    }
+
+    .detail-value {
+        font-size: .9rem;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .article-content {
+        font-size: .95rem;
+        line-height: 1.75;
+        color: #1e293b;
+    }
+
+    .badge-toning-positive {
+        background: #dcfce7;
+        color: #166534;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-toning-negative {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-toning-neutral {
+        background: #f1f5f9;
+        color: #475569;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-gen-yes {
+        background: #d1fae5;
+        color: #065f46;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .badge-gen-no {
+        background: #f1f5f9;
+        color: #475569;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .form-wrap {
+            padding: 0 !important;
+        }
+
+        .form-card {
+            box-shadow: none !important;
+            border: 1px solid #ccc !important;
+            break-inside: avoid;
+        }
+
+        .form-card-title {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-size: 11pt;
+        }
+    }
+</style>
+
+<div class="form-wrap">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+        <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+           style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);
+            font-size:.82rem;text-decoration:none;" class="no-print">
+            ← Back to Articles
+        </a>
+        <div style="display:flex;gap:.5rem;" class="no-print">
+            <a href="@Url.Action("Edit", new { id = Model.Id })"
+               style="display:inline-flex;align-items:center;gap:.35rem;
+                background:#f59e0b;color:#fff;border:none;border-radius:7px;
+                padding:.38rem .85rem;font-size:.82rem;text-decoration:none;font-weight:600;">
+                ✏️ Edit
+            </a>
+            <button onclick="window.print()"
+                    style="display:inline-flex;align-items:center;gap:.35rem;
+                background:#1e293b;color:#fff;border:none;border-radius:7px;
+                padding:.38rem .85rem;font-size:.82rem;cursor:pointer;font-weight:600;">
+                🖨️ Print / PDF
+            </button>    @await Html.PartialAsync("_navdashboard")
+        </div>
+    </div>
+
+
+
+    <div class="m-header" style="margin-bottom:1.4rem;">
+        <div class="m-header-icon" style="background:#cffafe;">📄</div>
+        <div>
+            <h1>@Model.Title</h1>
+            <p>@Model.ClientName &mdash; @Model.Date.ToString("dd MMMM yyyy")</p>
+        </div>
+    </div>
+
+    @* ── CARD 1: Source & Classification ────────────────────────────────────── *@
+    <div class="form-card">
+        <div class="form-card-title">📂 Source & Classification</div>
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">Website</span>
+                <span class="detail-value">@(Model.WebsiteName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Category</span>
+                <span class="detail-value">@(Model.CategoryName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Sub Category</span>
+                <span class="detail-value">@(Model.SubCategoryName ?? "—")</span>
+            </div>
+        </div>
+        <div class="fg-3" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Writer</span>
+                <span class="detail-value">@(Model.WriterName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Date</span>
+                <span class="detail-value">@Model.Date.ToString("dd MMM yyyy")</span>
+            </div>
+
+            <div>
+                <span class="detail-label">Article URL</span>
+                @if (!string.IsNullOrWhiteSpace(Model.ArticleURL))
+                {
+                    <a href="@Model.ArticleURL" target="_blank" rel="noopener"
+                       style="font-size:.88rem;word-break:break-all;">
+                        @Model.ArticleURL
+                    </a>
+                }
+                else
+                {
+                    <span class="detail-value">—</span>
+                }
+            </div>
+        </div>
+
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">WebsiteType</span>
+                <span class="detail-value">@(Model.WebsiteType ?? "—")</span>
+            </div>
+        </div>
+    </div>
+
+    @* ── CARD 2: Branding & Analysis ────────────────────────────────────────── *@
+    <div class="form-card">
+        <div class="form-card-title">🎯 Branding & Analysis</div>
+        <div class="fg-4">
+            <div>
+                <span class="detail-label">Article Branding</span>
+                <span class="detail-value">@(Model.ArticleBranding ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Headline Branding</span>
+                <span class="detail-value">@(Model.HeadlineBranding ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Picture in Article</span>
+                <span class="detail-value">@(Model.PictureinArticle ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Generation</span>
+                @if (Model.Generation == "Generated")
+                {
+                    <span class="badge-gen-yes">Generated</span>
+                }
+                else
+                {
+                    <span class="badge-gen-no">@(Model.Generation ?? "—")</span>
+                }
+            </div>
+        </div>
+        <div class="fg-2" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Toning</span>
+                @{
+                    var toningClass = Model.Toning switch
+                    {
+                        "Positive" => "badge-toning-positive",
+                        "Negative" => "badge-toning-negative",
+                        "Neutral" => "badge-toning-neutral",
+                        _ => "badge-toning-neutral"
+                    };
+                }
+                <span class="@toningClass">@(Model.Toning ?? "—")</span>
+            </div>
+            <div></div>
+        </div>
+    </div>
+
+    @* ── CARD 3: Website Data ───────────────────────────────────────────────── *@
+    <div class="form-card">
+        <div class="form-card-title">🔄 Website Data</div>
+        <div class="fg-4">
+            <div>
+                <span class="detail-label">Media Type</span>
+                <span class="detail-value">@(Model.MediaType ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Media Tier</span>
+                <span class="detail-value">@(Model.MediaTier ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Frequency</span>
+                <span class="detail-value">@(Model.Frequency ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Language</span>
+                <span class="detail-value">@(Model.Language ?? "—")</span>
+            </div>
+        </div>
+        <div class="fg-4" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Impression</span>
+                <span class="detail-value">@Model.Impression.ToString("N0")</span>
+            </div>
+            <div>
+                <span class="detail-label">Reach (× 4)</span>
+                <span class="detail-value">@Model.Reach.ToString("N0")</span>
+            </div>
+            <div>
+                <span class="detail-label">AD Value</span>
+                <span class="detail-value" style="color:#0ea5e9;font-weight:700;">
+                    @Model.ADValue.ToString("N2")
+                </span>
+            </div>
+            <div>
+                <span class="detail-label">PR Value</span>
+                <span class="detail-value" style="color:#16a34a;font-size:1.05rem;font-weight:700;">
+                    @Model.PRValue.ToString("N2")
+                </span>
+            </div>
+        </div>
+    </div>
+
+    @* ── CARD 4: Article Content ─────────────────────────────────────────────── *@
+    @if (!string.IsNullOrWhiteSpace(Model.Content))
+    {
+        <div class="form-card">
+            <div class="form-card-title">📝 Article Content</div>
+            <div style="margin-bottom:.6rem;">
+                <span class="detail-label">Title</span>
+                <span style="font-size:1rem;font-weight:600;color:#1e293b;">@Model.Title</span>
+            </div>
+            <div class="article-content">
+                @Html.Raw(Model.Content)
+            </div>
+        </div>
+    }
+
+    @* ── CARD 5: Images ─────────────────────────────────────────────────────── *@
+    @if (existingImagePaths.Any())
+    {
+        <div class="form-card">
+            <div class="form-card-title">🖼️ Article Images (@existingImagePaths.Count)</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                @foreach (var path in existingImagePaths)
+                {
+                    <a href="@path" target="_blank" rel="noopener">
+                        <img src="@path"
+                             style="width:130px;height:100px;object-fit:cover;
+                        border-radius:8px;border:1px solid #e2e8f0;
+                        transition:transform .15s;"
+                             onerror="this.src='/images/no-image.png'"
+                             onmouseover="this.style.transform='scale(1.04)'"
+                             onmouseout="this.style.transform=''" />
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @* ── CARD 6: Child Articles ──────────────────────────────────────────────── *@
+    @if (Model.Children != null && Model.Children.Any())
+    {
+        <div class="form-card">
+            <div class="form-card-title">📎 Child Articles (@Model.Children.Count)</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                <thead>
+                    <tr style="border-bottom:2px solid #e2e8f0;color:#64748b;">
+                        <th style="padding:.45rem .6rem;text-align:left;">#</th>
+                        <th style="padding:.45rem .6rem;text-align:left;">Date</th>
+                        <th style="padding:.45rem .6rem;text-align:left;">Website</th>
+                        <th style="padding:.45rem .6rem;text-align:left;">Writer</th>
+                        <th style="padding:.45rem .6rem;text-align:right;">AD Value</th>
+                        <th style="padding:.45rem .6rem;text-align:right;">PR Value</th>
+                        <th style="padding:.45rem .6rem;text-align:left;">Article URL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int ci = 1;
+                    }
+                    @foreach (var child in Model.Children)
+                    {
+                        <tr style="border-bottom:1px solid #f1f5f9;">
+                            <td style="padding:.4rem .6rem;color:#94a3b8;">@ci</td>
+                            <td style="padding:.4rem .6rem;">@child.Date.ToString("dd MMM yyyy")</td>
+                            <td style="padding:.4rem .6rem;">@child.WebsiteId</td>
+                            <td style="padding:.4rem .6rem;">@child.WriterId</td>
+                            <td style="padding:.4rem .6rem;text-align:right;">@child.ADValue.ToString("N0")</td>
+                            <td style="padding:.4rem .6rem;text-align:right;font-weight:700;color:#16a34a;">
+                                @child.PRValue.ToString("N0")
+                            </td>
+                            <td style="padding:.4rem .6rem;">
+                                @if (!string.IsNullOrWhiteSpace(child.ArticleURL))
+                                {
+                                    <a href="@child.ArticleURL" target="_blank" rel="noopener"
+                                       style="font-size:.8rem;">Link</a>
+                                }
+                                else
+                                {
+                                    <span style="color:#94a3b8;">—</span>
+                                }
+                            </td>
+                        </tr>
+                        ci++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @* ── Audit footer ─────────────────────────────────────────────────────────── *@
+    <div style="text-align:right;font-size:.78rem;color:#94a3b8;margin-top:.5rem;margin-bottom:2rem;">
+        Created by <strong style="color:#64748b;">@(Model.CreatedByUserName ?? "—")</strong>
+        &nbsp;·&nbsp;
+        @Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+    </div>
+
+</div>

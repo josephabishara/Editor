@@ -10,7 +10,7 @@ namespace EditorWeb.Controllers
         [Authorize]
         public IActionResult Index()
         {
-            return View();
+            return RedirectToAction("Index", "dashboard");
         }
         [Authorize]
         public IActionResult Privacy()

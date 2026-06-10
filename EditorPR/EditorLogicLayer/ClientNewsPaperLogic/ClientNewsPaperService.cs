@@ -5,7 +5,8 @@ using EditorViewModelLayer.MediaViewModel;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace EditorLogicLayer.ClientNewsPaperLogic
 {
@@ -34,7 +35,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             _context = context;
         }
 
-        // ── List ───────────────────────────────────────────────────────────────
+        // ── List — roots only ──────────────────────────────────────────────────
 
         public async Task<ClientNewsPaperListDTO> GetListAsync(int clientId)
         {
@@ -44,73 +45,68 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             {
                 ClientId = clientId,
                 ClientName = client?.Name ?? string.Empty,
-                Items = items.Select(MapToDTO).ToList()
+                Items = items
+                             .Where(n => n.ParentId == null)   // roots only
+                             .Select(MapToDTO)
+                             .ToList()
             };
         }
 
         public async Task<ClientNewsPaperDTO?> GetByIdAsync(int id)
         {
             var entity = await _clientNewsPaperRepo.GetByIdWithDetailsAsync(id);
-            return entity == null ? null : MapToDTO(entity);
+            if (entity == null) return null;
+
+            var dto = MapToDTO(entity);
+
+            // Load children
+            var children = await _clientNewsPaperRepo.GetChildrenAsync(id);
+            dto.Children = children.Select(MapToChildDTO).ToList();
+
+            return dto;
         }
 
         // ── Create ─────────────────────────────────────────────────────────────
-        // Step 1: Insert NewsPaper master (no FK dependency)
-        // Step 2: Insert ClientNewsPaper with real NewsPaperId
+        // Flow:
+        //   1. Insert NewsPaper master
+        //   2. Insert parent ClientNewsPaper   (ParentId = null)
+        //   3. For each child:
+        //        a. Insert child NewsPaper master
+        //        b. Insert child ClientNewsPaper (ParentId = parent.Id)
 
         public async Task<(bool Success, string Message)> CreateAsync(ClientNewsPaperDTO model)
         {
-            // Auto-calculate before save
             model.PRValue = Math.Round(model.ADValue * 3.5m, 2);
             model.Reach = (model.Circulation ?? 0) * 4;
 
-            // Step 1 — insert NewsPaper master
-            var newsPaper = new NewsPaper
-            {
-                PublicationId = model.PublicationId,
-                Date = model.Date,
-                Title = model.Title,
-                ADValue = model.ADValue,
-                PRValue = model.PRValue,
-                ArticleBranding = model.ArticleBranding,
-                HeadlineBranding = model.HeadlineBranding,
-                Toning = model.Toning,
-                Content = model.Content,
-                IsActive = true,
-                Deleted = 0,
-                CreatedAt = DateTime.UtcNow
-            };
-            await _newsPaperRepo.AddAsync(newsPaper); // newsPaper.Id set by EF
+            // ── Step 1: NewsPaper master ───────────────────────────────────────
+            var newsPaperMaster = BuildNewsPaper(model);
+            await _newsPaperRepo.AddAsync(newsPaperMaster);
 
-            // Step 2 — insert ClientNewsPaper with real NewsPaperId
-            var clientNewsPaper = new ClientNewsPaper
-            {
-                NewsPaperId = newsPaper.Id,       // real Id — no FK violation
-                ClientId = model.ClientId,
-                PublicationId = model.PublicationId,
-                CategoryId = model.CategoryId,
-                SubCategoryId = model.SubCategoryId,
-                WriterId = model.WriterId,
-                Date = model.Date,
-                Title = model.Title,
-                Pages = model.Pages,
-                Height = model.Height,
-                Width = model.Width,
-                ADValue = model.ADValue,
-                PRValue = model.PRValue,
-                ArticleBranding = model.ArticleBranding,
-                HeadlineBranding = model.HeadlineBranding,
-                Toning = model.Toning,
-                Content = model.Content,
-                //Images = model.Images,
-                Publish = false,
-                IsActive = true,
-                Deleted = 0,
-                CreatedAt = DateTime.UtcNow
-            };
-            await _clientNewsPaperRepo.AddAsync(clientNewsPaper);
+            // ── Step 2: Parent ClientNewsPaper ─────────────────────────────────
+            var parent = BuildClientNewsPaper(model, newsPaperMaster.Id, parentId: null);
+            await _clientNewsPaperRepo.AddAsync(parent);
 
-            return (true, "Newspaper article created successfully.");
+            // ── Step 3: Children ───────────────────────────────────────────────
+            foreach (var child in model.Children)
+            {
+                child.PRValue = Math.Round(child.ADValue * 3.5m, 2);
+                child.Reach = (child.Circulation ?? 0) * 4;
+
+                var childMaster = BuildNewsPaperFromChild(child, model);
+                await _newsPaperRepo.AddAsync(childMaster);
+
+                var childRecord = BuildClientNewsPaperFromChild(
+                    child, model, childMaster.Id, parentId: parent.Id);
+                await _clientNewsPaperRepo.AddAsync(childRecord);
+            }
+
+            var childCount = model.Children.Count;
+            var msg = childCount > 0
+                ? $"Newspaper created with {childCount} child clipping(s)."
+                : "Newspaper article created successfully.";
+
+            return (true, msg);
         }
 
         // ── Update ─────────────────────────────────────────────────────────────
@@ -120,43 +116,74 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             var existing = await _clientNewsPaperRepo.GetByIdWithDetailsAsync(model.Id);
             if (existing == null) return (false, "Record not found.");
 
-            // Recalculate
             model.PRValue = Math.Round(model.ADValue * 3.5m, 2);
             model.Reach = (model.Circulation ?? 0) * 4;
 
-            existing.PublicationId = model.PublicationId;
-            existing.CategoryId = model.CategoryId;
-            existing.SubCategoryId = model.SubCategoryId;
-            existing.WriterId = model.WriterId;
-            existing.Date = model.Date;
-            existing.Title = model.Title;
-            existing.Pages = model.Pages;
-            existing.Height = model.Height;
-            existing.Width = model.Width;
-            existing.ADValue = model.ADValue;
-            existing.PRValue = model.PRValue;
-            existing.ArticleBranding = model.ArticleBranding;
-            existing.HeadlineBranding = model.HeadlineBranding;
-            existing.Toning = model.Toning;
-            existing.Content = model.Content;
-            //existing.Images = model.Images;
+            ApplyToClientNewsPaper(existing, model);
             existing.UpdatedAt = DateTime.UtcNow;
+            await _clientNewsPaperRepo.UpdateAsync(existing);
 
-            // Also update NewsPaper master
+            // Update NewsPaper master
             if (existing.NewsPaper != null)
             {
-                existing.NewsPaper.Title = model.Title;
-                existing.NewsPaper.ADValue = model.ADValue;
-                existing.NewsPaper.PRValue = model.PRValue;
-                existing.NewsPaper.ArticleBranding = model.ArticleBranding;
-                existing.NewsPaper.HeadlineBranding = model.HeadlineBranding;
-                existing.NewsPaper.Toning = model.Toning;
-                existing.NewsPaper.Content = model.Content;
+                ApplyToNewsPaper(existing.NewsPaper, model);
                 existing.NewsPaper.UpdatedAt = DateTime.UtcNow;
                 await _newsPaperRepo.UpdateAsync(existing.NewsPaper);
             }
 
-            await _clientNewsPaperRepo.UpdateAsync(existing);
+            // ── Sync children ──────────────────────────────────────────────────
+            var existingChildren = await _clientNewsPaperRepo.GetChildrenAsync(model.Id);
+
+            foreach (var childDto in model.Children)
+            {
+                childDto.PRValue = Math.Round(childDto.ADValue * 3.5m, 2);
+                childDto.Reach = (childDto.Circulation ?? 0) * 4;
+
+                if (childDto.Id > 0)
+                {
+                    // Update existing child
+                    var existingChild = existingChildren.FirstOrDefault(c => c.Id == childDto.Id);
+                    if (existingChild != null)
+                    {
+                        ApplyChildToClientNewsPaper(existingChild, childDto, model);
+                        existingChild.UpdatedAt = DateTime.UtcNow;
+                        await _clientNewsPaperRepo.UpdateAsync(existingChild);
+
+                        var childMaster = await _newsPaperRepo.GetByIdAsync(existingChild.NewsPaperId);
+                        if (childMaster != null)
+                        {
+                            ApplyChildToNewsPaper(childMaster, childDto, model);
+                            childMaster.UpdatedAt = DateTime.UtcNow;
+                            await _newsPaperRepo.UpdateAsync(childMaster);
+                        }
+                    }
+                }
+                else
+                {
+                    // New child added on Edit
+                    var childMaster = BuildNewsPaperFromChild(childDto, model);
+                    await _newsPaperRepo.AddAsync(childMaster);
+
+                    var childRecord = BuildClientNewsPaperFromChild(
+                        childDto, model, childMaster.Id, parentId: model.Id);
+                    await _clientNewsPaperRepo.AddAsync(childRecord);
+                }
+            }
+
+            // Soft-delete removed children
+            var submittedChildIds = model.Children
+                .Where(c => c.Id > 0)
+                .Select(c => c.Id)
+                .ToHashSet();
+
+            foreach (var orphan in existingChildren.Where(c => !submittedChildIds.Contains(c.Id)))
+            {
+                orphan.IsActive = false;
+                orphan.Deleted = 1;
+                orphan.DeletedAt = DateTime.UtcNow;
+                await _clientNewsPaperRepo.UpdateAsync(orphan);
+            }
+
             return (true, "Newspaper article updated successfully.");
         }
 
@@ -167,6 +194,16 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             var existing = await _clientNewsPaperRepo.GetByIdWithDetailsAsync(id);
             if (existing == null) return (false, "Record not found.");
 
+            // Soft-delete children first
+            var children = await _clientNewsPaperRepo.GetChildrenAsync(id);
+            foreach (var child in children)
+            {
+                child.IsActive = false;
+                child.Deleted = 1;
+                child.DeletedAt = DateTime.UtcNow;
+                await _clientNewsPaperRepo.UpdateAsync(child);
+            }
+
             existing.IsActive = false;
             existing.Deleted = 1;
             existing.DeletedAt = DateTime.UtcNow;
@@ -174,13 +211,12 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
 
             // Soft-delete master only if no other clients reference it
             var others = await _clientNewsPaperRepo.GetByNewsPaperIdAsync(existing.NewsPaperId);
-            if (!others.Any(o => o.Id != id))
+            if (!others.Any(o => o.Id != id && o.IsActive))
             {
-                var master = existing.NewsPaper;
-                master.IsActive = false;
-                master.Deleted = 1;
-                master.DeletedAt = DateTime.UtcNow;
-                await _newsPaperRepo.UpdateAsync(master);
+                existing.NewsPaper.IsActive = false;
+                existing.NewsPaper.Deleted = 1;
+                existing.NewsPaper.DeletedAt = DateTime.UtcNow;
+                await _newsPaperRepo.UpdateAsync(existing.NewsPaper);
             }
 
             return (true, "Record deleted successfully.");
@@ -268,7 +304,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             var pub = await _publicationRepo.GetByIdAsync(publicationId);
             if (pub == null) return new PublicationAutoFillDTO();
 
-            // MediaTier comes from PublicationCustomerCategory for this client
             var pcc = await _context.Set<PublicationCustomerCategory>()
                 .FirstOrDefaultAsync(p => p.PublicationId == publicationId
                                        && p.CustomerId == clientId);
@@ -289,7 +324,203 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             };
         }
 
-        // ── Mapper ─────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════════
+        // PRIVATE BUILDERS
+        // ═══════════════════════════════════════════════════════════════════════
+
+        private static NewsPaper BuildNewsPaper(ClientNewsPaperDTO m) => new()
+        {
+            PublicationId = m.PublicationId,
+            Date = m.Date,
+            Title = m.Title,
+            ADValue = m.ADValue,
+            PRValue = m.PRValue,
+            ArticleBranding = m.ArticleBranding,
+            HeadlineBranding = m.HeadlineBranding,
+            Toning = m.Toning,
+            pictureInArticle = m.PictureinArticle == "Yes",
+            Generation = m.Generation == "Generated",
+            Content = m.Content,
+            Images = m.Images,       // ← images saved here too
+            IsActive = true,
+            Deleted = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        private static NewsPaper BuildNewsPaperFromChild(
+            ChildNewsPaperDTO child, ClientNewsPaperDTO parent) => new()
+            {
+                PublicationId = child.PublicationId,
+                Date = child.Date,
+                Title = parent.Title,         // ← inherited
+                ADValue = child.ADValue,
+                PRValue = child.PRValue,
+                ArticleBranding = parent.ArticleBranding,
+                HeadlineBranding = parent.HeadlineBranding,
+                Toning = parent.Toning,
+                Content = parent.Content,       // ← inherited
+                Images = parent.Images,        // ← inherited
+                IsActive = true,
+                Deleted = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+
+        private static ClientNewsPaper BuildClientNewsPaper(
+            ClientNewsPaperDTO m, int newsPaperId, int? parentId) => new()
+            {
+                NewsPaperId = newsPaperId,
+                ClientId = m.ClientId,
+                ParentId = parentId,
+                PublicationId = m.PublicationId,
+                CategoryId = m.CategoryId,
+                SubCategoryId = m.SubCategoryId,
+                WriterId = m.WriterId,
+                Date = m.Date,
+                Title = m.Title,
+                Pages = m.Pages,
+                Height = m.Height,
+                Width = m.Width,
+                ADValue = m.ADValue,
+                PRValue = m.PRValue,
+                ArticleBranding = m.ArticleBranding,
+                HeadlineBranding = m.HeadlineBranding,
+                Toning = m.Toning,
+                Content = m.Content,
+                Images = m.Images,
+                MediaType = m.MediaType,
+                MediaTier = m.MediaTier,
+                Frequency = m.Frequency,
+                Language = m.Language,
+                Circulation = m.Circulation,
+                Reach = m.Reach,
+                Publish = false,
+                IsActive = true,
+                Deleted = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+
+        private static ClientNewsPaper BuildClientNewsPaperFromChild(
+            ChildNewsPaperDTO child, ClientNewsPaperDTO parent,
+            int newsPaperId, int parentId) => new()
+            {
+                NewsPaperId = newsPaperId,
+                ClientId = parent.ClientId,
+                ParentId = parentId,              // ← links to parent row
+                PublicationId = child.PublicationId,   // ← child-specific
+                CategoryId = parent.CategoryId,     // ← inherited
+                SubCategoryId = parent.SubCategoryId,  // ← inherited
+                WriterId = child.WriterId,         // ← child-specific
+                Date = child.Date,             // ← child-specific
+                Title = parent.Title,           // ← inherited
+                Pages = child.Pages,            // ← child-specific
+                Height = child.Height,           // ← child-specific
+                Width = child.Width,            // ← child-specific
+                ADValue = child.ADValue,
+                PRValue = child.PRValue,
+                ArticleBranding = parent.ArticleBranding,
+                HeadlineBranding = parent.HeadlineBranding,
+                Toning = parent.Toning,
+                Content = parent.Content,         // ← inherited
+                Images = parent.Images,          // ← inherited
+                MediaType = child.MediaType,
+                MediaTier = child.MediaTier,
+                Frequency = child.Frequency,
+                Language = child.Language ?? parent.Language,
+                Circulation = child.Circulation,
+                Reach = child.Reach,
+                Publish = false,
+                IsActive = true,
+                Deleted = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+
+        // ── Apply update helpers ───────────────────────────────────────────────
+
+        private static void ApplyToClientNewsPaper(ClientNewsPaper e, ClientNewsPaperDTO m)
+        {
+            e.PublicationId = m.PublicationId;
+            e.CategoryId = m.CategoryId;
+            e.SubCategoryId = m.SubCategoryId;
+            e.WriterId = m.WriterId;
+            e.Date = m.Date;
+            e.Title = m.Title;
+            e.Pages = m.Pages;
+            e.Height = m.Height;
+            e.Width = m.Width;
+            e.ADValue = m.ADValue;
+            e.PRValue = m.PRValue;
+            e.ArticleBranding = m.ArticleBranding;
+            e.HeadlineBranding = m.HeadlineBranding;
+      
+            e.Toning = m.Toning;
+            e.Content = m.Content;
+            e.Images = m.Images;
+            e.MediaType = m.MediaType;
+            e.MediaTier = m.MediaTier;
+            e.Frequency = m.Frequency;
+            e.Language = m.Language;
+            e.Circulation = m.Circulation;
+            e.Reach = m.Reach;
+        }
+
+        private static void ApplyToNewsPaper(NewsPaper g, ClientNewsPaperDTO m)
+        {
+            g.Title = m.Title;
+            g.ADValue = m.ADValue;
+            g.PRValue = m.PRValue;
+            g.ArticleBranding = m.ArticleBranding;
+            g.HeadlineBranding = m.HeadlineBranding;
+            g.pictureInArticle = m.PictureinArticle == "Yes";
+            g.Generation = m.Generation == "Generated";
+            g.Toning = m.Toning;
+            g.Content = m.Content;
+            g.Images = m.Images;
+        }
+
+        private static void ApplyChildToClientNewsPaper(
+            ClientNewsPaper e, ChildNewsPaperDTO child, ClientNewsPaperDTO parent)
+        {
+            e.PublicationId = child.PublicationId;
+            e.WriterId = child.WriterId;
+            e.Date = child.Date;
+            e.Pages = child.Pages;
+            e.Height = child.Height;
+            e.Width = child.Width;
+            e.ADValue = child.ADValue;
+            e.PRValue = child.PRValue;
+            e.MediaType = child.MediaType;
+            e.MediaTier = child.MediaTier;
+            e.Frequency = child.Frequency;
+            e.Language = child.Language ?? parent.Language;
+            e.Circulation = child.Circulation;
+            e.Reach = child.Reach;
+            // inherited from parent:
+            e.Title = parent.Title;
+            e.Content = parent.Content;
+            e.Images = parent.Images;
+            e.CategoryId = parent.CategoryId;
+            e.SubCategoryId = parent.SubCategoryId;
+            e.ArticleBranding = parent.ArticleBranding;
+            e.HeadlineBranding = parent.HeadlineBranding;
+            e.Toning = parent.Toning;
+        }
+
+        private static void ApplyChildToNewsPaper(
+            NewsPaper g, ChildNewsPaperDTO child, ClientNewsPaperDTO parent)
+        {
+            g.PublicationId = child.PublicationId;
+            g.Date = child.Date;
+            g.ADValue = child.ADValue;
+            g.PRValue = child.PRValue;
+            g.Title = parent.Title;
+            g.Content = parent.Content;
+            g.Images = parent.Images;
+            g.ArticleBranding = parent.ArticleBranding;
+            g.HeadlineBranding = parent.HeadlineBranding;
+            g.Toning = parent.Toning;
+        }
+
+        // ── Mappers ────────────────────────────────────────────────────────────
 
         private static ClientNewsPaperDTO MapToDTO(ClientNewsPaper e) => new()
         {
@@ -297,6 +528,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             NewsPaperId = e.NewsPaperId,
             ClientId = e.ClientId,
             ClientName = e.Client?.Name,
+            ParentId = e.ParentId,
             PublicationId = e.PublicationId,
             CategoryId = e.CategoryId,
             SubCategoryId = e.SubCategoryId,
@@ -307,14 +539,162 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             Pages = e.Pages,
             Height = e.Height,
             Width = e.Width,
-            ADValue = e.ADValue,
-            PRValue = e.PRValue,
+            ADValue = e.ADValue ?? 0,
+            PRValue = e.PRValue ?? 0,
             ArticleBranding = e.ArticleBranding,
             HeadlineBranding = e.HeadlineBranding,
+            PictureinArticle = e.pictureInArticle == true ? "Yes" : "No",
+            Generation = e.Generation == true ? "Generated" : "Not Generated",
             Toning = e.Toning,
             Content = e.Content,
-           // Images = e.Images,
+            Images = e.Images,
+            MediaType = e.MediaType,
+            MediaTier = e.MediaTier,
+            Frequency = e.Frequency,
+            Language = e.Language,
+            Circulation = e.Circulation,
+            Reach = e.Reach,
             Publish = e.Publish
         };
+
+        private static ChildNewsPaperDTO MapToChildDTO(ClientNewsPaper e) => new()
+        {
+            Id = e.Id,
+            PublicationId = e.PublicationId,
+            WriterId = e.WriterId,
+            Date = e.Date,
+            Pages = e.Pages,
+            Height = e.Height,
+            Width = e.Width,
+            ADValue = e.ADValue ?? 0,
+            PRValue = e.PRValue ?? 0,
+            MediaType = e.MediaType,
+            MediaTier = e.MediaTier,
+            Frequency = e.Frequency,
+            Language = e.Language,
+            Circulation = e.Circulation,
+            Reach = e.Reach
+        };
+
+
+        public async Task<(bool Success, string Message, int NewId)> DuplicateAsync(int id)
+        {
+            var original = await _clientNewsPaperRepo.GetByIdWithDetailsAsync(id);
+            if (original == null) return (false, "Newspaper not found.", 0);
+
+            // ── Step 1: Duplicate NewsPaper master ────────────────────────────────────
+            var newMaster = new EditorEntitiesLayer.Entities.NewsPaper
+            {
+                PublicationId = original.PublicationId,
+                Date = original.Date,
+                Title = original.Title + " (Copy)",
+                ADValue = original.ADValue ?? 0,
+                PRValue = original.PRValue ?? 0,
+                ArticleBranding = original.ArticleBranding,
+                HeadlineBranding = original.HeadlineBranding,
+                Toning = original.Toning,
+                Content = original.Content,
+                Images = original.Images,
+                IsActive = true,
+                Deleted = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _newsPaperRepo.AddAsync(newMaster);
+
+            // ── Step 2: Duplicate parent ClientNewsPaper ──────────────────────────────
+            var newParent = new EditorEntitiesLayer.Entities.ClientNewsPaper
+            {
+                NewsPaperId = newMaster.Id,
+                ClientId = original.ClientId,
+                ParentId = null,
+                PublicationId = original.PublicationId,
+                CategoryId = original.CategoryId,
+                SubCategoryId = original.SubCategoryId,
+                WriterId = original.WriterId,
+                Date = original.Date,
+                Title = original.Title + " (Copy)",
+                Pages = original.Pages,
+                Height = original.Height,
+                Width = original.Width,
+                ADValue = original.ADValue,
+                PRValue = original.PRValue,
+                ArticleBranding = original.ArticleBranding,
+                HeadlineBranding = original.HeadlineBranding,
+                Toning = original.Toning,
+                Content = original.Content,
+                Images = original.Images,
+                MediaType = original.MediaType,
+                MediaTier = original.MediaTier,
+                Frequency = original.Frequency,
+                Language = original.Language,
+                Circulation = original.Circulation,
+                Reach = original.Reach,
+                Publish = false,
+                IsActive = true,
+                Deleted = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _clientNewsPaperRepo.AddAsync(newParent);
+
+            // ── Step 3: Duplicate each child ──────────────────────────────────────────
+            var children = await _clientNewsPaperRepo.GetChildrenAsync(id);
+            foreach (var child in children)
+            {
+                var childMaster = new EditorEntitiesLayer.Entities.NewsPaper
+                {
+                    PublicationId = child.PublicationId,
+                    Date = child.Date,
+                    Title = newParent.Title,
+                    ADValue = child.ADValue ?? 0,
+                    PRValue = child.PRValue ?? 0,
+                    ArticleBranding = child.ArticleBranding,
+                    HeadlineBranding = child.HeadlineBranding,
+                    Toning = child.Toning,
+                    Content = child.Content,
+                    Images = child.Images,
+                    IsActive = true,
+                    Deleted = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _newsPaperRepo.AddAsync(childMaster);
+
+                var newChild = new EditorEntitiesLayer.Entities.ClientNewsPaper
+                {
+                    NewsPaperId = childMaster.Id,
+                    ClientId = child.ClientId,
+                    ParentId = newParent.Id,
+                    PublicationId = child.PublicationId,
+                    CategoryId = child.CategoryId,
+                    SubCategoryId = child.SubCategoryId,
+                    WriterId = child.WriterId,
+                    Date = child.Date,
+                    Title = child.Title,
+                    Pages = child.Pages,
+                    Height = child.Height,
+                    Width = child.Width,
+                    ADValue = child.ADValue,
+                    PRValue = child.PRValue,
+                    ArticleBranding = child.ArticleBranding,
+                    HeadlineBranding = child.HeadlineBranding,
+                    Toning = child.Toning,
+                    Content = child.Content,
+                    Images = child.Images,
+                    MediaType = child.MediaType,
+                    MediaTier = child.MediaTier,
+                    Frequency = child.Frequency,
+                    Language = child.Language,
+                    Circulation = child.Circulation,
+                    Reach = child.Reach,
+                    Publish = false,
+                    IsActive = true,
+                    Deleted = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _clientNewsPaperRepo.AddAsync(newChild);
+            }
+
+            return (true, "Newspaper duplicated successfully.", newParent.Id);
+        }
+
     }
 }

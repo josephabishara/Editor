@@ -82,6 +82,54 @@ html, body {
     transition: all 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
 }
 
+.chess-decoration {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    pointer-events: none;
+}
+    .chess-decoration img {
+        width: 180px;
+        opacity: 0.08;
+        filter: drop-shadow(0 0 15px rgba(128,0,0,.3));
+        animation: floatChess 6s ease-in-out infinite;
+    }
+
+   /* .chess-decoration img {
+        width: 120px;
+        opacity: 0.15;
+        animation: floatChess 4s ease-in-out infinite;
+    }*/
+
+    .chess-decoration.left {
+        left: 30px;
+    }
+
+    .chess-decoration.right {
+        right: 30px;
+    }
+
+        .chess-decoration.right img {
+            animation-delay: 2s;
+        }
+
+@keyframes floatChess {
+    0% {
+        transform: translateY(0px) rotate(-2deg);
+    }
+
+    50% {
+        transform: translateY(-15px) rotate(2deg);
+    }
+
+    100% {
+        transform: translateY(0px) rotate(-2deg);
+    }
+}
+
+
+
 input[type="radio"] {
     display: none;
 }
@@ -165,14 +213,12 @@ form .field input:focus::placeholder {
     margin-top: 30px;
 }
 
-    .form-inner form .pass-link a,
-    .form-inner form .signup-link a {
+    .form-inner form .pass-link a, .form-inner form .signup-link a {
         color: #1a75ff;
         text-decoration: none;
     }
 
-        .form-inner form .pass-link a:hover,
-        .form-inner form .signup-link a:hover {
+        .form-inner form .pass-link a:hover, .form-inner form .signup-link a:hover {
             text-decoration: underline;
         }
 

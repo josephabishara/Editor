@@ -1,4 +1,5 @@
-﻿using EditorViewModelLayer.MediaViewModel;
+﻿using EditorEntitiesLayer.Entities;
+using EditorViewModelLayer.MediaViewModel;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,6 +13,8 @@ namespace EditorLogicLayer.ClientArticleLogic
         Task<(bool Success, string Message)> CreateAsync(ClientArticleDTO model);
         Task<(bool Success, string Message)> UpdateAsync(ClientArticleDTO model);
         Task<(bool Success, string Message)> DeleteAsync(int id);
+        Task<(bool Success, string Message)> PublishAsync(int id);
+        Task<(bool Success, string Message)> UnpublishAsync(int id);
 
         // Dropdown builders
         Task<List<MediaSelectOption>> GetWebsiteOptionsAsync(int selectedId = 0);
@@ -21,5 +24,8 @@ namespace EditorLogicLayer.ClientArticleLogic
 
         // AJAX: auto-fill website fields by websiteId + clientId
         Task<WebsiteAutoFillDTO> GetWebsiteAutoFillAsync(int websiteId, int clientId);
+        // Task<IEnumerable<ClientArticle>> GetChildrenAsync(int parentId);
+        Task<(bool Success, string Message, int NewId)> DuplicateAsync(int id);
+
     }
 }

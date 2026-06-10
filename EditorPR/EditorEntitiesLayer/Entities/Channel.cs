@@ -14,8 +14,7 @@ namespace EditorEntitiesLayer.Entities
         [MaxLength(10)]
         public string? MediaTier { get; set; }       // A, B, C
 
-        [MaxLength(200)]
-        public string? ChannelReach { get; set; }
+        public int ChannelReach { get; set; }
 
         [MaxLength(200)]
         public string? Distribution { get; set; }

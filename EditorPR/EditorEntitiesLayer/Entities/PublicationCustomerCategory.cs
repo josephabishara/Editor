@@ -16,9 +16,30 @@ namespace EditorEntitiesLayer.Entities
 
         [Required]
         public int PublicationId { get; set; }   // FK → Publication
+      
+
+        // ── Editable fields — defaults copied from Publication on creation ────────
+        [MaxLength(50)]
+        public string? MediaType { get; set; }  // newspaper, magazine, journal, newsletter
 
         [MaxLength(10)]
-        public string? MediaTier { get; set; }   // editable — default copied from Publication on creation
+        public string? MediaTier { get; set; }  // A, B, C
+
+        [MaxLength(50)]
+        public string? Frequency { get; set; }
+
+       
+
+        [MaxLength(200)]
+        public string? Distribution { get; set; }
+
+        [MaxLength(50)]
+        public string? Language { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal UnitPrice { get; set; }  // default: Publication.CmPrice
+
+        public int? Circulation { get; set; }
 
         // ── Navigation ──────────────────────────────────────────────────────
         [ForeignKey(nameof(CustomerId))]

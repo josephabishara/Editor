@@ -1,4 +1,5 @@
-﻿using EditorEntitiesLayer.Entities;
+﻿    using EditorEntitiesLayer.Entities;
+using EditorLogicLayer.Helpers;
 using EditorRepositoryLayer.IRepositories;
 using EditorViewModelLayer.ClientViewModel;
 using EditorViewModelLayer.General;
@@ -235,23 +236,24 @@ namespace EditorLogicLayer.Client
         {
             var existing = await _categoryRepo.GetByClientIdAsync(model.CustomerId);
             var existingDict = existing.ToDictionary(c => c.Id);
-
             var toUpdate = new List<WebsiteCustomerCategory>();
 
             foreach (var dto in model.Categories)
             {
-                if (existingDict.TryGetValue(dto.Id, out var category))
-                {
-                    category.MediaTier = dto.MediaTier;
-                    toUpdate.Add(category);
-                }
+                if (!existingDict.TryGetValue(dto.Id, out var cat)) continue;
+                cat.MediaTier = dto.MediaTier;
+                cat.Frequency = dto.Frequency;
+                cat.Reach = dto.Reach;
+                cat.Distribution = dto.Distribution;
+                cat.Language = dto.Language;
+                cat.UnitPrice = dto.UnitPrice;
+                toUpdate.Add(cat);
             }
 
-            if (toUpdate.Any())
-                await _categoryRepo.UpdateRangeAsync(toUpdate);
-
+            if (toUpdate.Any()) await _categoryRepo.UpdateRangeAsync(toUpdate);
             return (true, "Website categories updated successfully.");
         }
+
 
         public async Task<IEnumerable<PublicationCustomerCategoryDTO>> GetClientPublicationCategoriesAsync(int clientId)
         {
@@ -267,18 +269,21 @@ namespace EditorLogicLayer.Client
 
             foreach (var dto in model.Categories)
             {
-                if (existingDict.TryGetValue(dto.Id, out var category))
-                {
-                    category.MediaTier = dto.MediaTier;
-                    toUpdate.Add(category);
-                }
+                if (!existingDict.TryGetValue(dto.Id, out var cat)) continue;
+                cat.MediaType = dto.MediaType;
+                cat.MediaTier = dto.MediaTier;
+                cat.Frequency = dto.Frequency;
+                cat.Distribution = dto.Distribution;
+                cat.Language = dto.Language;
+                cat.UnitPrice = dto.UnitPrice;
+                cat.Circulation = dto.Circulation;
+                toUpdate.Add(cat);
             }
 
-            if (toUpdate.Any())
-                await _publicationCategoryRepo.UpdateRangeAsync(toUpdate);
-
+            if (toUpdate.Any()) await _publicationCategoryRepo.UpdateRangeAsync(toUpdate);
             return (true, "Publication categories updated successfully.");
         }
+
 
         public async Task<IEnumerable<ChannelCustomerCategoryDTO>> GetClientChannelCategoriesAsync(int clientId)
         {
@@ -294,18 +299,20 @@ namespace EditorLogicLayer.Client
 
             foreach (var dto in model.Categories)
             {
-                if (existingDict.TryGetValue(dto.Id, out var category))
-                {
-                    category.MediaTier = dto.MediaTier;
-                    toUpdate.Add(category);
-                }
+                if (!existingDict.TryGetValue(dto.Id, out var cat)) continue;
+                cat.MediaTier = dto.MediaTier;
+                cat.Reach = dto.Reach;
+                cat.Distribution = dto.Distribution;
+                cat.Language = dto.Language;
+                cat.UnitPrice = dto.UnitPrice;
+                cat.UnitCurrency = dto.UnitCurrency;
+                toUpdate.Add(cat);
             }
 
-            if (toUpdate.Any())
-                await _channelCategoryRepo.UpdateRangeAsync(toUpdate);
-
+            if (toUpdate.Any()) await _channelCategoryRepo.UpdateRangeAsync(toUpdate);
             return (true, "Channel categories updated successfully.");
         }
+
 
         // ── Assistant CRUD ─────────────────────────────────────────────────────
         // BUG 1: All methods below were missing — now implemented here in ClientService
@@ -566,6 +573,292 @@ namespace EditorLogicLayer.Client
                 return (null, $"Failed to save photo: {ex.Message}");
             }
         }
+
+        // ── Website Categories Excel ──────────────────────────────────────────────────
+
+        public byte[] ExportWebsiteCategoriesToExcel(int clientId, IEnumerable<WebsiteCustomerCategoryDTO> categories)
+        {
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var ws = workbook.Worksheets.Add("WebsiteCategories");
+
+            // Col layout: A=Id  B=WebsiteId  C=WebsiteName  D=WebsiteURL  E=MediaTier  F=UnitPrice
+            var headers = new[] { "Id", "WebsiteId", "Website Name", "Website URL", "Media Tier", "Unit Price" };
+            WriteHeaders(ws, headers, "#2E75B6");
+
+            int row = 2;
+            foreach (var c in categories)
+            {
+                ws.Cell(row, 1).Value = c.Id;
+                ws.Cell(row, 2).Value = c.WebsiteId;
+                ws.Cell(row, 3).Value = c.WebsiteName;
+                ws.Cell(row, 4).Value = c.WebsiteURL;
+                ws.Cell(row, 5).Value = c.MediaTier ?? "";
+                ws.Cell(row, 6).Value = c.UnitPrice;
+                ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0.00";
+
+                // Lock Id, WebsiteId, Name, URL — visually distinguish read-only cols
+                ws.Range(row, 1, row, 4).Style.Fill.BackgroundColor =
+                    ClosedXML.Excel.XLColor.FromHtml("#F2F2F2");
+
+                if (row % 2 == 0)
+                {
+                    ws.Cell(row, 5).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#EBF3FB");
+                    ws.Cell(row, 6).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#EBF3FB");
+                }
+
+                ws.Range(row, 1, row, 6).Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+                row++;
+            }
+
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+
+            // Protect editable columns note in A1 comment
+            ws.Cell(1, 5).GetComment().AddText("Edit columns E (Media Tier) and F (Unit Price) only. Do not change columns A–D.");
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
+
+        public async Task<(bool Success, string Message, int UpdatedCount)>
+         ImportWebsiteCategoriesFromExcelAsync(int clientId, Stream fileStream, string fileName)
+        {
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+                return (false, "Only .xlsx and .xls files are supported.", 0);
+
+            var existing = (await _categoryRepo.GetByClientIdAsync(clientId)).ToDictionary(c => c.Id);
+            if (!existing.Any()) return (false, "No website categories found for this client.", 0);
+
+            var toUpdate = new List<WebsiteCustomerCategory>();
+            var errors = new List<string>();
+
+            try
+            {
+                using var workbook = new ClosedXML.Excel.XLWorkbook(fileStream);
+                var ws = workbook.Worksheet(1);
+                var rows = ws.RangeUsed()?.RowsUsed().Skip(1).ToList();
+                if (rows == null || rows.Count == 0) return (false, "The file has no data rows.", 0);
+
+                int rowNum = 2;
+                foreach (var row in rows)
+                {
+                    // Col A = Id (key), E=MediaTier, F=Frequency, G=Reach,
+                    // H=Distribution, I=Language, J=UnitPrice
+                    if (!int.TryParse(row.Cell(1).GetString().Trim(), out int id))
+                    {
+                        errors.Add($"Row {rowNum}: Id is missing or invalid."); rowNum++; continue;
+                    }
+                    if (!existing.TryGetValue(id, out var cat))
+                    {
+                        errors.Add($"Row {rowNum}: Id {id} does not belong to this client."); rowNum++; continue;
+                    }
+
+                    decimal.TryParse(row.Cell(10).GetString().Trim(), out decimal price);
+
+                    cat.MediaTier = row.Cell(5).GetString().Trim().NullIfEmpty();
+                    cat.Frequency = row.Cell(6).GetString().Trim().NullIfEmpty();
+                    cat.Reach = row.Cell(7).GetString().Trim().NullIfEmpty();
+                    cat.Distribution = row.Cell(8).GetString().Trim().NullIfEmpty();
+                    cat.Language = row.Cell(9).GetString().Trim().NullIfEmpty();
+                    cat.UnitPrice = price;
+                    toUpdate.Add(cat);
+                    rowNum++;
+                }
+            }
+            catch (Exception ex) { return (false, $"Failed to read file: {ex.Message}", 0); }
+
+            if (errors.Any()) return (false, string.Join(" | ", errors), 0);
+            if (toUpdate.Any()) await _categoryRepo.UpdateRangeAsync(toUpdate);
+            return (true, $"{toUpdate.Count} website category row(s) updated.", toUpdate.Count);
+        }
+
+
+        // ── Publication Categories Excel ──────────────────────────────────────────────
+        public byte[] ExportPublicationCategoriesToExcel(
+     IEnumerable<PublicationCustomerCategoryDTO> categories, string clientName)
+        {
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var ws = workbook.Worksheets.Add("PublicationCategories");
+
+            // Col layout (10 columns):
+            // A=Id  B=PublicationId  C=Publication Name         ← key cols (read-only)
+            // D=Media Type  E=Media Tier  F=Frequency
+            // G=Distribution  H=Language  I=Unit Price  J=Circulation  ← editable
+            var headers = new[]
+            {
+        "Id", "PublicationId", "Publication Name",
+        "Media Type", "Media Tier", "Frequency",
+        "Distribution", "Language", "Unit Price", "Circulation"
+    };
+            WriteHeaders(ws, headers, "#2E75B6");
+
+            int row = 2;
+            foreach (var p in categories)
+            {
+                ws.Cell(row, 1).Value = p.Id;
+                ws.Cell(row, 2).Value = p.PublicationId;
+                ws.Cell(row, 3).Value = p.PublicationName;
+                ws.Cell(row, 4).Value = p.MediaType ?? "";
+                ws.Cell(row, 5).Value = p.MediaTier ?? "";
+                ws.Cell(row, 6).Value = p.Frequency ?? "";
+                ws.Cell(row, 7).Value = p.Distribution ?? "";
+                ws.Cell(row, 8).Value = p.Language ?? "";
+                ws.Cell(row, 9).Value = p.UnitPrice;
+                ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
+
+                // Circulation: use Blank.Value for null — avoids XLCellValue cast crash
+                if (p.Circulation.HasValue)
+                    ws.Cell(row, 10).Value = p.Circulation.Value;
+                else
+                    ws.Cell(row, 10).Value = ClosedXML.Excel.Blank.Value;
+
+                // Gray out read-only key columns A–C
+                ws.Range(row, 1, row, 3).Style.Fill.BackgroundColor =
+                    ClosedXML.Excel.XLColor.FromHtml("#F2F2F2");
+
+                // Alternate shading on editable columns D–J
+                if (row % 2 == 0)
+                    ws.Range(row, 4, row, 10).Style.Fill.BackgroundColor =
+                        ClosedXML.Excel.XLColor.FromHtml("#EBF3FB");
+
+                ws.Range(row, 1, row, 10).Style.Border.OutsideBorder =
+                    ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+                row++;
+            }
+
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+            ws.Cell(1, 4).GetComment().AddText(
+                "KEY COLUMNS (A–C): Do NOT change — used as update keys.\n" +
+                "EDITABLE COLUMNS (D–J): Media Type, Media Tier, Frequency, " +
+                "Distribution, Language, Unit Price, Circulation.");
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
+
+
+
+
+        // ── Channel Categories Excel ──────────────────────────────────────────────────
+        public byte[] ExportChannelCategoriesToExcel(IEnumerable<ChannelCustomerCategoryDTO> categories, string clientName)
+        {
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var ws = workbook.Worksheets.Add("ChannelCategories");
+
+            // Cols: A=Id  B=ChannelId  C=ChannelName
+            //       D=MediaTier  E=Reach  F=Distribution  G=Language
+            //       H=UnitPrice  I=UnitCurrency
+            var headers = new[]
+            {
+        "Id","ChannelId","Channel Name",
+        "Media Tier","Reach","Distribution","Language",
+        "Unit Price","Unit Currency"
+    };
+            WriteHeaders(ws, headers, "#1F4E79");
+
+            int row = 2;
+            foreach (var c in categories)
+            {
+                ws.Cell(row, 1).Value = c.Id;
+                ws.Cell(row, 2).Value = c.ChannelId;
+                ws.Cell(row, 3).Value = c.ChannelName;
+                ws.Cell(row, 4).Value = c.MediaTier ?? "";
+                ws.Cell(row, 5).Value = c.Reach ;
+                ws.Cell(row, 6).Value = c.Distribution ?? "";
+                ws.Cell(row, 7).Value = c.Language ?? "";
+                ws.Cell(row, 8).Value = c.UnitPrice;
+                ws.Cell(row, 9).Value = c.UnitCurrency;
+                ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
+
+                ws.Range(row, 1, row, 3).Style.Fill.BackgroundColor =
+                    ClosedXML.Excel.XLColor.FromHtml("#F2F2F2");
+                if (row % 2 == 0)
+                    ws.Range(row, 4, row, 9).Style.Fill.BackgroundColor =
+                        ClosedXML.Excel.XLColor.FromHtml("#D6E4F0");
+                ws.Range(row, 1, row, 9).Style.Border.OutsideBorder =
+                    ClosedXML.Excel.XLBorderStyleValues.Thin;
+                row++;
+            }
+
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+            ws.Cell(1, 4).GetComment().AddText(
+                "KEY COLUMNS (A–C): Do NOT change — used as update keys.\n" +
+                "EDITABLE COLUMNS (D–I): Media Tier, Reach, Distribution, Language, Unit Price, Unit Currency.");
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
+        public async Task<(bool Success, string Message, int UpdatedCount)> ImportChannelCategoriesFromExcelAsync(
+            int clientId, Stream fileStream, string fileName)
+        {
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+                return (false, "Only .xlsx and .xls files are supported.", 0);
+
+            var existing = (await _channelCategoryRepo.GetByClientIdAsync(clientId)).ToDictionary(c => c.Id);
+            if (!existing.Any())
+                return (false, "No channel categories found for this client.", 0);
+
+            var toUpdate = new List<ChannelCustomerCategory>();
+            var errors = new List<string>();
+
+            try
+            {
+                using var workbook = new ClosedXML.Excel.XLWorkbook(fileStream);
+                var ws = workbook.Worksheet(1);
+                var rows = ws.RangeUsed()?.RowsUsed().Skip(1).ToList();
+
+                if (rows == null || rows.Count == 0)
+                    return (false, "The file has no data rows.", 0);
+
+                int rowNumber = 2;
+                foreach (var row in rows)
+                {
+                    if (!int.TryParse(row.Cell(1).GetString().Trim(), out int id))
+                    {
+                        errors.Add($"Row {rowNumber}: Id is missing or invalid.");
+                        rowNumber++;
+                        continue;
+                    }
+
+                    if (!existing.TryGetValue(id, out var entity))
+                    {
+                        errors.Add($"Row {rowNumber}: Id {id} does not belong to this client.");
+                        rowNumber++;
+                        continue;
+                    }
+
+                    decimal.TryParse(row.Cell(5).GetString().Trim(), out decimal unitPrice);
+
+                    entity.MediaTier = row.Cell(4).GetString().Trim().NullIfEmpty();
+                    entity.UnitPrice = unitPrice;
+                    toUpdate.Add(entity);
+
+                    rowNumber++;
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Failed to read file: {ex.Message}", 0);
+            }
+
+            if (errors.Any())
+                return (false, string.Join(" | ", errors), 0);
+
+            if (toUpdate.Any())
+                await _channelCategoryRepo.UpdateRangeAsync(toUpdate);
+
+            return (true, $"{toUpdate.Count} channel category row(s) updated.", toUpdate.Count);
+        }
+
         // ── Mappers ────────────────────────────────────────────────────────────
 
         private static ClientDTO MapToDTO(EditorEntitiesLayer.Entities.Client c) => new()
@@ -622,17 +915,30 @@ namespace EditorLogicLayer.Client
             WebsiteId = c.WebsiteId,
             WebsiteName = c.Website?.WebsiteName ?? string.Empty,
             WebsiteURL = c.Website?.URL ?? string.Empty,
-            MediaTier = c.MediaTier
+            MediaTier = c.MediaTier,
+            Frequency = c.Frequency,
+            Reach = c.Reach,
+            Distribution = c.Distribution,
+            Language = c.Language,
+            UnitPrice = c.UnitPrice
         };
 
-        private static PublicationCustomerCategoryDTO MapPublicationCategoryToDTO(PublicationCustomerCategory p) => new()
-        {
-            Id = p.Id,
-            CustomerId = p.CustomerId,
-            PublicationId = p.PublicationId,
-            PublicationName = p.Publication?.PublicationName ?? string.Empty,
-            MediaTier = p.MediaTier
-        };
+        private static PublicationCustomerCategoryDTO MapPublicationCategoryToDTO(
+    PublicationCustomerCategory p) => new()
+    {
+        Id = p.Id,
+        CustomerId = p.CustomerId,
+        PublicationId = p.PublicationId,
+        PublicationName = p.Publication?.PublicationName ?? string.Empty,
+        // PublicationURL not mapped — Publication entity has no URL field
+        MediaType = p.MediaType,
+        MediaTier = p.MediaTier,
+        Frequency = p.Frequency,
+        Distribution = p.Distribution,
+        Language = p.Language,
+        UnitPrice = p.UnitPrice,
+        Circulation = p.Circulation
+    };
 
         private static ChannelCustomerCategoryDTO MapChannelCategoryToDTO(ChannelCustomerCategory c) => new()
         {
@@ -640,8 +946,156 @@ namespace EditorLogicLayer.Client
             CustomerId = c.CustomerId,
             ChannelId = c.ChannelId,
             ChannelName = c.Channel?.ChannelName ?? string.Empty,
-            MediaTier = c.MediaTier
+            MediaTier = c.MediaTier,
+            Reach = c.Reach,
+            Distribution = c.Distribution,
+            Language = c.Language,
+            UnitPrice = c.UnitPrice,
+            UnitCurrency = c.UnitCurrency
         };
 
+
+        // ── Website Categories Export / Import ────────────────────────────────────────
+        public byte[] ExportWebsiteCategoriesToExcel(IEnumerable<WebsiteCustomerCategoryDTO> categories, string clientName)
+        {
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var ws = workbook.Worksheets.Add("WebsiteCategories");
+
+            // Cols: A=Id  B=WebsiteId  C=WebsiteName  D=WebsiteURL
+            //       E=MediaTier  F=Frequency  G=Reach  H=Distribution  I=Language  J=UnitPrice
+            var headers = new[]
+            {
+        "Id","WebsiteId","Website Name","Website URL",
+        "Media Tier","Frequency","Reach","Distribution","Language","Unit Price"
+    };
+            WriteHeaders(ws, headers, "#2E75B6");
+
+            int row = 2;
+            foreach (var c in categories)
+            {
+                ws.Cell(row, 1).Value = c.Id;
+                ws.Cell(row, 2).Value = c.WebsiteId;
+                ws.Cell(row, 3).Value = c.WebsiteName;
+                ws.Cell(row, 4).Value = c.WebsiteURL;
+                ws.Cell(row, 5).Value = c.MediaTier ?? "";
+                ws.Cell(row, 6).Value = c.Frequency ?? "";
+                ws.Cell(row, 7).Value = c.Reach ?? "";
+                ws.Cell(row, 8).Value = c.Distribution ?? "";
+                ws.Cell(row, 9).Value = c.Language ?? "";
+                ws.Cell(row, 10).Value = c.UnitPrice;
+                ws.Cell(row, 10).Style.NumberFormat.Format = "#,##0.00";
+
+                // Gray out read-only key columns A–D
+                ws.Range(row, 1, row, 4).Style.Fill.BackgroundColor =
+                    ClosedXML.Excel.XLColor.FromHtml("#F2F2F2");
+                if (row % 2 == 0)
+                    ws.Range(row, 5, row, 10).Style.Fill.BackgroundColor =
+                        ClosedXML.Excel.XLColor.FromHtml("#EBF3FB");
+                ws.Range(row, 1, row, 10).Style.Border.OutsideBorder =
+                    ClosedXML.Excel.XLBorderStyleValues.Thin;
+                row++;
+            }
+
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+            ws.Cell(1, 5).GetComment().AddText(
+                "KEY COLUMNS (A–D): Do NOT change — used as update keys.\n" +
+                "EDITABLE COLUMNS (E–J): Media Tier, Frequency, Reach, Distribution, Language, Unit Price.");
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
+
+        // ── Publication Categories Export / Import ────────────────────────────────────
+        public async Task<(bool Success, string Message, int UpdatedCount)>
+     ImportPublicationCategoriesFromExcelAsync(
+         int clientId, Stream fileStream, string fileName)
+        {
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+                return (false, "Only .xlsx and .xls files are supported.", 0);
+
+            var existing = (await _publicationCategoryRepo.GetByClientIdAsync(clientId))
+                               .ToDictionary(c => c.Id);
+            if (!existing.Any())
+                return (false, "No publication categories found for this client.", 0);
+
+            var toUpdate = new List<PublicationCustomerCategory>();
+            var errors = new List<string>();
+
+            try
+            {
+                using var workbook = new ClosedXML.Excel.XLWorkbook(fileStream);
+                var ws = workbook.Worksheet(1);
+                var rows = ws.RangeUsed()?.RowsUsed().Skip(1).ToList();
+                if (rows == null || rows.Count == 0)
+                    return (false, "The file has no data rows.", 0);
+
+                int rowNum = 2;
+                foreach (var row in rows)
+                {
+                    // Col A=Id (key — do not change)
+                    // Col D=MediaType, E=MediaTier, F=Frequency,
+                    // Col G=Distribution, H=Language, I=UnitPrice, J=Circulation
+                    if (!int.TryParse(row.Cell(1).GetString().Trim(), out int id))
+                    {
+                        errors.Add($"Row {rowNum}: Id is missing or invalid.");
+                        rowNum++; continue;
+                    }
+                    if (!existing.TryGetValue(id, out var cat))
+                    {
+                        errors.Add($"Row {rowNum}: Id {id} does not belong to this client.");
+                        rowNum++; continue;
+                    }
+
+                    decimal.TryParse(row.Cell(9).GetString().Trim(), out decimal price);
+                    int.TryParse(
+                        row.Cell(10).GetString().Trim().Replace(",", ""),
+                        out int circulation);
+
+                    cat.MediaType = row.Cell(4).GetString().Trim().NullIfEmpty();
+                    cat.MediaTier = row.Cell(5).GetString().Trim().NullIfEmpty();
+                    cat.Frequency = row.Cell(6).GetString().Trim().NullIfEmpty();
+                    cat.Distribution = row.Cell(7).GetString().Trim().NullIfEmpty();
+                    cat.Language = row.Cell(8).GetString().Trim().NullIfEmpty();
+                    cat.UnitPrice = price;
+                    cat.Circulation = circulation > 0 ? circulation : null;
+                    toUpdate.Add(cat);
+                    rowNum++;
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Failed to read file: {ex.Message}", 0);
+            }
+
+            if (errors.Any())
+                return (false, string.Join(" | ", errors), 0);
+
+            if (toUpdate.Any())
+                await _publicationCategoryRepo.UpdateRangeAsync(toUpdate);
+
+            return (true, $"{toUpdate.Count} publication category row(s) updated.", toUpdate.Count);
+        }
+
+        // ── Shared Excel header helper ────────────────────────────────────────────────
+        private static void WriteHeaders(ClosedXML.Excel.IXLWorksheet ws, string[] headers, string hexColor)
+        {
+            for (int col = 1; col <= headers.Length; col++)
+            {
+                var cell = ws.Cell(1, col);
+                cell.Value = headers[col - 1];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml(hexColor);
+                cell.Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+                cell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                cell.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+                cell.Style.Border.OutsideBorderColor = ClosedXML.Excel.XLColor.White;
+            }
+        }
+
+
+      
     }
 }
