@@ -1,0 +1,149 @@
+@model EditorViewModelLayer.MediaViewModel.ClientArticleDTO
+@{
+    ViewData["Title"] = "Article Details";
+    Layout = "~/Views/Shared/_ClientLayout.cshtml";
+}
+@await Html.PartialAsync("_MediaStyles")
+<div class="m-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Article Details</h5>
+    <a href="@Url.Action("ClientArticle")" class="btn btn-secondary btn-sm">
+        ← Back to Articles
+    </a>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">@Model.Title</h5>
+                <hr />
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Date</label>
+                        <p>@Model.Date.ToString("dd MMM yyyy")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Website</label>
+                        <p>@Model.WebsiteName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Category</label>
+                        <p>@Model.CategoryName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Sub Category</label>
+                        <p>@Model.SubCategoryName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Writer</label>
+                        <p>@Model.WriterName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Language</label>
+                        <p>@Model.Language</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Media Type</label>
+                        <p>@Model.MediaType</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Toning</label>
+                        <p>@Model.Toning</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Media Tier</label>
+                        <p>@Model.MediaTier</p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.ArticleURL))
+                {
+                    <a href="@Model.ArticleURL" target="_blank"
+                       class="btn btn-outline-primary btn-sm mt-2">
+                        View Online Article
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Values</h6>
+                <table class="table table-sm">
+                    <tr><th>Impression</th><td>@Model.Impression.ToString("N0")</td></tr>
+                    <tr><th>Reach</th><td>@Model.Reach.ToString("N0")</td></tr>
+                    <tr><th>AD Value</th><td>@Model.ADValue.ToString("N0")</td></tr>
+                    <tr class="table-primary"><th>PR Value</th><td><strong>@Model.PRValue.ToString("N0")</strong></td></tr>
+                </table>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Images))
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Images</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var img in Model.Images.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            <a href="/@img.Trim()" target="_blank">
+                                <img src="/@img.Trim()" class="img-thumbnail"
+                                     style="width:80px;height:80px;object-fit:cover;" />
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Content))
+    {
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Content</h6>
+                    <div>@Html.Raw(Model.Content)</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model.Children?.Any() == true)
+    {
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">Related Publications (@Model.Children.Count)</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Website</th>
+                                <th>Impression</th>
+                                <th>Reach</th>
+                                <th>AD Value</th>
+                                <th>PR Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.Children)
+                            {
+                                <tr>
+                                    <td>@c.Date.ToString("yyyy-MM-dd")</td>
+                                    <td>@c.WebsiteId</td>
+                                    <td>@c.Impression.ToString("N0")</td>
+                                    <td>@c.Reach.ToString("N0")</td>
+                                    <td>@c.ADValue.ToString("N0")</td>
+                                    <td>@c.PRValue.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

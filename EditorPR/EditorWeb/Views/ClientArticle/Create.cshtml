@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
     bool isEdit = Model.Id > 0;
-    ViewData["Title"] = isEdit ? "Edit Website " : "Add Website ";
+    ViewData["Title"] = isEdit ? "Edit Website" : "Add Website";
 
     List<SelectListItem> ToSL(List<MediaSelectOption> src)
         => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
@@ -17,21 +17,18 @@
     var yesNoSL = ToSL(Model.YesNoOptions);
     var genSL = ToSL(Model.GenerationOptions);
 
-    // Parse existing images for Edit mode
     var existingImagePaths = new List<string>();
     if (!string.IsNullOrEmpty(Model.Images))
     {
-        try
-        {
-            existingImagePaths = System.Text.Json.JsonSerializer
-                                       .Deserialize<List<string>>(Model.Images)
-                                 ?? new List<string>();
-        }
+        try { existingImagePaths = System.Text.Json.JsonSerializer.Deserialize<List<string>>(Model.Images) ?? new(); }
         catch { }
     }
 }
 
 @await Html.PartialAsync("_MediaStyles")
+ 
+
+ 
 
 <div class="form-wrap">
 
@@ -56,29 +53,25 @@
         <div class="val-summary">
             <strong>Please fix the errors below:</strong>
             <ul>
-                @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
                 {
-                    <li>@e.ErrorMessage</li>
+                    <li>@err.ErrorMessage</li>
                 }
             </ul>
         </div>
     }
 
-    @*   {{-- enctype MUST be multipart/form-data for file uploads --}} *@
-    <form method="post"
-          enctype="multipart/form-data"
+    <form method="post" enctype="multipart/form-data"
           action="@(isEdit ? Url.Action("Edit", new { id = Model.Id }) : Url.Action("Create"))">
 
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="ClientId" />
         <input type="hidden" asp-for="ArticleId" />
-
-        @* {{-- Hidden fields for image path management --}} *@
         <input type="hidden" name="Images" id="hdnImages" value="@Model.Images" />
         <input type="hidden" name="removedImages" id="hdnRemovedImages" value="[]" />
 
-        @* ── CARD 1: Source & Classification ───────────────────────────────── *@
+        @* ── CARD 1: Source & Classification ── *@
         <div class="form-card">
 
             <div class="fg-3">
@@ -92,22 +85,23 @@
                 </div>
                 <div class="fg">
                     <label asp-for="CategoryId">Category</label>
-                    <select asp-for="CategoryId" asp-items="catSL" class="select-search" required
+                    <select asp-for="CategoryId" asp-items="catSL" class="select-search"
                             id="catSel" onchange="loadSubs(this.value)">
                         <option value="0">— None —</option>
                     </select>
                 </div>
                 <div class="fg">
                     <label asp-for="SubCategoryId">Sub Category</label>
-                    <select asp-for="SubCategoryId" asp-items="subSL" class="select-search" id="subSel" required>
+                    <select asp-for="SubCategoryId" asp-items="subSL" class="select-search" id="subSel">
                         <option value="0">— None —</option>
                     </select>
                 </div>
             </div>
+
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
                     <label asp-for="ArticleURL">Article URL</label>
-                    <input asp-for="ArticleURL" type="url" required placeholder="https://…" />
+                    <input asp-for="ArticleURL" type="url" placeholder="https://…" id="articleUrlField" />
                 </div>
                 <div class="fg">
                     <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
@@ -115,14 +109,17 @@
                     <span asp-validation-for="Date" class="field-error"></span>
                 </div>
                 <div class="fg">
-                    <label asp-for="WriterId">Writer</label>
-                    <select asp-for="WriterId" asp-items="writerSL" class="select-search" required>
+                    <label asp-for="WriterId">
+                        Writer
+                        <a asp-action="Create" asp-controller="Writer" class="btn btn-sm">Add New</a>
+                    </label>
+                    <select asp-for="WriterId" asp-items="writerSL" class="select-search">
                         <option value="0">— None —</option>
                     </select>
                 </div>
             </div>
-
             <br />
+
             <div class="fg-3">
                 <div class="fg">
                     <label asp-for="ArticleBranding">Article Branding</label>
@@ -136,8 +133,8 @@
                     <label asp-for="PictureinArticle">Picture in Article</label>
                     <select asp-for="PictureinArticle" asp-items="yesNoSL"></select>
                 </div>
-
             </div>
+
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
                     <label asp-for="Toning">Toning</label>
@@ -158,8 +155,7 @@
 
             <div class="fg" style="margin-bottom:.9rem;">
                 <label asp-for="Content">Content</label>
-                <textarea id="textarea" class="form-control" asp-for="Content"
-                          placeholder="Content"></textarea>
+                <textarea id="textarea" class="form-control" asp-for="Content" placeholder="Content"></textarea>
                 <script src="~/lib/tinymce/tinymce.min.js"></script>
                 <script>
                     tinymce.init({
@@ -172,67 +168,210 @@
                 </script>
             </div>
             <br />
-            @*  {{-- ═══════════════════════════════════════════════════════════════ --}}
-            {{-- IMAGE UPLOAD SECTION                                           --}}
-            {{-- ═══════════════════════════════════════════════════════════════ --}} *@
-            <div class="fg">
 
-                
-                @*   {{-- Drop zone --}} *@
+            @* ── 📸 SCREENSHOT FROM URL ── *@
+         @*    <div id="screenshotBlock"
+                 style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;
+                padding:1rem 1.1rem;margin-bottom:.9rem;">
+
+                <label style="font-size:.8rem;font-weight:700;color:#0369a1;display:block;margin-bottom:.5rem;">
+                    📸 Screenshot from URL
+                    <span style="font-size:.72rem;font-weight:400;color:#64748b;margin-left:.4rem;">
+                        — capture a page and add it to images
+                    </span>
+                </label>
+
+                <div style="display:flex;gap:.5rem;align-items:center;">
+                    <input type="url" id="screenshotUrl"
+                           placeholder="https://example.com/article"
+                           style="flex:1;padding:.45rem .7rem;border:1.5px solid #bae6fd;
+                    border-radius:7px;font-size:.85rem;outline:none;
+                    transition:border-color .15s;box-sizing:border-box;"
+                           onfocus="this.style.borderColor='#0284c7'"
+                           onblur="this.style.borderColor='#bae6fd'" />
+
+                    <button type="button" id="btnUseArticleUrl" onclick="useArticleUrl()"
+                            title="Copy the Article URL field above"
+                            style="display:inline-flex;align-items:center;gap:.3rem;
+                        background:#e0f2fe;color:#0369a1;border:none;border-radius:7px;
+                        padding:.45rem .7rem;font-size:.78rem;font-weight:600;
+                        cursor:pointer;white-space:nowrap;">
+                        ⬆ Use Article URL
+                    </button>
+
+                    <button type="button" id="btnScreenshot" onclick="screenshotFromUrl()"
+                            style="display:inline-flex;align-items:center;gap:.35rem;
+                        background:#0284c7;color:#fff;border:none;border-radius:7px;
+                        padding:.45rem 1rem;font-size:.82rem;font-weight:700;
+                        cursor:pointer;white-space:nowrap;transition:background .15s;"
+                            onmouseover="this.style.background='#0369a1'"
+                            onmouseout="this.style.background='#0284c7'">
+                        <span id="screenshotSpinner"
+                              style="display:none;width:13px;height:13px;
+                        border:2px solid rgba(255,255,255,.4);
+                        border-top-color:#fff;border-radius:50%;
+                        animation:spin .6s linear infinite;"></span>
+                        📸 Take Screenshot
+                    </button>
+                </div>
+
+                <div id="screenshotStatus"
+                     style="margin-top:.5rem;font-size:.78rem;color:#0369a1;display:none;"></div>
+
+                <div id="screenshotPreview" style="margin-top:.6rem;display:none;">
+                    <img id="screenshotImg"
+                         style="max-width:220px;max-height:140px;border-radius:7px;
+                    border:1.5px solid #0284c7;object-fit:cover;display:block;" />
+                    <button type="button" onclick="removeScreenshot()"
+                            style="display:inline-flex;align-items:center;gap:.25rem;
+                        margin-top:.35rem;background:none;border:none;
+                        color:#dc2626;font-size:.75rem;cursor:pointer;padding:0;">
+                        ✕ Remove screenshot
+                    </button>
+                </div>
+            </div> *@
+            
+            <div id="screenshotBlock"
+                 style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;
+                padding:1rem 1.1rem;margin-bottom:.9rem;">
+
+                <label style="font-size:.8rem;font-weight:700;color:#0369a1;display:block;margin-bottom:.6rem;">
+                    📸 Screenshot from URL
+                    <span style="font-size:.72rem;font-weight:400;color:#64748b;margin-left:.4rem;">
+                        — capture a page and add it to images
+                    </span>
+                </label>
+
+              @*   {{-- URL row --}} *@
+                <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;">
+                    <input type="url" id="screenshotUrl"
+                           placeholder="https://example.com/article"
+                           style="flex:1;padding:.45rem .7rem;border:1.5px solid #bae6fd;border-radius:7px;
+                    font-size:.85rem;outline:none;transition:border-color .15s;box-sizing:border-box;"
+                           onfocus="this.style.borderColor='#0284c7'"
+                           onblur="this.style.borderColor='#bae6fd'" />
+
+                    <button type="button" id="btnUseArticleUrl" onclick="useArticleUrl()"
+                            title="Copy the Article URL field"
+                            style="display:inline-flex;align-items:center;gap:.3rem;background:#e0f2fe;
+                        color:#0369a1;border:none;border-radius:7px;padding:.45rem .7rem;
+                        font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                        ⬆ Use Article URL
+                    </button>
+                </div>
+
+               @*  {{-- Options row --}} *@
+                <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem;">
+
+                   @*  {{-- Capture mode --}} *@
+                    <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:#475569;">
+                        <label style="font-weight:600;white-space:nowrap;">Mode:</label>
+                        <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;">
+                            <input type="radio" name="ssMode" id="ssCrop" value="crop" checked />
+                            Crop
+                        </label>
+                        <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;">
+                            <input type="radio" name="ssMode" id="ssFullpage" value="fullpage" />
+                            Full Page
+                        </label>
+                    </div>
+
+                   @*  {{-- Width --}} *@
+                    <div style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;color:#475569;">
+                        <label style="font-weight:600;white-space:nowrap;">Width:</label>
+                        <select id="ssWidth"
+                                style="padding:.3rem .5rem;border:1.5px solid #bae6fd;border-radius:6px;
+                            font-size:.8rem;background:#fff;color:#1e293b;">
+                            <option value="800">800 px</option>
+                            <option value="1024">1024 px</option>
+                            <option value="1280" selected>1280 px  (default)</option>
+                            <option value="1440">1440 px</option>
+                            <option value="1920">1920 px</option>
+                        </select>
+                    </div>
+
+                  @*   {{-- Crop height (hidden when fullpage is selected) --}} *@
+                    <div id="cropHeightGroup"
+                         style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;color:#475569;">
+                        <label style="font-weight:600;white-space:nowrap;">Height (crop):</label>
+                        <select id="ssCropHeight"
+                                style="padding:.3rem .5rem;border:1.5px solid #bae6fd;border-radius:6px;
+                            font-size:.8rem;background:#fff;color:#1e293b;">
+                            <option value="600">600 px</option>
+                            <option value="800">800 px</option>
+                            <option value="900" selected>900 px  (default)</option>
+                            <option value="1080">1080 px</option>
+                            <option value="1200">1200 px</option>
+                            <option value="1600">1600 px</option>
+                            <option value="2000">2000 px</option>
+                            <option value="3000">3000 px</option>
+                            <option value="5000">5000 px  (very tall)</option>
+                        </select>
+                    </div>
+
+                  @*   {{-- Take screenshot button --}} *@
+                    <button type="button" id="btnScreenshot" onclick="screenshotFromUrl()"
+                            style="display:inline-flex;align-items:center;gap:.35rem;background:#0284c7;
+                        color:#fff;border:none;border-radius:7px;padding:.45rem 1rem;
+                        font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;
+                        transition:background .15s;"
+                            onmouseover="this.style.background='#0369a1'"
+                            onmouseout="this.style.background='#0284c7'">
+                        <span id="screenshotSpinner"
+                              style="display:none;width:13px;height:13px;
+                        border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+                        border-radius:50%;animation:spin .6s linear infinite;"></span>
+                        📸 Take Screenshot
+                    </button>
+                </div>
+
+                <div id="screenshotStatus"
+                     style="font-size:.78rem;color:#0369a1;display:none;margin-bottom:.4rem;"></div>
+
+                <div id="screenshotPreview" style="display:none;">
+                    <img id="screenshotImg"
+                         style="max-width:100%;max-height:200px;border-radius:7px;
+                    border:1.5px solid #0284c7;object-fit:contain;display:block;" />
+                    <div style="font-size:.75rem;color:#64748b;margin-top:.25rem;" id="screenshotDimLabel"></div>
+                    <button type="button" onclick="removeScreenshot()"
+                            style="display:inline-flex;align-items:center;gap:.25rem;margin-top:.3rem;
+                        background:none;border:none;color:#dc2626;font-size:.75rem;
+                        cursor:pointer;padding:0;">
+                        ✕ Remove screenshot
+                    </button>
+                </div>
+            </div>
+
+            @* ── Image Drop Zone ── *@
+            <div class="fg">
                 <div id="dropZone"
-                     style="border: 2px dashed var(--rule, #cbd5e1);
-                    border-radius: 10px;
-                    padding: 1.4rem 1rem;
-                    text-align: center;
-                    background: #f8fafc;
-                    cursor: pointer;
-                    min-height: 110px;
-                    transition: border-color .2s, background .2s;">
+                     style="border:2px dashed var(--rule,#cbd5e1);border-radius:10px;
+                    padding:1.4rem 1rem;text-align:center;background:#f8fafc;
+                    cursor:pointer;min-height:110px;transition:border-color .2s,background .2s;">
                     <div style="font-size:2rem;line-height:1;">📁</div>
                     <p style="color:#64748b;margin:.4rem 0 .2rem;font-size:.88rem;">
                         Drag &amp; drop images here, or <strong>click to browse</strong>
                     </p>
-                    <small style="color:#94a3b8;">
-                        JPG · PNG · GIF · WebP &nbsp;|&nbsp; Multiple selection allowed
-                    </small>
-                    <input type="file"
-                           name="imageFiles"
-                           id="imageFilesInput"
-                           multiple
-                           accept=".jpg,.jpeg,.png,.gif,.webp"
-                           style="display:none;" />
+                    <small style="color:#94a3b8;">JPG · PNG · GIF · WebP &nbsp;|&nbsp; Multiple selection allowed</small>
+                    <input type="file" name="imageFiles" id="imageFilesInput"
+                           multiple accept=".jpg,.jpeg,.png,.gif,.webp" style="display:none;" />
                 </div>
+                <div id="newPreviewGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
 
-                @*   {{-- New file preview grid --}} *@
-                <div id="newPreviewGrid"
-                     style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
-
-                @*  {{-- Existing images (Edit mode only) --}} *@
                 @if (existingImagePaths.Any())
                 {
-                    <p style="font-size:.8rem;font-weight:600;color:#64748b;
-                    margin:12px 0 6px;">Current Images</p>
-                    <div id="existingGrid"
-                         style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <p style="font-size:.8rem;font-weight:600;color:#64748b;margin:12px 0 6px;">Current Images</p>
+                    <div id="existingGrid" style="display:flex;flex-wrap:wrap;gap:8px;">
                         @foreach (var path in existingImagePaths)
                         {
-                            <div class="existing-thumb"
-                                 data-path="@path"
-                                 style="position:relative;">
+                            <div class="existing-thumb" data-path="@path" style="position:relative;">
                                 <img src="@path"
-                                     style="width:88px;height:88px;object-fit:cover;
-                                border-radius:6px;border:1px solid #e2e8f0;"
+                                     style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;"
                                      onerror="this.src='/images/no-image.png'" />
-                                <button type="button"
-                                        class="remove-existing"
-                                        data-path="@path"
-                                        title="Remove"
-                                        style="position:absolute;top:2px;right:2px;
-                                    background:#ef4444;color:#fff;border:none;
-                                    border-radius:50%;width:20px;height:20px;
-                                    font-size:11px;line-height:1;cursor:pointer;
-                                    display:flex;align-items:center;
-                                    justify-content:center;">
+                                <button type="button" class="remove-existing" data-path="@path" title="Remove"
+                                        style="position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;
+                                    border:none;border-radius:50%;width:20px;height:20px;font-size:11px;
+                                    line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                                     ✕
                                 </button>
                             </div>
@@ -240,11 +379,9 @@
                     </div>
                 }
             </div>
-            @*   {{-- END IMAGE UPLOAD SECTION --}} *@
-
         </div>
 
-        @* ── CARD 5: Child Articles ─────────────────────────────────────────────────── *@
+        @* ── CARD 2: Child Articles ── *@
         <div class="form-card" id="childrenCard">
             <div class="form-card-title" style="display:flex;justify-content:space-between;align-items:center;">
                 <span>📎 Also Mention (Other Sources)</span>
@@ -254,179 +391,98 @@
                     + Also Mention
                 </button>
             </div>
-
-           
-            @*    {{-- Child rows container --}} *@
             <div id="childRowsContainer"></div>
-
-            @*  {{-- Hidden template row (cloned by JS) --}} *@
             <template id="childRowTemplate">
-                <div class="child-row"
-                     data-index="__IDX__"
+                <div class="child-row" data-index="__IDX__"
                      style="border:1px solid #e2e8f0;border-radius:8px;padding:.9rem;
                     margin-bottom:.75rem;background:#f8fafc;position:relative;">
-
                     <div style="position:absolute;top:8px;right:10px;">
                         <button type="button" class="btn-remove-child"
-                                style="background:#ef4444;color:#fff;border:none;
-                            border-radius:50%;width:22px;height:22px;
-                            font-size:12px;cursor:pointer;line-height:1;">
+                                style="background:#ef4444;color:#fff;border:none;border-radius:50%;
+                            width:22px;height:22px;font-size:12px;cursor:pointer;line-height:1;">
                             ✕
                         </button>
                     </div>
-
                     <div style="font-size:.78rem;font-weight:600;color:#64748b;margin-bottom:.6rem;">
-                        Also Mention <span class="child-number">1</span>
+                        Child #<span class="child-number">1</span>
                     </div>
-
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.7rem;">
-
-                        @* {{-- Website --}} *@
                         <div>
-                            <label style="font-size:.8rem;font-weight:600;">
-                                Website <span style="color:#ef4444">*</span>
-                            </label>
-                            <select name="Children[__IDX__].WebsiteId"
-                                    class="child-website-sel select-search"
-                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
-                                border-radius:6px;font-size:.85rem;"
-                                    onchange="autoFillChild(this, __IDX__)">
+                            <label style="font-size:.8rem;font-weight:600;">Website <span style="color:#ef4444">*</span></label>
+                            <select name="Children[__IDX__].WebsiteId" class="child-website-sel"
+                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;"
+                                    onchange="autoFillChild(this,__IDX__)">
                                 <option value="0">— Select —</option>
                                 {{WEBSITE_OPTIONS}}
                             </select>
                         </div>
-
-                        @*  {{-- Writer --}} *@
                         <div>
                             <label style="font-size:.8rem;font-weight:600;">Writer</label>
-                            <select name="Children[__IDX__].WriterId" class="select-search"
-                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
-                                border-radius:6px;font-size:.85rem;">
+                            <select name="Children[__IDX__].WriterId"
+                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;">
                                 <option value="0">— None —</option>
                                 {{WRITER_OPTIONS}}
                             </select>
                         </div>
-
-                        @*  {{-- Date --}} *@
                         <div>
-                            <label style="font-size:.8rem;font-weight:600;">
-                                Date <span style="color:#ef4444">*</span>
-                            </label>
-                            <input type="date"
-                                   name="Children[__IDX__].Date"
-                                   value="@DateTime.Today.ToString("yyyy-MM-dd")"
-                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
-                            border-radius:6px;font-size:.85rem;" />
+                            <label style="font-size:.8rem;font-weight:600;">Date <span style="color:#ef4444">*</span></label>
+                            <input type="date" name="Children[__IDX__].Date"
+                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;" />
                         </div>
-
-                        @*   {{-- Article URL --}} *@
                         <div>
                             <label style="font-size:.8rem;font-weight:600;">Article URL</label>
-                            <input type="url"
-                                   name="Children[__IDX__].ArticleURL"
-                                   placeholder="https://…"
-                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;
-                            border-radius:6px;font-size:.85rem;" />
+                            <input type="url" name="Children[__IDX__].ArticleURL" placeholder="https://…"
+                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;" />
                         </div>
-
                     </div>
-
-                    @*  {{-- Auto-filled child website data --}} *@
-                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-top:.6rem;display:none;">
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-top:.6rem;">
                         <div>
                             <label style="font-size:.75rem;color:#64748b;">AD Value</label>
-                            <input type="number" step="0.01"
-                                   name="Children[__IDX__].ADValue"
-                                   class="child-ad"
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;
-                            border-radius:6px;font-size:.83rem;background:#f1f5f9;"
-                                   oninput="recalcChildPR(this, __IDX__)" />
+                            <input type="number" step="0.01" name="Children[__IDX__].ADValue" class="child-ad"
+                                   id="childAD___IDX__" value="0" oninput="recalcChildPR(this,__IDX__)"
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.83rem;background:#f1f5f9;" />
                         </div>
                         <div>
                             <label style="font-size:.75rem;color:#64748b;">PR Value (×3.5)</label>
-                            <input type="number" step="0.01"
-                                   name="Children[__IDX__].PRValue"
-                                   class="child-pr"
-                                   readonly
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;
-                            border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
+                            <input type="number" step="0.01" name="Children[__IDX__].PRValue" class="child-pr"
+                                   id="childPR___IDX__" value="0" readonly
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
                         </div>
                         <div>
                             <label style="font-size:.75rem;color:#64748b;">Media Tier</label>
-                            <input type="text"
-                                   name="Children[__IDX__].MediaTier"
-                                   class="child-tier"
-                                   readonly
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;
-                            border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
+                            <input type="text" name="Children[__IDX__].MediaTier" class="child-tier" readonly
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
                         </div>
                         <div>
                             <label style="font-size:.75rem;color:#64748b;">Language</label>
-                            <input type="text"
-                                   name="Children[__IDX__].Language"
-                                   class="child-lang"
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;
-                            border-radius:6px;font-size:.83rem;" />
+                            <input type="text" name="Children[__IDX__].Language"
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.83rem;" />
                         </div>
                     </div>
-
                 </div>
             </template>
         </div>
-        @* ── CARD 3: Auto-filled from Website ───────────────────────────────── *@
+
+        @* ── CARD 3: Auto-fill (hidden) ── *@
         <div class="form-card" style="display:none;">
-            <div class="form-card-title">
-                🔄 Website Data
-                <span class="badge-autofill">Auto-filled on Website change</span>
-            </div>
             <div class="fg-4">
-                <div class="fg">
-                    <label asp-for="MediaType">Media Type</label>
-                    <input asp-for="MediaType" class="autofill" id="afMediaType" readonly />
-                </div>
-                <div class="fg">
-                    <label asp-for="MediaTier">Media Tier</label>
-                    <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
-                </div>
-                <div class="fg">
-                    <label asp-for="Frequency">Frequency</label>
-                    <input asp-for="Frequency" class="autofill" id="afFrequency" readonly />
-                </div>
-                <div class="fg">
-                    <label asp-for="Language">Language</label>
-                    <input asp-for="Language" class="autofill" id="afLanguage" readonly />
-                </div>
+                <div class="fg"><label asp-for="MediaType">Media Type</label><input asp-for="MediaType" class="autofill" id="afMediaType" readonly /></div>
+                <div class="fg"><label asp-for="MediaTier">Media Tier</label><input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly /></div>
+                <div class="fg"><label asp-for="Frequency">Frequency</label><input asp-for="Frequency" class="autofill" id="afFrequency" readonly /></div>
+                <div class="fg"><label asp-for="Language">Language</label><input asp-for="Language" class="autofill" id="afLanguage" readonly /></div>
             </div>
             <div class="fg-4" style="margin-top:.9rem;">
-                <div class="fg">
-                    <label asp-for="Impression">Impression</label>
-                    <input asp-for="Impression" type="number" id="afImpression"
-                           oninput="recalcReach()" class="autofill" />
-                </div>
-                <div class="fg">
-                    <label asp-for="Reach">Reach (Impression × 4)</label>
-                    <input asp-for="Reach" class="autofill" id="afReach" readonly />
-                </div>
-                <div class="fg">
-                    <label asp-for="ADValue">AD Value (Unit Price)</label>
-                    <input asp-for="ADValue" type="number" step="0.01" id="afAD"
-                           oninput="recalcPR()" class="autofill" />
-                </div>
-                <div class="fg">
-                    <label asp-for="PRValue">PR Value (AD × 3.5)</label>
-                    <input asp-for="PRValue" class="autofill" id="afPR" readonly />
-                </div>
+                <div class="fg"><label asp-for="Impression">Impression</label><input asp-for="Impression" type="number" id="afImpression" class="autofill" /></div>
+                <div class="fg"><label asp-for="Reach">Reach</label><input asp-for="Reach" class="autofill" id="afReach" readonly /></div>
+                <div class="fg"><label asp-for="ADValue">AD Value</label><input asp-for="ADValue" type="number" step="0.01" id="afAD" class="autofill" /></div>
+                <div class="fg"><label asp-for="PRValue">PR Value</label><input asp-for="PRValue" class="autofill" id="afPR" readonly /></div>
             </div>
         </div>
 
-
-        @* ── Footer ─────────────────────────────────────────────────────────── *@
+        @* ── Footer ── *@
         <div class="form-footer">
-            <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
-               class="btn-cancel">Cancel</a>
-            <button type="submit" class="btn-save">
-                @(isEdit ? "💾 Save " : "✅ Save ")
-            </button>
+            <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
+            <button type="submit" class="btn-save">@(isEdit ? "💾 Save" : "✅ Save")</button>
         </div>
 
     </form>
@@ -434,9 +490,225 @@
 
 @section Scripts {
     <script>
-        // ── Existing article JS (unchanged) ───────────────────────────────────────
         const clientId = @Model.ClientId;
 
+        // ── "Use Article URL" shortcut ────────────────────────────────────────────────
+        // function useArticleUrl() {
+        // const src = document.getElementById('articleUrlField')?.value?.trim();
+        // if (src) {
+        // document.getElementById('screenshotUrl').value = src;
+        // document.getElementById('screenshotUrl').focus();
+        // }
+        // }
+
+        // ── Screenshot capture ────────────────────────────────────────────────────────
+        
+       // let _screenshotPath = null;
+
+      
+        // async function screenshotFromUrl() {
+        // const urlInput   = document.getElementById('screenshotUrl');
+        // const previewEl  = document.getElementById('screenshotPreview');
+        // const previewImg = document.getElementById('screenshotImg');
+        // const spinner    = document.getElementById('screenshotSpinner');
+        // const btn        = document.getElementById('btnScreenshot');
+
+        // const targetUrl = urlInput.value.trim();
+        // if (!targetUrl) {
+        // setScreenshotStatus('⚠️ Please enter a URL first.', '#c2410c');
+        // return;
+        // }
+        // if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        // setScreenshotStatus('⚠️ URL must start with http:// or https://', '#c2410c');
+        // return;
+        // }
+
+        // spinner.style.display   = 'inline-block';
+        // btn.disabled            = true;
+        // previewEl.style.display = 'none';
+        // setScreenshotStatus('⏳ Capturing screenshot… (may take 5–15 seconds)', '#0369a1');
+
+        // try {
+        // // ── Build FormData — antiforgery token + url as form fields ──────────
+        // const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+        // const formData = new FormData();
+        // formData.append('__RequestVerificationToken', token);   // ← antiforgery field
+        // formData.append('url', targetUrl);                      // ← [FromForm] string url
+
+        // // DO NOT set Content-Type manually — browser sets multipart/form-data + boundary
+        // const resp = await fetch('/ClientArticle/CaptureScreenshot', {
+        // method: 'POST',
+        // body:   formData
+        // });
+
+        // const data = await resp.json();
+        // if (!resp.ok) throw new Error(data.error || `Server error ${resp.status}`);
+
+        // _screenshotPath = data.path;
+        // previewImg.src  = data.path;
+        // previewEl.style.display = 'block';
+        // setScreenshotStatus('✅ Screenshot captured and added to images.', '#15803d');
+
+        // addPathToImages(data.path);
+        // addThumbToGrid(data.path, '📸 screenshot');
+
+        // } catch (err) {
+        // setScreenshotStatus(`❌ ${err.message}`, '#dc2626');
+        // console.error('Screenshot error:', err);
+        // } finally {
+        // spinner.style.display = 'none';
+        // btn.disabled          = false;
+        // }
+        // }
+
+        // function removeScreenshot() {
+        // if (!_screenshotPath) return;
+        // removePathFromImages(_screenshotPath);
+        // document.querySelectorAll('#newPreviewGrid [data-screenshot-thumb]').forEach(el => el.remove());
+        // _screenshotPath = null;
+        // document.getElementById('screenshotPreview').style.display = 'none';
+        // document.getElementById('screenshotStatus').style.display  = 'none';
+        // }
+
+        // function setScreenshotStatus(msg, color) {
+        // const el = document.getElementById('screenshotStatus');
+        // el.textContent = msg; el.style.color = color; el.style.display = 'block';
+        // }
+
+        function addPathToImages(path) {
+        const hdn = document.getElementById('hdnImages');
+        let paths = [];
+        try { paths = JSON.parse(hdn.value || '[]'); } catch {}
+        if (!paths.includes(path)) { paths.push(path); hdn.value = JSON.stringify(paths); }
+        }
+
+        function removePathFromImages(path) {
+        const hdn = document.getElementById('hdnImages');
+        let paths = [];
+        try { paths = JSON.parse(hdn.value || '[]'); } catch {}
+        hdn.value = JSON.stringify(paths.filter(p => p !== path));
+        }
+
+        // FIX BUG 2: data-screenshot-thumb marks this as a screenshot so
+        // renderPreviews() (which only removes [data-upload-thumb]) won't erase it
+        function addThumbToGrid(path, label) {
+        const grid = document.getElementById('newPreviewGrid');
+        const wrap = document.createElement('div');
+        wrap.style.cssText      = 'position:relative;';
+        wrap.dataset.screenshotThumb = '1';
+        wrap.innerHTML = `
+        <img src="${path}"
+        style="width:88px;height:88px;object-fit:cover;
+        border-radius:6px;border:2px solid #0284c7;" />
+        <span style="position:absolute;bottom:0;left:0;right:0;
+        background:rgba(2,132,199,.85);color:#fff;font-size:9px;
+        padding:2px 4px;border-radius:0 0 6px 6px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</span>`;
+        grid.appendChild(wrap);
+        }
+
+        // ── Toggle crop height group when mode changes ────────────────────────────────
+        document.querySelectorAll('input[name="ssMode"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+        document.getElementById('cropHeightGroup').style.display =
+        this.value === 'fullpage' ? 'none' : 'flex';
+        });
+        });
+
+        function useArticleUrl() {
+        const src = document.getElementById('articleUrlField')?.value?.trim();
+        if (src) { document.getElementById('screenshotUrl').value = src; }
+        }
+
+        let _screenshotPath = null;
+
+        async function screenshotFromUrl() {
+        const urlInput   = document.getElementById('screenshotUrl');
+        const previewEl  = document.getElementById('screenshotPreview');
+        const previewImg = document.getElementById('screenshotImg');
+        const dimLabel   = document.getElementById('screenshotDimLabel');
+        const spinner    = document.getElementById('screenshotSpinner');
+        const btn        = document.getElementById('btnScreenshot');
+
+        const targetUrl = urlInput.value.trim();
+        if (!targetUrl) { setScreenshotStatus('⚠️ Please enter a URL first.', '#c2410c'); return; }
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        setScreenshotStatus('⚠️ URL must start with http:// or https://', '#c2410c'); return;
+        }
+
+        // Read options
+        const mode        = document.querySelector('input[name="ssMode"]:checked')?.value ?? 'crop';
+        const width       = document.getElementById('ssWidth').value;
+        const cropHeight  = document.getElementById('ssCropHeight').value;
+
+        spinner.style.display   = 'inline-block';
+        btn.disabled            = true;
+        previewEl.style.display = 'none';
+        setScreenshotStatus(
+        mode === 'fullpage'
+        ? `⏳ Capturing full page at ${width}px wide… (may take 10–20 s)`
+        : `⏳ Capturing ${width}×${cropHeight}px screenshot…`,
+        '#0369a1'
+        );
+
+        try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+        // Send mode + dimensions as form fields — controller reads them via [FromForm]
+        const formData = new FormData();
+        formData.append('__RequestVerificationToken', token);
+        formData.append('url',         targetUrl);
+        formData.append('captureMode', mode);
+        formData.append('width',       width);
+        formData.append('cropHeight',  cropHeight);
+
+        const resp = await fetch('/ClientArticle/CaptureScreenshot', {
+        method: 'POST',
+        body:   formData
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || `Server error ${resp.status}`);
+
+        _screenshotPath     = data.path;
+        previewImg.src      = data.path;
+        previewEl.style.display = 'block';
+
+        const dimText = mode === 'fullpage'
+        ? `Full page · ${width}px wide`
+        : `${width} × ${cropHeight}px`;
+        dimLabel.textContent = dimText;
+
+        setScreenshotStatus('✅ Screenshot captured and added to images.', '#15803d');
+
+        addPathToImages(data.path);
+        addThumbToGrid(data.path, `📸 ${dimText}`);
+
+        } catch (err) {
+        setScreenshotStatus(`❌ ${err.message}`, '#dc2626');
+        console.error('Screenshot error:', err);
+        } finally {
+        spinner.style.display = 'none';
+        btn.disabled          = false;
+        }
+        }
+
+        function removeScreenshot() {
+        if (!_screenshotPath) return;
+        removePathFromImages(_screenshotPath);
+        document.querySelectorAll('#newPreviewGrid [data-screenshot-thumb]').forEach(el => el.remove());
+        _screenshotPath = null;
+        document.getElementById('screenshotPreview').style.display = 'none';
+        document.getElementById('screenshotStatus').style.display  = 'none';
+        }
+
+        function setScreenshotStatus(msg, color) {
+        const el = document.getElementById('screenshotStatus');
+        el.textContent = msg; el.style.color = color; el.style.display = 'block';
+        }
+
+        // ── Website auto-fill ─────────────────────────────────────────────────────────
         async function autoFillWebsite(webId) {
         if (!webId || webId == '0') return;
         const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
@@ -450,25 +722,10 @@
         document.getElementById('afPR').value         = d.prValue    ?? '';
         }
 
-        // function recalcReach() {
-        // const imp = parseInt(document.getElementById('afImpression').value) || 0;
-        // document.getElementById('afReach').value = imp * 4;
-        // document.querySelector('[name="Reach"]').value = imp * 4;
-        // }
-
-        // function recalcPR() {
-        // const ad = parseFloat(document.getElementById('afAD').value) || 0;
-        // document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
-        // document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
-        // }
-
         async function loadSubs(parentId) {
         const sel = document.getElementById('subSel');
         sel.innerHTML = '<option value="0">Loading…</option>';
-        if (!parentId || parentId == '0') {
-        sel.innerHTML = '<option value="0">— None —</option>';
-        return;
-        }
+        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
         const data = await (await fetch(`/ClientArticle/GetSubCategories?parentId=${parentId}`)).json();
         sel.innerHTML = '<option value="0">— None —</option>';
         data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
@@ -478,7 +735,7 @@
         $('.select-search').select2({ placeholder: 'Search...', allowClear: true });
         });
 
-        // ── Image Upload ──────────────────────────────────────────────────────────
+        // ── Image drop zone IIFE ──────────────────────────────────────────────────────
         (function () {
         const dropZone   = document.getElementById('dropZone');
         const fileInput  = document.getElementById('imageFilesInput');
@@ -486,84 +743,57 @@
         const hdnImages  = document.getElementById('hdnImages');
         const hdnRemoved = document.getElementById('hdnRemovedImages');
 
-        // Open picker on click
         dropZone.addEventListener('click', () => fileInput.click());
-
-        // Drag-over highlight
         dropZone.addEventListener('dragover', e => {
-        e.preventDefault();
-        dropZone.style.borderColor = '#3b82f6';
-        dropZone.style.background  = '#eff6ff';
+        e.preventDefault(); dropZone.style.borderColor='#3b82f6'; dropZone.style.background='#eff6ff';
         });
-        ['dragleave', 'dragend'].forEach(evt =>
-        dropZone.addEventListener(evt, () => {
-        dropZone.style.borderColor = '';
-        dropZone.style.background  = '';
-        })
+        ['dragleave','dragend'].forEach(evt =>
+        dropZone.addEventListener(evt, () => { dropZone.style.borderColor=''; dropZone.style.background=''; })
         );
-
-        // Drop
         dropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropZone.style.borderColor = '';
-        dropZone.style.background  = '';
-        mergeFiles(e.dataTransfer.files);
-        renderPreviews(fileInput.files);
+        e.preventDefault(); dropZone.style.borderColor=''; dropZone.style.background='';
+        mergeFiles(e.dataTransfer.files); renderPreviews(fileInput.files);
         });
-
-        // File input change
         fileInput.addEventListener('change', () => renderPreviews(fileInput.files));
 
-        // Render preview thumbnails
         function renderPreviews(files) {
-        newGrid.innerHTML = '';
+        // FIX BUG 2: only remove upload thumbs, preserve screenshot thumbs
+        newGrid.querySelectorAll('[data-upload-thumb]').forEach(el => el.remove());
+
         Array.from(files).forEach(file => {
         if (!file.type.startsWith('image/')) return;
         const reader = new FileReader();
         reader.onload = ev => {
         const wrap = document.createElement('div');
-        wrap.style.cssText = 'position:relative;';
+        wrap.style.cssText    = 'position:relative;';
+        wrap.dataset.uploadThumb = '1';  // ← tagged so renderPreviews can find it
         wrap.innerHTML = `
         <img src="${ev.target.result}"
-        style="width:88px;height:88px;object-fit:cover;
-        border-radius:6px;border:1px solid #e2e8f0;" />
-        <span style="position:absolute;bottom:0;left:0;right:0;
-        background:rgba(0,0,0,.55);color:#fff;
-        font-size:9px;padding:2px 4px;border-radius:0 0 6px 6px;
-        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        ${file.name}
-        </span>`;
+        style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;" />
+        <span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);
+        color:#fff;font-size:9px;padding:2px 4px;border-radius:0 0 6px 6px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${file.name}</span>`;
         newGrid.appendChild(wrap);
         };
         reader.readAsDataURL(file);
         });
         }
 
-        // Merge dropped files into the file input (DataTransfer trick)
-        function mergeFiles(droppedFiles) {
+        function mergeFiles(dropped) {
         const dt = new DataTransfer();
-        if (fileInput.files) {
-        Array.from(fileInput.files).forEach(f => dt.items.add(f));
-        }
-        Array.from(droppedFiles).forEach(f => dt.items.add(f));
+        if (fileInput.files) Array.from(fileInput.files).forEach(f => dt.items.add(f));
+        Array.from(dropped).forEach(f => dt.items.add(f));
         fileInput.files = dt.files;
         }
 
-        // Remove existing image (Edit mode)
         document.querySelectorAll('.remove-existing').forEach(btn => {
         btn.addEventListener('click', function () {
         const path = this.dataset.path;
-
-        // Remove from DOM
         this.closest('.existing-thumb').remove();
-
-        // Remove from hdnImages JSON
         let current = [];
         try { current = JSON.parse(hdnImages.value || '[]'); } catch {}
         current = current.filter(p => p !== path);
         hdnImages.value = JSON.stringify(current);
-
-        // Add to hdnRemovedImages so controller deletes from disk
         let removed = [];
         try { removed = JSON.parse(hdnRemoved.value || '[]'); } catch {}
         if (!removed.includes(path)) removed.push(path);
@@ -571,28 +801,24 @@
         });
         });
         })();
-        // ── Children management ───────────────────────────────────────────────────────
+
+        // ── Children IIFE ─────────────────────────────────────────────────────────────
         (function () {
-        // Build option HTML strings from server-side lists
-        // These are injected by the controller via ViewBag / Model.WebsiteOptions etc.
-        const websiteOptions = @Html.Raw(
-                                        System.Text.Json.JsonSerializer.Serialize(
-                                            Model.WebsiteOptions.Select(o => new { value = o.Value, text = o.Text })));
+        const websiteOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.WebsiteOptions.Select(o => new { value = o.Value, text = o.Text })));
+        const writerOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.WriterOptions.Select(o => new { value = o.Value, text = o.Text })));
 
-        const writerOptions = @Html.Raw(
-                                        System.Text.Json.JsonSerializer.Serialize(
-                                            Model.WriterOptions.Select(o => new { value = o.Value, text = o.Text })));
-
-        function buildOptions(list, selectedVal) {
+        function buildOptions(list, sel) {
         return list.map(o =>
-        `<option value="${o.value}" ${o.value == selectedVal ? 'selected' : ''}>${o.text}</option>`
+        `<option value="${o.value}"${o.value==sel?' selected':''}>${o.text}</option>`
         ).join('');
         }
 
         let childIndex = 0;
-        const container  = document.getElementById('childRowsContainer');
-        const template   = document.getElementById('childRowTemplate');
-        const today      = new Date().toISOString().split('T')[0];
+        const container = document.getElementById('childRowsContainer');
+        const template  = document.getElementById('childRowTemplate');
+        const today     = new Date().toISOString().split('T')[0];
 
         document.getElementById('btnAddChild').addEventListener('click', () => {
         addChildRow(childIndex++);
@@ -607,84 +833,59 @@
         const wrapper = document.createElement('div');
         wrapper.innerHTML = html;
         const row = wrapper.firstElementChild;
-
-        // Set number label
         row.querySelector('.child-number').textContent = idx + 1;
 
-        // Set date if provided (Edit mode)
-        if (data?.date) {
+        if (data?.date)
         row.querySelector(`[name="Children[${idx}].Date"]`).value = data.date;
-        }
-
-        // Set Id hidden (Edit mode — existing child)
         if (data?.id > 0) {
         const hdnId = document.createElement('input');
-        hdnId.type  = 'hidden';
-        hdnId.name  = `Children[${idx}].Id`;
-        hdnId.value = data.id;
+        hdnId.type = 'hidden'; hdnId.name = `Children[${idx}].Id`; hdnId.value = data.id;
         row.appendChild(hdnId);
         }
 
-        // Remove button
         row.querySelector('.btn-remove-child').addEventListener('click', function () {
         row.remove();
-        renumberChildren();
+        container.querySelectorAll('.child-row').forEach((r, i) =>
+        r.querySelector('.child-number').textContent = i + 1);
         });
-
         container.appendChild(row);
         }
 
-        function renumberChildren() {
-        container.querySelectorAll('.child-row').forEach((row, i) => {
-        row.querySelector('.child-number').textContent = i + 1;
-        });
-        }
-
-        // Auto-fill child AD / PR / MediaTier / Language when Website changes
         window.autoFillChild = async function (sel, idx) {
-        const webId    = sel.value;
-        const clientId = @Model.ClientId;
+        const webId = sel.value;
         if (!webId || webId == '0') return;
-
-        const d = await (await fetch(
-        `/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`
-        )).json();
-
+        const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
         const row = sel.closest('.child-row');
-        row.querySelector(`[name="Children[${idx}].ADValue"]`).value    = d.adValue    ?? '';
-        row.querySelector(`[name="Children[${idx}].PRValue"]`).value    = d.prValue    ?? '';
-        row.querySelector(`[name="Children[${idx}].MediaTier"]`).value  = d.mediaTier  ?? '';
-        row.querySelector(`[name="Children[${idx}].Language"]`).value   = d.language   ?? '';
+        row.querySelector(`[name="Children[${idx}].ADValue"]`).value   = d.adValue   ?? '';
+        row.querySelector(`[name="Children[${idx}].PRValue"]`).value   = d.prValue   ?? '';
+        row.querySelector(`[name="Children[${idx}].MediaTier"]`).value = d.mediaTier ?? '';
+        row.querySelector(`[name="Children[${idx}].Language"]`).value  = d.language  ?? '';
         };
 
-        // Recalc PR when AD is manually changed
         window.recalcChildPR = function (adInput, idx) {
-        const ad  = parseFloat(adInput.value) || 0;
-        const row = adInput.closest('.child-row');
-        row.querySelector(`[name="Children[${idx}].PRValue"]`).value = (ad * 3.5).toFixed(2);
+        const ad = parseFloat(adInput.value) || 0;
+        adInput.closest('.child-row').querySelector(`[name="Children[${idx}].PRValue"]`).value = (ad * 3.5).toFixed(2);
         };
 
-        // ── Edit mode — re-populate existing children ─────────────────────────────
         @if (Model.Children != null && Model.Children.Any())
         {
             <text>
                 const existingChildren = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                                                                                    Model.Children.Select(c => new
-                                                                                    {
-                                                                                        id = c.Id,
-                                                                                        websiteId = c.WebsiteId,
-                                                                                        writerId = c.WriterId,
-                                                                                        date = c.Date.ToString("yyyy-MM-dd"),
-                                                                                        articleURL = c.ArticleURL ?? "",
-                                                                                        adValue = c.ADValue,
-                                                                                        prValue = c.PRValue,
-                                                                                        mediaTier = c.MediaTier ?? "",
-                                                                                        language = c.Language ?? ""
-                                                                                    })));
+                                Model.Children.Select(c => new
+                                {
+                                    id = c.Id,
+                                    websiteId = c.WebsiteId,
+                                    writerId = c.WriterId,
+                                    date = c.Date.ToString("yyyy-MM-dd"),
+                                    articleURL = c.ArticleURL ?? "",
+                                    adValue = c.ADValue,
+                                    prValue = c.PRValue,
+                                    mediaTier = c.MediaTier ?? "",
+                                    language = c.Language ?? ""
+                                })));
 
                 existingChildren.forEach(child => {
                 addChildRow(childIndex, child);
-                // Set extra fields after row is in DOM
                 const row = container.lastElementChild;
                 const idx = childIndex;
                 row.querySelector(`[name="Children[${idx}].ArticleURL"]`).value = child.articleURL;
@@ -697,6 +898,5 @@
             </text>
         }
         })();
-
     </script>
 }

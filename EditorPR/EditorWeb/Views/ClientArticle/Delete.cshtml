@@ -1,0 +1,258 @@
+@model EditorViewModelLayer.MediaViewModel.ClientArticleDTO
+
+@{
+    ViewData["Title"] = "Delete Article";
+
+    var existingImages = new List<string>();
+    if (!string.IsNullOrWhiteSpace(Model.Images))
+    {
+        try { existingImages = System.Text.Json.JsonSerializer.Deserialize<List<string>>(Model.Images) ?? new(); }
+        catch { }
+    }
+}
+
+@await Html.PartialAsync("_MediaStyles")
+
+<style>
+    .danger-card {
+        background: #fff5f5;
+        border: 1.5px solid #fca5a5;
+        border-radius: var(--radius, 10px);
+        padding: 1.4rem 1.6rem;
+        margin-bottom: 1.4rem;
+    }
+    .danger-icon {
+        font-size: 2.2rem;
+        line-height: 1;
+        margin-bottom: .5rem;
+    }
+    .danger-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #dc2626;
+        margin-bottom: .25rem;
+    }
+    .danger-msg {
+        font-size: .875rem;
+        color: #6b7280;
+    }
+    .detail-label {
+        font-size: .73rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        display: block;
+        margin-bottom: .15rem;
+    }
+    .detail-value {
+        font-size: .9rem;
+        font-weight: 500;
+        color: #1e293b;
+    }
+    .btn-confirm-del {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: #dc2626;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: .55rem 1.4rem;
+        font-size: .9rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .15s;
+    }
+    .btn-confirm-del:hover { background: #b91c1c; }
+</style>
+
+<div class="form-wrap">
+
+    <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+       style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);
+              font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
+        ← Back to Articles
+    </a>
+
+    @await Html.PartialAsync("_navdashboard")
+
+    <div class="m-header" style="margin-bottom:1.2rem;">
+        <div class="m-header-icon" style="background:#fee2e2;">🗑️</div>
+        <div>
+            <h1>Delete Article</h1>
+            <p>@Model.ClientName</p>
+        </div>
+    </div>
+
+    @* ── Warning banner ────────────────────────────────────────────────────── *@
+    <div class="danger-card">
+        <div class="danger-icon">⚠️</div>
+        <div class="danger-title">This action cannot be undone</div>
+        <div class="danger-msg">
+            You are about to permanently delete this article
+            @if (Model.Children != null && Model.Children.Any())
+            {
+                <text> and its <strong>@Model.Children.Count child publication(s)</strong></text>
+            }
+            . Please review the details below before confirming.
+        </div>
+    </div>
+
+    @* ── Article summary ───────────────────────────────────────────────────── *@
+    <div class="form-card">
+        <div class="form-card-title">📄 Article to be deleted</div>
+
+        <div class="fg-3">
+            <div>
+                <span class="detail-label">Title</span>
+                <span class="detail-value" style="font-size:.97rem;font-weight:700;">@Model.Title</span>
+            </div>
+            <div>
+                <span class="detail-label">Date</span>
+                <span class="detail-value">@Model.Date.ToString("dd MMM yyyy")</span>
+            </div>
+            <div>
+                <span class="detail-label">Website</span>
+                <span class="detail-value">@(Model.WebsiteName ?? "—")</span>
+            </div>
+        </div>
+
+        <div class="fg-3" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">Category</span>
+                <span class="detail-value">@(Model.CategoryName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Sub Category</span>
+                <span class="detail-value">@(Model.SubCategoryName ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Writer</span>
+                <span class="detail-value">@(Model.WriterName ?? "—")</span>
+            </div>
+        </div>
+
+        <div class="fg-4" style="margin-top:.9rem;">
+            <div>
+                <span class="detail-label">AD Value</span>
+                <span class="detail-value" style="color:#0ea5e9;font-weight:700;">
+                    @Model.ADValue.ToString("N2")
+                </span>
+            </div>
+            <div>
+                <span class="detail-label">PR Value</span>
+                <span class="detail-value" style="color:#16a34a;font-weight:700;">
+                    @Model.PRValue.ToString("N2")
+                </span>
+            </div>
+            <div>
+                <span class="detail-label">Toning</span>
+                <span class="detail-value">@(Model.Toning ?? "—")</span>
+            </div>
+            <div>
+                <span class="detail-label">Created By</span>
+                <span class="detail-value">@(Model.CreatedByUserName ?? "—")</span>
+            </div>
+        </div>
+
+        @* ── Article URL ───────────────────────────────────────────────────── *@
+        @if (!string.IsNullOrWhiteSpace(Model.ArticleURL))
+        {
+            <div style="margin-top:.9rem;">
+                <span class="detail-label">Article URL</span>
+                <a href="@Model.ArticleURL" target="_blank" rel="noopener"
+                   style="font-size:.85rem;word-break:break-all;">
+                    @Model.ArticleURL
+                </a>
+            </div>
+        }
+
+        @* ── Images preview ────────────────────────────────────────────────── *@
+        @if (existingImages.Any())
+        {
+            <div style="margin-top:1rem;">
+                <span class="detail-label" style="margin-bottom:.5rem;">
+                    Images (@existingImages.Count) — will also be removed
+                </span>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    @foreach (var img in existingImages)
+                    {
+                        <img src="@img"
+                             style="width:80px;height:60px;object-fit:cover;border-radius:6px;
+                                    border:1.5px solid #fca5a5;opacity:.85;"
+                             onerror="this.src='/images/no-image.png'" />
+                    }
+                </div>
+            </div>
+        }
+
+        @* ── Children warning ──────────────────────────────────────────────── *@
+        @if (Model.Children != null && Model.Children.Any())
+        {
+            <div style="margin-top:1rem;padding:.75rem;background:#fff7ed;
+                        border:1px solid #fed7aa;border-radius:7px;">
+                <strong style="font-size:.82rem;color:#c2410c;">
+                    ⚠️ @Model.Children.Count child publication(s) will also be deleted:
+                </strong>
+                <table style="width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.5rem;">
+                    <thead>
+                        <tr style="border-bottom:1px solid #fed7aa;color:#92400e;">
+                            <th style="padding:.3rem .4rem;text-align:left;">#</th>
+                            <th style="padding:.3rem .4rem;text-align:left;">Date</th>
+                            <th style="padding:.3rem .4rem;text-align:right;">AD Value</th>
+                            <th style="padding:.3rem .4rem;text-align:right;">PR Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int ci = 1; }
+                        @foreach (var child in Model.Children)
+                        {
+                            <tr style="border-bottom:1px solid #fef3c7;">
+                                <td style="padding:.25rem .4rem;color:#94a3b8;">@ci</td>
+                                <td style="padding:.25rem .4rem;">@child.Date.ToString("dd MMM yyyy")</td>
+                                <td style="padding:.25rem .4rem;text-align:right;">@child.ADValue.ToString("N0")</td>
+                                <td style="padding:.25rem .4rem;text-align:right;font-weight:600;color:#16a34a;">
+                                    @child.PRValue.ToString("N0")
+                                </td>
+                            </tr>
+                            ci++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @* ── Confirm form ──────────────────────────────────────────────────────── *@
+    <form method="post"
+          action="@Url.Action("Delete", new { id = Model.Id })"
+          onsubmit="return confirmDelete()">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id"       value="@Model.Id" />
+        <input type="hidden" name="clientId" value="@Model.ClientId" />
+
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+            <button type="submit" class="btn-confirm-del">
+                🗑️ Yes, Delete Permanently
+            </button>
+            <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
+               class="btn-cancel">
+                Cancel
+            </a>
+            <a href="@Url.Action("Details", new { id = Model.Id })"
+               style="font-size:.82rem;color:var(--slate);text-decoration:none;margin-left:.25rem;">
+                View Article
+            </a>
+        </div>
+    </form>
+
+</div>
+
+@section Scripts {
+<script>
+function confirmDelete() {
+    return confirm('Are you sure you want to permanently delete this article? This cannot be undone.');
+}
+</script>
+}

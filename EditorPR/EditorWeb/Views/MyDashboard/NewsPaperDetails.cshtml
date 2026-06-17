@@ -1,0 +1,115 @@
+@model EditorViewModelLayer.MediaViewModel.ClientNewsPaperDTO
+@{
+    ViewData["Title"] = "Newspaper Details";
+    Layout = "~/Views/Shared/_ClientLayout.cshtml";
+}
+@await Html.PartialAsync("_MediaStyles")
+<div class="m-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Newspaper Details</h5>
+    <a href="@Url.Action("ClientNewsPaper")" class="btn btn-secondary btn-sm">← Back</a>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">@Model.Title</h5>
+                <hr />
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Date</label>
+                        <p>@Model.Date.ToString("dd MMM yyyy")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Publication</label>
+                        <p>@Model.PublicationName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Category</label>
+                        <p>@Model.CategoryName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Sub Category</label>
+                        <p>@Model.SubCategoryName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Writer</label>
+                        <p>@Model.WriterName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Language</label>
+                        <p>@Model.Language</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Media Type</label>
+                        <p>@Model.MediaType</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Frequency</label>
+                        <p>@Model.Frequency</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Toning</label>
+                        <p>@Model.Toning</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Pages</label>
+                        <p>@Model.Pages</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Height (cm)</label>
+                        <p>@Model.Height</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted mb-0">Width (cm)</label>
+                        <p>@Model.Width</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Values</h6>
+                <table class="table table-sm">
+                    <tr><th>Circulation</th><td>@((Model.Circulation ?? 0).ToString("N0"))</td></tr>
+                    <tr><th>Reach</th><td>@Model.Reach.ToString("N0")</td></tr>
+                    <tr><th>AD Value</th><td>@Model.ADValue.ToString("N0")</td></tr>
+                    <tr class="table-primary"><th>PR Value</th><td><strong>@Model.PRValue.ToString("N0")</strong></td></tr>
+                </table>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Images))
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Images</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var img in Model.Images.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            <a href="/@img.Trim()" target="_blank">
+                                <img src="/@img.Trim()" class="img-thumbnail"
+                                     style="width:80px;height:80px;object-fit:cover;" />
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Content))
+    {
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Content</h6>
+                    <div>@Html.Raw(Model.Content)</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

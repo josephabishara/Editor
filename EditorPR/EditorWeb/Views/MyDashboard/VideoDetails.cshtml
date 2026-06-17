@@ -1,0 +1,92 @@
+@model EditorViewModelLayer.MediaViewModel.ClientVideoDTO
+@{
+    ViewData["Title"] = "Video Details";
+    Layout = "~/Views/Shared/_ClientLayout.cshtml";
+}
+@await Html.PartialAsync("_MediaStyles")
+<div class="m-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Video Details</h5>
+    <a href="@Url.Action("ClientVideo")" class="btn btn-secondary btn-sm">← Back</a>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">@Model.Title</h5>
+                <hr />
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Date</label>
+                        <p>@Model.Date.ToString("dd MMM yyyy")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Channel</label>
+                        <p>@Model.ChannelName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Category</label>
+                        <p>@Model.CategoryName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Sub Category</label>
+                        <p>@Model.SubCategoryName</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Program</label>
+                        <p>@Model.Program</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Duration</label>
+                        <p>@Model.Duration seconds</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Language</label>
+                        <p>@Model.Language</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Toning</label>
+                        <p>@Model.Toning</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted mb-0">Media Tier</label>
+                        <p>@Model.MediaTier</p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.VideoUrl))
+                {
+                    <a href="@Model.VideoUrl" target="_blank"
+                       class="btn btn-outline-danger btn-sm mt-2">
+                        <i class="bi bi-play-circle"></i> Watch Video
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Values</h6>
+                <table class="table table-sm">
+                    <tr><th>Impression</th><td>@Model.Impression.ToString("N0")</td></tr>
+                    <tr><th>Reach</th><td>@Model.Reach.ToString("N0")</td></tr>
+                    <tr><th>AD Value</th><td>@Model.ADValue.ToString("N0")</td></tr>
+                    <tr class="table-primary"><th>PR Value</th><td><strong>@Model.PRValue.ToString("N0")</strong></td></tr>
+                </table>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Screenshot))
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title text-muted">Screenshot</h6>
+                    <img src="/@Model.Screenshot" class="img-fluid rounded"
+                         style="max-height:200px;object-fit:cover;" />
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,6 +1,10 @@
 ﻿@model IEnumerable<EditorViewModelLayer.ClientViewModel.ClientDTO>
 @{
     ViewData["Title"] = "Clients";
+
+
+    bool isAdmin = User.IsInRole("Admin");
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
 }
 
 <div class="container-fluid mt-4">
@@ -11,15 +15,17 @@
         <div class="col-6">
         </div>
         <div class="col-2">
-            <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Add Client</a>
-
+            @if (isAdmin)
+            {
+                <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Add Client</a>
+            }
         </div>
         <div class="col-2">
             <a asp-action="Index" class="btn btn-primary btn-sm"><i class="fa fa-building"></i> Manage</a>
 
         </div>
     </div>
-<br />
+    <br />
 
     @if (TempData["Success"] != null)
     {
@@ -42,13 +48,13 @@
             
         @if (!Model.Any())
         {
-                        
+
             <div class="text-center text-muted py-4">No clients found.</div>
-                        
+
         }
         @foreach (var c in Model)
         {
-                      
+
             <div class="col-md-3">
                 <div class="card shadow-sm">
                     <div class="card-header">
@@ -64,9 +70,9 @@
                        
                         <a asp-action="dashboard" asp-route-id="@c.Id"
                            class="btn btn-lg btn-outline-primary  me-1" style="width: 100%;"><i class="fa fa-dashboard"></i></a>
+
                        
 
-                           
                     </div>
                 </div>
             </div>

@@ -97,15 +97,20 @@
                     </select>
                 </div>
                 <div class="fg">
-                    <label asp-for="SubCategoryId">Sub Category</label>
+                    <label asp-for="SubCategoryId">Sub Category</label> 
                     <select asp-for="SubCategoryId" asp-items="subSL" id="subSel" class="select-search" required>
                         <option value="0">— None —</option>
                     </select>
+                  
                 </div>
             </div>
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
-                    <label asp-for="WriterId">Writer</label>
+                    <label asp-for="WriterId">
+                        <a asp-action="create" asp-controller="Writer" class="btn btn-info btn-sm">+</a>
+                        Writer
+                </label>
+                   
                     <select asp-for="WriterId" asp-items="writerSL" class="select-search">
                         <option value="0">— None —</option>
                     </select>
@@ -409,6 +414,8 @@
 
     </form>
 </div>
+ 
+
 @section Scripts {
     <script>
         const clientId = @Model.ClientId;

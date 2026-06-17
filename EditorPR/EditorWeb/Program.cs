@@ -16,6 +16,7 @@ using EditorLogicLayer.Writer;
 using EditorRepositoryLayer.IRepositories;
 using EditorRepositoryLayer.Repositories;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,6 +48,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // ── 4. Dependency Injection ───────────────────────────────────────────────────
+builder.Services.AddHttpClient();
+
 
 // ──  Repositories Injection ───────────────────────────────────────────────────
 builder.Services.AddScoped<IWebsiteRepository, WebsiteRepository>();
@@ -90,11 +93,18 @@ builder.Services.AddScoped<IClientVideoService, ClientVideoService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IGeneralArticleService, GeneralArticleService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<ITheClientResolverService, TheClientResolverService>();
 
 // ── 5. MVC ────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
 
+builder.Services.Configure<IISServerOptions>(o => o.MaxRequestBodySize = null);
+builder.Services.Configure<KestrelServerOptions>(o => o.Limits.MaxRequestBodySize = null);
+
 var app = builder.Build();
+
+
+
 
 // ── 6. Seed Roles on startup ──────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Text.Json;
+using static System.Net.WebRequestMethods;
 
 namespace EditorWeb.Controllers
 {
@@ -12,16 +13,18 @@ namespace EditorWeb.Controllers
     {
         private readonly IClientArticleService _service;
         private readonly IWebHostEnvironment _env;
-
+        private readonly IHttpClientFactory _http;
         public ClientArticleController(
             IClientArticleService service,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IHttpClientFactory http)
         {
             _service = service;
             _env = env;
+            _http = http;
         }
 
-        
+
 
         // ── Allowed image extensions ───────────────────────────────────────────
         private static readonly string[] _allowedExt =
@@ -32,6 +35,54 @@ namespace EditorWeb.Controllers
 
         // ── INDEX ──────────────────────────────────────────────────────────────
 
+        //[HttpGet]
+        //[Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
+        //public async Task<IActionResult> Index(
+        //    int clientId,
+        //    string? title = null,
+        //    string? dateFrom = null,
+        //    string? dateTo = null,
+        //    int categoryId = 0,
+        //    int subCategoryId = 0,
+        //    int writerId = 0,
+        //    int websiteId = 0)
+        //{
+        //    if (clientId <= 0) return RedirectToAction("Index", "Dashboard");
+
+        //    var list = await _service.GetListAsync(clientId);
+        //    var items = list.Items.AsEnumerable();
+
+        //    if (!string.IsNullOrWhiteSpace(title))
+        //        items = items.Where(i => i.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
+        //    if (DateTime.TryParse(dateFrom, out var from))
+        //        items = items.Where(i => i.Date.Date >= from.Date);
+        //    if (DateTime.TryParse(dateTo, out var to))
+        //        items = items.Where(i => i.Date.Date <= to.Date);
+        //    if (categoryId > 0) items = items.Where(i => i.CategoryId == categoryId);
+        //    if (subCategoryId > 0) items = items.Where(i => i.SubCategoryId == subCategoryId);
+        //    if (writerId > 0) items = items.Where(i => i.WriterId == writerId);
+        //    if (websiteId > 0) items = items.Where(i => i.WebsiteId == websiteId);
+
+        //    list.WebsiteOptions = await _service.GetWebsiteOptionsAsync(websiteId);
+        //    list.CategoryOptions = await _service.GetCategoryOptionsAsync(clientId, categoryId);
+        //    list.SubCategoryOptions = categoryId > 0
+        //        ? await _service.GetSubCategoryOptionsAsync(categoryId, subCategoryId)
+        //        : new List<MediaSelectOption>();
+        //    list.WriterOptions = await _service.GetWriterOptionsAsync(writerId);
+        //    list.Items = items.ToList();
+
+        //    ViewBag.ClientId = clientId;
+        //    ViewBag.FilterTitle = title;
+        //    ViewBag.FilterDateFrom = dateFrom;
+        //    ViewBag.FilterDateTo = dateTo;
+        //    ViewBag.FilterCategoryId = categoryId;
+        //    ViewBag.FilterSubId = subCategoryId;
+        //    ViewBag.FilterWriterId = writerId;
+        //    ViewBag.FilterWebsiteId = websiteId;
+
+        //    return View(list);
+        //}
+
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
         public async Task<IActionResult> Index(
@@ -41,14 +92,16 @@ namespace EditorWeb.Controllers
             string? dateTo = null,
             int categoryId = 0,
             int subCategoryId = 0,
-            int writerId = 0,
-            int websiteId = 0)
+            int websiteId = 0,
+            string? createdFrom = null,   // ← NEW: filter by CreatedAt from
+            string? createdTo = null)   // ← NEW: filter by CreatedAt to
         {
             if (clientId <= 0) return RedirectToAction("Index", "Dashboard");
 
             var list = await _service.GetListAsync(clientId);
             var items = list.Items.AsEnumerable();
 
+            // Existing filters
             if (!string.IsNullOrWhiteSpace(title))
                 items = items.Where(i => i.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
             if (DateTime.TryParse(dateFrom, out var from))
@@ -57,15 +110,21 @@ namespace EditorWeb.Controllers
                 items = items.Where(i => i.Date.Date <= to.Date);
             if (categoryId > 0) items = items.Where(i => i.CategoryId == categoryId);
             if (subCategoryId > 0) items = items.Where(i => i.SubCategoryId == subCategoryId);
-            if (writerId > 0) items = items.Where(i => i.WriterId == writerId);
             if (websiteId > 0) items = items.Where(i => i.WebsiteId == websiteId);
+
+            // ← NEW: filter by CreatedAt
+            if (DateTime.TryParse(createdFrom, out var cFrom))
+                items = items.Where(i => i.CreatedAt.Date >= cFrom.Date);
+            if (DateTime.TryParse(createdTo, out var cTo))
+                items = items.Where(i => i.CreatedAt.Date <= cTo.Date);
 
             list.WebsiteOptions = await _service.GetWebsiteOptionsAsync(websiteId);
             list.CategoryOptions = await _service.GetCategoryOptionsAsync(clientId, categoryId);
             list.SubCategoryOptions = categoryId > 0
                 ? await _service.GetSubCategoryOptionsAsync(categoryId, subCategoryId)
                 : new List<MediaSelectOption>();
-            list.WriterOptions = await _service.GetWriterOptionsAsync(writerId);
+            // WriterOptions removed — no longer needed for filtering
+
             list.Items = items.ToList();
 
             ViewBag.ClientId = clientId;
@@ -74,12 +133,12 @@ namespace EditorWeb.Controllers
             ViewBag.FilterDateTo = dateTo;
             ViewBag.FilterCategoryId = categoryId;
             ViewBag.FilterSubId = subCategoryId;
-            ViewBag.FilterWriterId = writerId;
             ViewBag.FilterWebsiteId = websiteId;
+            ViewBag.FilterCreatedFrom = createdFrom;  // ← NEW
+            ViewBag.FilterCreatedTo = createdTo;    // ← NEW
 
             return View(list);
         }
-
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
         public async Task<IActionResult> Details(int id)
@@ -110,9 +169,7 @@ namespace EditorWeb.Controllers
         //}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(
-           ClientArticleDTO model,
-           List<IFormFile>? imageFiles)
+        public async Task<IActionResult> Create(ClientArticleDTO model, List<IFormFile>? imageFiles)
         {
             if (!ModelState.IsValid)
             {
@@ -150,25 +207,11 @@ namespace EditorWeb.Controllers
             return View(item);
         }
 
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Edit(int id, ClientArticleDTO model)
-        //{
-        //    if (id != model.Id) return BadRequest();
-        //    if (!ModelState.IsValid) { await PopulateDropdownsAsync(model); return View(model); }
-        //    var (success, message) = await _service.UpdateAsync(model);
-        //    if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateDropdownsAsync(model); return View(model); }
-        //    TempData["Success"] = message;
-        //    return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
-        //}
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(
-          int id,
-          ClientArticleDTO model,
-          List<IFormFile>? imageFiles,
-          string? removedImages)   // posted as hidden field from the view
+        public async Task<IActionResult> Edit(int id, ClientArticleDTO model, List<IFormFile>? imageFiles, string? removedImages)   // posted as hidden field from the view
         {
             if (id != model.Id) return BadRequest();
 
@@ -373,6 +416,228 @@ namespace EditorWeb.Controllers
             }
             catch { /* swallow — non-critical */ }
         }
+
+
+
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> CaptureScreenshot([FromForm] string url)
+        //{
+        //    if (string.IsNullOrWhiteSpace(url))
+        //        return BadRequest(new { error = "URL is required." });
+
+        //    if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
+        //        || (uri.Scheme != "http" && uri.Scheme != "https"))
+        //        return BadRequest(new { error = "Invalid URL. Must start with http:// or https://" });
+
+        //    var cleanUrl = uri.ToString(); // normalised, no double-encoding
+
+        //    var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "articles");
+        //    Directory.CreateDirectory(uploadsFolder);
+
+        //    var client = _http.CreateClient();
+        //    client.Timeout = TimeSpan.FromSeconds(25);
+        //    client.DefaultRequestHeaders.TryAddWithoutValidation(
+        //        "User-Agent",
+        //        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 EditorPR/2.0");
+
+        //    byte[]? imageBytes = null;
+        //    string ext = ".jpg";
+        //    string? lastError = null;
+
+        //    // ── Strategy 1: thum.io ───────────────────────────────────────────────────
+        //    // CRITICAL: append cleanUrl RAW after the path prefix — no Uri.EscapeDataString.
+        //    // thum.io parses the target URL from the path itself; encoding destroys it.
+        //    try
+        //    {
+        //        // Use /noanimate/ flag to skip animated GIFs (faster, more reliable)
+        //        var thumbUrl = "https://image.thum.io/get/width/1280/crop/900/noanimate/" + cleanUrl;
+
+        //        var resp = await client.GetAsync(thumbUrl);
+
+        //        if (resp.IsSuccessStatusCode)
+        //        {
+        //            var ct = resp.Content.Headers.ContentType?.MediaType ?? "";
+        //            if (ct.StartsWith("image/"))
+        //            {
+        //                imageBytes = await resp.Content.ReadAsByteArrayAsync();
+        //                ext = ct == "image/png" ? ".png" : ".jpg";
+        //            }
+        //            else
+        //            {
+        //                lastError = $"thum.io returned non-image content-type: {ct}";
+        //            }
+        //        }
+        //        else
+        //        {
+        //            lastError = $"thum.io returned HTTP {(int)resp.StatusCode}";
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        lastError = $"thum.io error: {ex.Message}";
+        //    }
+
+        //    // ── Strategy 2: microlink.io (fallback) ───────────────────────────────────
+        //    // Free API, no key, returns JSON { data: { screenshot: { url } } }
+        //    // The screenshot URL itself is publicly accessible — we fetch it next.
+        //    if (imageBytes == null)
+        //    {
+        //        try
+        //        {
+        //            var microlinkApi =
+        //                $"https://api.microlink.io/?url={Uri.EscapeDataString(cleanUrl)}&screenshot=true&meta=false&embed=screenshot.url";
+
+        //            var apiResp = await client.GetAsync(microlinkApi);
+        //            if (apiResp.IsSuccessStatusCode)
+        //            {
+        //                var json = await apiResp.Content.ReadAsStringAsync();
+        //                var doc = System.Text.Json.JsonDocument.Parse(json);
+        //                var imgUrl = doc.RootElement
+        //                                 .GetProperty("data")
+        //                                 .GetProperty("screenshot")
+        //                                 .GetProperty("url")
+        //                                 .GetString();
+
+        //                if (!string.IsNullOrEmpty(imgUrl))
+        //                {
+        //                    var imgResp = await client.GetAsync(imgUrl);
+        //                    if (imgResp.IsSuccessStatusCode)
+        //                    {
+        //                        imageBytes = await imgResp.Content.ReadAsByteArrayAsync();
+        //                        ext = ".png";
+        //                        lastError = null; // succeeded
+        //                    }
+        //                    else
+        //                    {
+        //                        lastError += $" | microlink image fetch HTTP {(int)imgResp.StatusCode}";
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    lastError += " | microlink: screenshot URL was empty";
+        //                }
+        //            }
+        //            else
+        //            {
+        //                lastError += $" | microlink API HTTP {(int)apiResp.StatusCode}";
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            lastError += $" | microlink error: {ex.Message}";
+        //        }
+        //    }
+
+        //    // ── Both failed ───────────────────────────────────────────────────────────
+        //    if (imageBytes == null || imageBytes.Length == 0)
+        //        return BadRequest(new { error = $"Could not capture screenshot. Details: {lastError}" });
+
+        //    // ── Save to disk ──────────────────────────────────────────────────────────
+        //    var uniqueName = $"ss_{Guid.NewGuid()}{ext}";
+        //    var fullPath = Path.Combine(uploadsFolder, uniqueName);
+        //    await System.IO.File.WriteAllBytesAsync(fullPath, imageBytes);
+
+        //    return Ok(new { path = $"/uploads/articles/{uniqueName}" });
+        //}
+
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CaptureScreenshot(
+            [FromForm] string url,
+            [FromForm] string captureMode = "crop",    // "crop" or "fullpage"
+            [FromForm] int width = 1280,
+            [FromForm] int cropHeight = 900)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return BadRequest(new { error = "URL is required." });
+
+            if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
+                || (uri.Scheme != "http" && uri.Scheme != "https"))
+                return BadRequest(new { error = "Invalid URL." });
+
+            // Clamp dimensions to sensible bounds
+            width = Math.Clamp(width, 320, 2560);
+            cropHeight = Math.Clamp(cropHeight, 100, 5000);
+
+            var cleanUrl = uri.ToString();
+
+            // ── Build thum.io URL based on mode ──────────────────────────────────────
+            // Format: https://image.thum.io/get/{options}/{target-url}
+            // Options are path segments — NO encoding on the target URL itself.
+            var modeSegment = captureMode == "fullpage"
+                ? $"width/{width}/fullpage/noanimate"
+                : $"width/{width}/crop/{cropHeight}/noanimate";
+
+            var thumbUrl = $"https://image.thum.io/get/{modeSegment}/{cleanUrl}";
+
+            var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "articles");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var client = _http.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.TryAddWithoutValidation(
+                "User-Agent", "Mozilla/5.0 EditorPR/2.0");
+
+            byte[]? imageBytes = null;
+            string ext = ".jpg";
+            string? lastError = null;
+
+            // ── Strategy 1: thum.io ───────────────────────────────────────────────────
+            try
+            {
+                var resp = await client.GetAsync(thumbUrl);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var ct = resp.Content.Headers.ContentType?.MediaType ?? "";
+                    if (ct.StartsWith("image/"))
+                    {
+                        imageBytes = await resp.Content.ReadAsByteArrayAsync();
+                        ext = ct == "image/png" ? ".png" : ".jpg";
+                    }
+                    else lastError = $"thum.io returned content-type: {ct}";
+                }
+                else lastError = $"thum.io HTTP {(int)resp.StatusCode}";
+            }
+            catch (Exception ex) { lastError = $"thum.io error: {ex.Message}"; }
+
+            // ── Strategy 2: microlink.io fallback ─────────────────────────────────────
+            if (imageBytes == null)
+            {
+                try
+                {
+                    var api = $"https://api.microlink.io/?url={Uri.EscapeDataString(cleanUrl)}&screenshot=true&meta=false&embed=screenshot.url";
+                    var apiResp = await client.GetAsync(api);
+                    if (apiResp.IsSuccessStatusCode)
+                    {
+                        var doc = System.Text.Json.JsonDocument.Parse(await apiResp.Content.ReadAsStringAsync());
+                        var imgUrl = doc.RootElement.GetProperty("data").GetProperty("screenshot").GetProperty("url").GetString();
+                        if (!string.IsNullOrEmpty(imgUrl))
+                        {
+                            var imgResp = await client.GetAsync(imgUrl);
+                            if (imgResp.IsSuccessStatusCode)
+                            { imageBytes = await imgResp.Content.ReadAsByteArrayAsync(); ext = ".png"; lastError = null; }
+                            else lastError += $" | microlink image HTTP {(int)imgResp.StatusCode}";
+                        }
+                        else lastError += " | microlink: empty screenshot URL";
+                    }
+                    else lastError += $" | microlink API HTTP {(int)apiResp.StatusCode}";
+                }
+                catch (Exception ex) { lastError += $" | microlink: {ex.Message}"; }
+            }
+
+            if (imageBytes == null || imageBytes.Length == 0)
+                return BadRequest(new { error = $"Could not capture screenshot. {lastError}" });
+
+            var uniqueName = $"ss_{Guid.NewGuid()}{ext}";
+            await System.IO.File.WriteAllBytesAsync(Path.Combine(uploadsFolder, uniqueName), imageBytes);
+
+            return Ok(new { path = $"/uploads/articles/{uniqueName}" });
+        }
+
+
 
     }
 

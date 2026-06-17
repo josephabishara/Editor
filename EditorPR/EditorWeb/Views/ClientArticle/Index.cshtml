@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @using System.Text.Encodings.Web
 @{
-    ViewData["Title"] = "Website Articles";
+    ViewData["Title"] = "Website ";
     var clientId = Model.ClientId > 0 ? Model.ClientId : (ViewBag.ClientId is int v ? v : 0);
 
     var fTitle = ViewBag.FilterTitle as string ?? "";
@@ -11,8 +11,10 @@
     var fTo = ViewBag.FilterDateTo as string ?? "";
     var fCat = (int)(ViewBag.FilterCategoryId ?? 0);
     var fSub = (int)(ViewBag.FilterSubId ?? 0);
-    var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
-    var fWebsite = (int)(ViewBag.FilterWebsiteId ?? 0);
+    // var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
+    // var fWebsite = (int)(ViewBag.FilterWebsiteId ?? 0);
+    var fCreatedFrom = ViewBag.FilterCreatedFrom as string ?? "";
+    var fCreatedTo = ViewBag.FilterCreatedTo as string ?? "";
 
     bool isAdmin = User.IsInRole("Admin");
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
@@ -134,7 +136,7 @@
 
 <div class="m-header">
     <div class="m-header-icon" style="background:#cffafe;">🌐</div>
-    <div><h1>Website Articles</h1><p>@Model.ClientName</p></div>
+    <div><h1>Website </h1><p>@Model.ClientName</p></div>
     <div class="ms-auto">
         <a href="@Url.Action("ClientDashboard", "Dashboard", new { id = clientId })" class="btn-dashboard">← Dashboard</a>
     </div>
@@ -142,7 +144,7 @@
 </div>
 
 <div class="stat-row">
-    <div class="stat-pill sp-total"><span class="num">@Model.Total</span><span class="lbl">Total Articles</span></div>
+    <div class="stat-pill sp-total"><span class="num">@Model.Total</span><span class="lbl">Total Websites</span></div>
     <div class="stat-pill sp-pr"><span class="num">@Model.TotalPR.ToString("N0")</span><span class="lbl">Total PR</span></div>
     <div class="stat-pill sp-ad"><span class="num">@Model.TotalAD.ToString("N0")</span><span class="lbl">Total AD</span></div>
 </div>
@@ -152,7 +154,7 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
         </svg>
-        Filter Articles
+        Filter Website
     </div>
     <form method="get" action="@Url.Action("Index")">
         <input type="hidden" name="clientId" value="@clientId" />
@@ -168,10 +170,28 @@
                 </select>
             </div>
             <div class="fg"><label>Sub Category</label><select name="subCategoryId" id="fSub" asp-items="subSL"><option value="0">All</option></select></div>
-            <div class="fg"><label>Writer</label><select name="writerId" asp-items="writerSL"><option value="0">All</option></select></div>
+            @*             <div class="fg"><label>Writer</label><select name="writerId" asp-items="writerSL"><option value="0">All</option></select></div>
+ *@         
+            
+        </div>
+        <br />
+        <div class="filter-grid">
             <div class="fg"><label>Website</label><select name="websiteId" asp-items="webSL"><option value="0">All</option></select></div>
+            <div class="fg">
+                <label>Created From</label>
+                <input type="date" name="createdFrom" value="@fCreatedFrom" />
+            </div>
+
+           
+            <div class="fg">
+                <label>Created To</label>
+                <input type="date" name="createdTo" value="@fCreatedTo" />
+            </div>
             <div class="fg" style="display:flex;gap:.4rem;">
                 <button type="submit" class="btn-filter">Search</button>
+             
+            </div>
+            <div class="fg" style="display:flex;gap:.4rem;">
                 <a href="@Url.Action("Index", new { clientId })" class="btn-reset">Reset</a>
             </div>
         </div>
@@ -179,7 +199,7 @@
 </div>
 
 <div class="sel-toolbar" id="selToolbar">
-    <div class="sel-count">Selected <span id="selCount">0</span> articles</div>
+    <div class="sel-count">Selected <span id="selCount">0</span> Websites</div>
     <button class="btn-export btn-xl" onclick="exportExcel()">⬇ Excel</button>
     <button class="btn-export btn-pdf" onclick="exportPDF()">⬇ PDF Report</button>
     <form id="duplicateForm" asp-action="Duplicate" asp-controller="ClientArticle"
@@ -203,14 +223,14 @@
     <div class="result-count">Showing <strong>@Model.Items.Count()</strong> of <strong>@Model.Total</strong></div>
     @if (canEdit)
     {
-        <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add Article</a>
+        <a href="@Url.Action("Create", new { clientId })" class="btn-add">+ Add Website</a>
     }
 </div>
 
 <div class="m-table-wrap">
     @if (!Model.Items.Any())
     {
-        <div class="empty-state"><h3>No articles found</h3><p>Adjust filters or add a new article.</p></div>
+        <div class="empty-state"><h3>No Websites found</h3><p>Adjust filters or add a new Website.</p></div>
     }
     else
     {
@@ -296,7 +316,7 @@
                         <td class="small">@(item.WebsiteName ?? "—")</td>
                         <td class="small">@(item.CategoryName ?? "—")</td>
                         <td class="small">@(item.SubCategoryName ?? "—")</td>
-                    @*     <td class="small">@(item.WriterName ?? "—")</td>
+                        @*     <td class="small">@(item.WriterName ?? "—")</td>
                         <td class="text-end small">@item.ADValue.ToString("N0")</td>
                         <td class="text-end small fw-semibold text-success">@item.PRValue.ToString("N0")</td> *@
                         <td class="small text-muted">@(item.CreatedByUserName ?? "—")</td>
@@ -411,12 +431,12 @@
         // ── Excel ─────────────────────────────────────────────────────────────────────
         function exportExcel() {
         const rows = getSelectedRows();
-        if (!rows.length) { alert('Please select at least one article.'); return; }
+        if (!rows.length) { alert('Please select at least one Website.'); return; }
         const headers = [
         'Date','Title','Website','Category','Sub-Category','Writer',
         'Media Type','Media Tier','Frequency','Language',
         'Impression','Reach','AD Value','PR Value',
-        'Toning','Article Branding','Headline Branding','Picture in Article','Generation','URL'
+        'Toning','Website Branding','Headline Branding','Picture in Website','Generation','URL'
         ];
         const data = rows.map(d => [
         d.date, d.title, d.website, d.category, d.subcategory, d.writer,
@@ -427,7 +447,7 @@
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
         ws['!cols'] = headers.map((_, i) => ({ wch: i === 1 ? 40 : i === 2 ? 22 : 15 }));
-        XLSX.utils.book_append_sheet(wb, ws, 'Articles');
+        XLSX.utils.book_append_sheet(wb, ws, 'Website');
         XLSX.writeFile(wb, `${clientName}_Articles_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
@@ -436,7 +456,7 @@
         // ══════════════════════════════════════════════════════════════════════════════
         async function exportPDF() {
         const rows = getSelectedRows();
-        if (!rows.length) { alert('Please select at least one article.'); return; }
+        if (!rows.length) { alert('Please select at least one Website.'); return; }
 
         const { jsPDF } = window.jspdf;
 
@@ -570,8 +590,8 @@
         [ ['Website',          d.website],        ['Sub Category',      d.subcategory],   ['Media Type',        d.mediatype]    ],
         [ ['Frequency',        d.frequency],      ['Ad Value',          d.ad],            ['Language',          d.language]     ],
         [ ['Impression',       d.impression],     ['PR Value',          d.pr],            ['Writer',            d.writer]       ],
-        [ ['Reach',            d.reach],          ['Tone',              d.toning],        ['Article Branding',  d.articlebrand] ],
-        [ ['Headline Branding',d.headlinebrand],  ['Picture In Article',d.picture],      ['Article URL',       d.url]          ],
+        [ ['Reach',            d.reach],          ['Tone',              d.toning],        ['Website Branding',  d.articlebrand] ],
+        [ ['Headline Branding',d.headlinebrand],  ['Picture In Website',d.picture],       ['Website URL',       d.url]          ],
         [ ['Generation',       d.generation],     ['Created By',        d.createdby],     ['Created At',        d.createdat]    ],
         ];
 

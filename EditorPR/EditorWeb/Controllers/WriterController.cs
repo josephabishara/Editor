@@ -116,5 +116,33 @@ namespace EditorWeb.Controllers
             TempData[success ? "Success" : "Error"] = message;
             return RedirectToAction(nameof(Index));
         }
+
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateQuick([FromBody] WriterDTO model)
+        {
+            if (string.IsNullOrWhiteSpace(model?.WriterName))
+                return BadRequest(new { error = "Writer name is required." });
+
+            var (success, message) = await _writerService.CreateAsync(model);
+
+            if (!success)
+                return BadRequest(new { error = message });
+
+            // Re-fetch to get the generated Id
+            var all = await _writerService.GetAllAsync();
+            var created = all
+                .OrderByDescending(w => w.Id)
+                .FirstOrDefault(w => w.WriterName.Equals(
+                    model.WriterName, StringComparison.OrdinalIgnoreCase));
+
+            if (created == null)
+                return BadRequest(new { error = "Writer created but could not be retrieved." });
+
+            return Ok(new { id = created.Id, writerName = created.WriterName });
+        }
+
     }
 }

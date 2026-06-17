@@ -1,0 +1,132 @@
+﻿@model EditorViewModelLayer.MediaViewModel.ClientArticleListDTO
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "My Articles";
+    Layout = "~/Views/Shared/_ClientLayout.cshtml";
+
+    List<SelectListItem> ToSL(List<EditorViewModelLayer.MediaViewModel.MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+}
+@await Html.PartialAsync("_MediaStyles")
+<div class="m-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Articles — @Model.ClientName</h5>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("ExportArticlesExcel", new
+           {
+               title = ViewBag.FilterTitle,
+               dateFrom = ViewBag.FilterDateFrom,
+               dateTo = ViewBag.FilterDateTo,
+               categoryId = ViewBag.FilterCategoryId,
+               subCategoryId = ViewBag.FilterSubId,
+               writerId = ViewBag.FilterWriterId,
+               websiteId = ViewBag.FilterWebsiteId
+           })"
+           class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+        <a href="@Url.Action("ExportArticlesPdf", new
+           {
+               title = ViewBag.FilterTitle,
+               dateFrom = ViewBag.FilterDateFrom,
+               dateTo = ViewBag.FilterDateTo,
+               categoryId = ViewBag.FilterCategoryId,
+               subCategoryId = ViewBag.FilterSubId,
+               writerId = ViewBag.FilterWriterId,
+               websiteId = ViewBag.FilterWebsiteId
+           })"
+           class="btn btn-danger btn-sm" target="_blank">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+    </div>
+</div>
+
+ 
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+        <input type="text" name="title" class="form-control form-control-sm"
+               placeholder="Title…" value="@ViewBag.FilterTitle" />
+    </div>
+    <div class="col-md-2">
+        <input type="date" name="dateFrom" class="form-control form-control-sm"
+               value="@ViewBag.FilterDateFrom" />
+    </div>
+    <div class="col-md-2">
+        <input type="date" name="dateTo" class="form-control form-control-sm"
+               value="@ViewBag.FilterDateTo" />
+    </div>
+    <div class="col-md-2">
+        @Html.DropDownList("categoryId",
+            new SelectList(ToSL(Model.CategoryOptions), "Value", "Text", ViewBag.FilterCategoryId),
+            "All Categories", new { @class = "form-select form-select-sm" })
+    </div>
+    <div class="col-md-2">
+        @Html.DropDownList("writerId",
+            new SelectList(ToSL(Model.WriterOptions), "Value", "Text", ViewBag.FilterWriterId),
+            "All Writers", new { @class = "form-select form-select-sm" })
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="@Url.Action("ClientArticle")" class="btn btn-secondary btn-sm">Reset</a>
+    </div>
+</form>
+
+ 
+<div class="row g-2 mb-3">
+    <div class="col-auto">
+        <span class="badge bg-secondary">Total: @Model.Total</span>
+    </div>
+    <div class="col-auto">
+        <span class="badge bg-primary">PR: @Model.TotalPR.ToString("N0")</span>
+    </div>
+    <div class="col-auto">
+        <span class="badge bg-info text-dark">AD: @Model.TotalAD.ToString("N0")</span>
+    </div>
+</div>
+
+ 
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Title</th>
+                <th>Website</th>
+                <th>Category</th>
+                <th>Writer</th>
+                <th>AD Value</th>
+                <th>PR Value</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Items.Any())
+            {
+                <tr>
+                    <td colspan="9" class="text-center text-muted">No articles found.</td>
+                </tr>
+            }
+            @{
+                int i = 1;
+            }
+            @foreach (var a in Model.Items)
+            {
+                <tr>
+                    <td>@i</td>
+                    <td>@a.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@a.Title</td>
+                    <td>@a.WebsiteName</td>
+                    <td>@a.CategoryName</td>
+                    <td>@a.WriterName</td>
+                    <td>@a.ADValue.ToString("N0")</td>
+                    <td>@a.PRValue.ToString("N0")</td>
+                    <td>
+                        <a href="@Url.Action("ArticleDetails", new { id = a.Id })"
+                           class="btn btn-outline-primary btn-xs">Details</a>
+                    </td>
+                </tr>
+                i++;
+            }
+        </tbody>
+    </table>
+</div>

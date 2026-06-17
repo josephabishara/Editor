@@ -54,11 +54,13 @@ namespace EditorWeb.Controllers
 
         // GET: /Client/Create
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public IActionResult Create() => View(new ClientDTO());
 
         // POST: /Client/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(ClientDTO model , IFormFile? photoFile)
         {
             if (!ModelState.IsValid) return View(model);
@@ -353,6 +355,7 @@ namespace EditorWeb.Controllers
 
         // GET: /Client/CreateAssistant?clientId=5
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateAssistant(int clientId)
         {
             var client = await _clientService.GetByIdAsync(clientId);
@@ -368,6 +371,7 @@ namespace EditorWeb.Controllers
         // POST: /Client/CreateAssistant
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateAssistant(AssistantDTO model)
         {
             if (!ModelState.IsValid) return View(model);

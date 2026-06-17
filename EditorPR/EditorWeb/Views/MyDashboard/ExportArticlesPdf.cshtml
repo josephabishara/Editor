@@ -1,0 +1,65 @@
+{{!-- ExportArticlesPdf.cshtml --}}
+@model IEnumerable<EditorViewModelLayer.MediaViewModel.ClientArticleDTO>
+@{
+    Layout = null;
+    ViewData["Title"] = "Articles Export";
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Articles — @ViewBag.ClientName</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; }
+        h2 { color: #1a2e5a; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #1a2e5a; color: #fff; padding: 6px 8px; text-align: left; }
+        td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
+        tr:nth-child(even) td { background: #f5f7fa; }
+        .meta { color: #666; margin-bottom: 10px; }
+        @@media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom:10px;">
+        <button onclick="window.print()">🖨 Print / Save PDF</button>
+    </div>
+    <h2>Articles Report — @ViewBag.ClientName</h2>
+    <p class="meta">Exported: @ViewBag.ExportDate &nbsp;|&nbsp; Total: @Model.Count()</p>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th><th>Date</th><th>Title</th><th>Website</th>
+                <th>Category</th><th>Writer</th><th>Impression</th>
+                <th>Reach</th><th>AD Value</th><th>PR Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{ int i = 1; }
+            @foreach (var a in Model)
+            {
+                <tr>
+                    <td>@i</td>
+                    <td>@a.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@a.Title</td>
+                    <td>@a.WebsiteName</td>
+                    <td>@a.CategoryName</td>
+                    <td>@a.WriterName</td>
+                    <td>@a.Impression.ToString("N0")</td>
+                    <td>@a.Reach.ToString("N0")</td>
+                    <td>@a.ADValue.ToString("N0")</td>
+                    <td>@a.PRValue.ToString("N0")</td>
+                </tr>
+                i++;
+            }
+        </tbody>
+        <tfoot>
+            <tr style="font-weight:bold; background:#f0f4ff;">
+                <td colspan="8">Grand Total</td>
+                <td>@Model.Sum(x => x.ADValue).ToString("N0")</td>
+                <td>@Model.Sum(x => x.PRValue).ToString("N0")</td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>

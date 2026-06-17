@@ -1,69 +1,45 @@
-﻿@model EditorViewModelLayer.ClientViewModel.ClientDashboardDTO
-
+@model EditorViewModelLayer.ClientViewModel.ClientDashboardDTO
 @{
-    ViewData["Title"] = "Client Dashboard";
+    ViewData["Title"] = "My Dashboard";
+    Layout = "~/Views/Shared/_ClientLayout.cshtml";
 }
-
 @await Html.PartialAsync("_ClientStyles")
 <div class="container-fluid dashboard-wrapper">
 
     <div class="dashboard-header mb-4">
-
-        <a asp-action="Index"
-           asp-controller="Dashboard"
-           class="back-link">
-            <i class="bi bi-arrow-left"></i>
-            Back To Dashboard
-        </a>
-
-        <div class="row d-flex align-items-center justify-content-between flex-wrap gap-4 client-header-content">
-
-            <form method="get"
-                  asp-action="ClientDashboard"
-                  asp-controller="Dashboard"
-                  class="row d-flex align-items-center justify-content-between flex-wrap gap-4 client-header-content">
-
-                <input type="hidden" name="id" value="@Model.ClientId" />
-
-                <div class="col-md-5 d-flex align-items-center gap-4 flex-wrap">
-                    <img src="@Model.Photo" class="client-avatar" alt="@Model.Name" />
-                    <div>
-                        <h1 class="client-name">@Model.Name</h1>
-                        <div class="client-email">
-                            <i class="bi bi-envelope"></i> @Model.Email
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-2">
-                    <input type="date"
-                           name="from"
-                           value="@Model.DateFrom?.ToString("yyyy-MM-dd")"
-                           class="form-control fs-6 rounded-pill shadow-sm"
-                           placeholder="From" />
-                </div>
-
-                <div class="col-md-2">
-                    <input type="date"
-                           name="to"
-                           value="@Model.DateTo?.ToString("yyyy-MM-dd")"
-                           class="form-control fs-6 rounded-pill shadow-sm"
-                           placeholder="To" />
-                </div>
-
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-outline-light w-100">
-                        <i class="bi bi-funnel"></i> Filter
-                    </button>
-                </div>
-
-            </form>
-         
+        <div class="d-flex align-items-center gap-3">
+            @if (!string.IsNullOrWhiteSpace(Model.Photo))
+            {
+                <img src="@Model.Photo" class="rounded-circle"
+                     width="56" height="56" style="object-fit:cover;" />
+            }
+            <div>
+                <h4 class="mb-0">@Model.Name</h4>
+                <small class="text-white">@Model.Email</small>
+            </div>
         </div>
     </div>
 
-    <div class="row g-4 stats-grid">
+ 
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-auto">
+            <label class="form-label mb-0">From</label>
+            <input type="date" name="dateFrom" class="form-control form-control-sm"
+                   value="@ViewBag.DateFrom" />
+        </div>
+        <div class="col-auto">
+            <label class="form-label mb-0">To</label>
+            <input type="date" name="dateTo" class="form-control form-control-sm"
+                   value="@ViewBag.DateTo" />
+        </div>
+        <div class="col-auto align-self-end">
+            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+            <a href="@Url.Action("Index")" class="btn btn-secondary btn-sm">Reset</a>
+        </div>
+    </form>
 
+ 
+    <div class="row g-4 stats-grid">
         <div class="col-lg-4 col-md-6">
             <div class="dashboard-card articles-card">
                 <div class="d-flex justify-content-between align-items-start">
@@ -87,9 +63,8 @@
                     </div>
                     <i class="bi bi-graph-up-arrow text-success fs-4"></i>
                 </div>
-                <a asp-action="Index"
-                   asp-controller="ClientArticle"
-                   asp-route-clientId="@Model.ClientId"
+                <a asp-action="ClientArticle"
+                   asp-controller="MyDashboard"
                    class="btn btn-primary w-100 dashboard-btn">
                     Open Website
                 </a>
@@ -123,9 +98,8 @@
                     <i class="bi bi-bar-chart-line text-warning fs-4"></i>
                 </div>
 
-                <a asp-action="Index"
-                   asp-controller="ClientNewsPaper"
-                   asp-route-clientId="@Model.ClientId"
+                <a asp-action="ClientNewsPaper"
+                   asp-controller="MyDashboard"
                    class="btn btn-warning w-100 dashboard-btn text-dark">
                     Open Publications
                 </a>
@@ -159,60 +133,20 @@
                     </div>
                 </div>
 
-                <a asp-action="Index"
-                   asp-controller="ClientVideo"
-                   asp-route-clientId="@Model.ClientId"
+                <a asp-action="ClientVideo"
+                   asp-controller="MyDashboard"
                    class="btn btn-danger w-100 dashboard-btn">
                     Open Videos
                 </a>
 
             </div>
         </div>
-
     </div>
+</div>
 
-    <div class="overview-panel">
-
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-            <h3 class="overview-title mb-0">Performance Overview</h3>
-
-            <span class="badge bg-success px-3 py-2 rounded-pill">
-                @if (Model.DateFrom.HasValue || Model.DateTo.HasValue)
-                {
-                    @($"{Model.DateFrom?.ToString("dd MMM yyyy") ?? "Start"} → {Model.DateTo?.ToString("dd MMM yyyy") ?? "Today"}")
-                }
-                else
-                {
-                    <span>All Time</span>
-                }
-            </span>
-        </div>
-
-        <div class="row">
-
-            <div class="col-md-4">
-                <div class="overview-item">
-                    <h6>Total Articles</h6>
-                    <p>@Model.ArticleCount.ToString("N0") active media articles published.</p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="overview-item">
-                    <h6>Total Publications</h6>
-                    <p>@Model.NewsPaperCount.ToString("N0") print publications tracked.</p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="overview-item">
-                    <h6>Total Videos</h6>
-                    <p>@Model.VideoCount.ToString("N0") TV and media videos monitored.</p>
-                </div>
-            </div>
-
-        </div>
-
+@if (!string.IsNullOrWhiteSpace(Model.Notes))
+{
+    <div class="alert alert-light border">
+        <strong>Notes:</strong> @Model.Notes
     </div>
-
-</div> 
+}

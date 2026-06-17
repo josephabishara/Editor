@@ -81,16 +81,33 @@ namespace EditorWeb.Controllers
             return View(model);
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [DisableRequestSizeLimit]                                   // ← removes 28.6 MB cap
+        [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue, // ← no multipart limit
+                           ValueLengthLimit = int.MaxValue)]
         public async Task<IActionResult> Create(ClientVideoDTO model)
         {
-            if (!ModelState.IsValid) { await PopulateDropdownsAsync(model); return View(model); }
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdownsAsync(model);
+                return View(model);
+            }
+
             var (success, message) = await _service.CreateAsync(model, Request.Form.Files);
-            if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateDropdownsAsync(model); return View(model); }
+
+            if (!success)
+            {
+                ModelState.AddModelError(string.Empty, message);
+                await PopulateDropdownsAsync(model);
+                return View(model);
+            }
+
             TempData["Success"] = message;
             return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
         }
+
 
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
