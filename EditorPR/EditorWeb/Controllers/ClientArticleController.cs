@@ -1,4 +1,6 @@
-﻿using EditorLogicLayer.ClientArticleLogic;
+﻿using EditorDataLayer.Services;
+using EditorLogicLayer.ClientArticleLogic;
+using EditorLogicLayer.Helpers;
 using EditorViewModelLayer.MediaViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +16,7 @@ namespace EditorWeb.Controllers
         private readonly IClientArticleService _service;
         private readonly IWebHostEnvironment _env;
         private readonly IHttpClientFactory _http;
+        //private readonly ICurrentUserService _currentUser;
         public ClientArticleController(
             IClientArticleService service,
             IWebHostEnvironment env,
@@ -171,11 +174,15 @@ namespace EditorWeb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ClientArticleDTO model, List<IFormFile>? imageFiles)
         {
+
+
             if (!ModelState.IsValid)
             {
                 await PopulateDropdownsAsync(model);
                 return View(model);
             }
+
+            model.CreatedByUserName = User.Identity?.Name ?? "Unknown";
 
             // ── Upload new images ──────────────────────────────────────────
             if (imageFiles != null && imageFiles.Count > 0)
@@ -282,6 +289,22 @@ namespace EditorWeb.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id, int clientId)
         {
             var (success, message) = await _service.DeleteAsync(id);
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(nameof(Index), new { clientId });
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDelete(List<int> ids, int clientId)
+        {
+            if (ids == null || !ids.Any())
+            {
+                TempData["Error"] = "No articles selected.";
+                return RedirectToAction(nameof(Index), new { clientId });
+            }
+
+            var (success, message) = await _service.BulkDeleteAsync(ids);
             TempData[success ? "Success" : "Error"] = message;
             return RedirectToAction(nameof(Index), new { clientId });
         }

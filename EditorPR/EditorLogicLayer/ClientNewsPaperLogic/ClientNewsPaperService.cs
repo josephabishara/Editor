@@ -74,39 +74,55 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
         //        a. Insert child NewsPaper master
         //        b. Insert child ClientNewsPaper (ParentId = parent.Id)
 
-        public async Task<(bool Success, string Message)> CreateAsync(ClientNewsPaperDTO model)
+        public async Task<(bool Success, string Message, int NewId)> CreateAsync(ClientNewsPaperDTO model)
         {
             model.PRValue = Math.Round(model.ADValue * 3.5m, 2);
             model.Reach = (model.Circulation ?? 0) * 4;
 
-            // ── Step 1: NewsPaper master ───────────────────────────────────────
-            var newsPaperMaster = BuildNewsPaper(model);
-            await _newsPaperRepo.AddAsync(newsPaperMaster);
-
-            // ── Step 2: Parent ClientNewsPaper ─────────────────────────────────
-            var parent = BuildClientNewsPaper(model, newsPaperMaster.Id, parentId: null);
-            await _clientNewsPaperRepo.AddAsync(parent);
-
-            // ── Step 3: Children ───────────────────────────────────────────────
-            foreach (var child in model.Children)
+            var newsPaper = new NewsPaper
             {
-                child.PRValue = Math.Round(child.ADValue * 3.5m, 2);
-                child.Reach = (child.Circulation ?? 0) * 4;
+                PublicationId = model.PublicationId,
+                Date = model.Date,
+                Title = model.Title,
+                ADValue = model.ADValue,
+                PRValue = model.PRValue,
+                ArticleBranding = model.ArticleBranding,
+                HeadlineBranding = model.HeadlineBranding,
+                Toning = model.Toning,
+                Content = model.Content,
+                IsActive = true,
+                Deleted = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _newsPaperRepo.AddAsync(newsPaper);
 
-                var childMaster = BuildNewsPaperFromChild(child, model);
-                await _newsPaperRepo.AddAsync(childMaster);
+            var clientNewsPaper = new ClientNewsPaper
+            {
+                NewsPaperId = newsPaper.Id,
+                ClientId = model.ClientId,
+                PublicationId = model.PublicationId,
+                CategoryId = model.CategoryId,
+                SubCategoryId = model.SubCategoryId,
+                WriterId = model.WriterId,
+                Date = model.Date,
+                Title = model.Title,
+                Pages = model.Pages,
+                Height = model.Height,
+                Width = model.Width,
+                ADValue = model.ADValue,
+                PRValue = model.PRValue,
+                ArticleBranding = model.ArticleBranding,
+                HeadlineBranding = model.HeadlineBranding,
+                Toning = model.Toning,
+                Content = model.Content,
+                Publish = false,
+                IsActive = true,
+                Deleted = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _clientNewsPaperRepo.AddAsync(clientNewsPaper);
 
-                var childRecord = BuildClientNewsPaperFromChild(
-                    child, model, childMaster.Id, parentId: parent.Id);
-                await _clientNewsPaperRepo.AddAsync(childRecord);
-            }
-
-            var childCount = model.Children.Count;
-            var msg = childCount > 0
-                ? $"Newspaper created with {childCount} child clipping(s)."
-                : "Newspaper article created successfully.";
-
-            return (true, msg);
+            return (true, "Newspaper article created successfully.", clientNewsPaper.Id);  // ← NewId added
         }
 
         // ── Update ─────────────────────────────────────────────────────────────
@@ -220,6 +236,23 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             }
 
             return (true, "Record deleted successfully.");
+        }
+
+        public async Task<(bool Success, string Message)> BulkDeleteAsync(IEnumerable<int> ids)
+        {
+            var idList = ids?.Distinct().ToList() ?? new List<int>();
+            if (!idList.Any()) return (false, "No records selected.");
+
+            int deleted = 0;
+            foreach (var id in idList)
+            {
+                var (success, _) = await DeleteAsync(id);   // reuses the master-cascade check already in DeleteAsync
+                if (success) deleted++;
+            }
+
+            return deleted == idList.Count
+                ? (true, $"{deleted} newspaper(s) deleted successfully.")
+                : (false, $"{deleted} of {idList.Count} newspaper(s) deleted — some records were not found.");
         }
 
         // ── Publish ────────────────────────────────────────────────────────────

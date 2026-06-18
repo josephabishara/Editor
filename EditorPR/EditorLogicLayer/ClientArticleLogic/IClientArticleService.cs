@@ -15,6 +15,8 @@ namespace EditorLogicLayer.ClientArticleLogic
         Task<(bool Success, string Message)> DeleteAsync(int id);
         Task<(bool Success, string Message)> PublishAsync(int id);
         Task<(bool Success, string Message)> UnpublishAsync(int id);
+        Task<(bool Success, string Message)> BulkDeleteAsync(IEnumerable<int> ids);
+
 
         // Dropdown builders
         Task<List<MediaSelectOption>> GetWebsiteOptionsAsync(int selectedId = 0);

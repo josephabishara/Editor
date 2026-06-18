@@ -107,7 +107,7 @@
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
                     <label asp-for="WriterId">
-                        <a asp-action="create" asp-controller="Writer" class="btn btn-info btn-sm">+</a>
+                        <a asp-action="create" asp-controller="Writer" asp-route-state="1" class="btn btn-sm">Add Writer</a>
                         Writer
                 </label>
                    
@@ -407,8 +407,18 @@
         @* ── Footer ──────────────────────────────────────────────────────────── *@
         <div class="form-footer">
             <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
+
+            @if (!isEdit)
+            {
+                <button type="submit" name="saveAndDuplicate" value="true" class="btn-save"
+                        style="background:#f59e0b;"
+                        onclick="this.form.querySelectorAll('[name=saveAndDuplicate]').forEach(el => el.value = 'true')">
+                    📋 Save &amp; Duplicate
+                </button>
+            }
+
             <button type="submit" name="save" value="true" class="btn-save">
-                @(isEdit ? "💾 Save " : "✅ Save ")
+                @(isEdit ? "💾 Save" : "✅ Save")
             </button>
         </div>
 

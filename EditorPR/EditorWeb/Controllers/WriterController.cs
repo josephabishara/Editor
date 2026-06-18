@@ -45,7 +45,7 @@ namespace EditorWeb.Controllers
         [Authorize(Roles = "Admin,Manager")]
         //[AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(WriterDTO model)
+        public async Task<IActionResult> Create(int? state, WriterDTO model)
         {
             if (!ModelState.IsValid)
                 return View(model);

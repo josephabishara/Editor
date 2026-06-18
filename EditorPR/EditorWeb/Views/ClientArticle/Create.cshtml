@@ -111,7 +111,7 @@
                 <div class="fg">
                     <label asp-for="WriterId">
                         Writer
-                        <a asp-action="Create" asp-controller="Writer" class="btn btn-sm">Add New</a>
+                        <a asp-action="Create" asp-controller="Writer" asp-route-state="1" class="btn btn-sm">Add Writer</a>
                     </label>
                     <select asp-for="WriterId" asp-items="writerSL" class="select-search">
                         <option value="0">— None —</option>

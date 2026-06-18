@@ -1,4 +1,5 @@
 using EditorDataLayer.Data;
+using EditorDataLayer.Services;
 using EditorEntitiesLayer.Entities;
 using EditorLogicLayer.Auth;
 using EditorLogicLayer.Channel;
@@ -8,9 +9,11 @@ using EditorLogicLayer.ClientNewsPaperLogic;
 using EditorLogicLayer.ClientVideoLogic;
 using EditorLogicLayer.Dashboard;
 using EditorLogicLayer.GeneralArticle;
+using EditorLogicLayer.Helpers;
 using EditorLogicLayer.News;
 using EditorLogicLayer.Publication;
 using EditorLogicLayer.Reports;
+using EditorLogicLayer.UserLogLogic;
 using EditorLogicLayer.Website;
 using EditorLogicLayer.Writer;
 using EditorRepositoryLayer.IRepositories;
@@ -75,6 +78,7 @@ builder.Services.AddScoped<IGeneralArticleRepository, GeneralArticleRepository>(
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportArticleRepository, ReportArticleRepository>();
 builder.Services.AddScoped<IReportNewspaperRepository, ReportNewspaperRepository>();
+builder.Services.AddScoped<IUserLogRepository, UserLogRepository>();
 
 
 // ──    Services Injection    ───────────────────────────────────────────────────
@@ -94,6 +98,15 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IGeneralArticleService, GeneralArticleService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ITheClientResolverService, TheClientResolverService>();
+
+
+
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IUserLogService, UserLogService>();
+
+
 
 // ── 5. MVC ────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();

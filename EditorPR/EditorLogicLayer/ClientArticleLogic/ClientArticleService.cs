@@ -156,6 +156,7 @@ namespace EditorLogicLayer.ClientArticleLogic
             model.PRValue = Math.Round(model.ADValue * 3.5m, 2);
             model.Reach = model.Impression * 4;
 
+
             // ── Step 1: GeneralArticle master ──────────────────────────────────
             var generalParent = BuildGeneralArticle(model);
             await _generalArticleRepo.AddAsync(generalParent);   // Id populated by EF
@@ -294,6 +295,25 @@ namespace EditorLogicLayer.ClientArticleLogic
 
             return (true, "Record deleted.");
         }
+
+        public async Task<(bool Success, string Message)> BulkDeleteAsync(IEnumerable<int> ids)
+        {
+            var idList = ids?.Distinct().ToList() ?? new List<int>();
+            if (!idList.Any()) return (false, "No records selected.");
+
+            int deleted = 0;
+            foreach (var id in idList)
+            {
+                var (success, _) = await DeleteAsync(id);   // children cascade automatically — same as single delete
+                if (success) deleted++;
+            }
+
+            return deleted == idList.Count
+                ? (true, $"{deleted} article(s) deleted successfully.")
+                : (false, $"{deleted} of {idList.Count} article(s) deleted — some records were not found.");
+        }
+
+
         // ── Publish ────────────────────────────────────────────────────────────
 
         public async Task<(bool Success, string Message)> PublishAsync(int id)
@@ -637,7 +657,8 @@ namespace EditorLogicLayer.ClientArticleLogic
             Images = e.Images,
             Publish = e.Publish,
             CreatedAt = e.CreatedAt,
-            WebsiteType = e.WebsiteType,
+            WebsiteType = e.WebsiteType
+          
 
         };
 

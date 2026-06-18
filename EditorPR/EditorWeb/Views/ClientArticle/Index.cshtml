@@ -202,6 +202,8 @@
     <div class="sel-count">Selected <span id="selCount">0</span> Websites</div>
     <button class="btn-export btn-xl" onclick="exportExcel()">⬇ Excel</button>
     <button class="btn-export btn-pdf" onclick="exportPDF()">⬇ PDF Report</button>
+    <button class="btn-export" style="background:#0ea5e9;color:#fff;" onclick="viewAsHtml()">📄 View as HTML</button>
+
     <form id="duplicateForm" asp-action="Duplicate" asp-controller="ClientArticle"
           method="post" style="display:inline;">
         @Html.AntiForgeryToken()
@@ -216,6 +218,19 @@
             📋 Duplicate Selected
         </button>
     </form>
+    @if (isAdmin)
+    {
+        <form id="bulkDeleteForm" asp-action="BulkDelete" asp-controller="ClientNewsPaper"
+              method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="clientId" value="@clientId" />
+            <div id="bulkDeleteIdsContainer"></div>
+            <button type="button" class="btn-export" style="background:#dc2626;color:#fff;"
+                    onclick="confirmBulkDelete('newspaper')">
+                🗑 Delete Selected
+            </button>
+        </form>
+    }
     <button class="btn-export btn-desel" onclick="deselectAll()">✕ Deselect All</button>
 </div>
 
@@ -418,6 +433,24 @@
         return confirm('Duplicate this record and all its children?');
         }
 
+        function confirmBulkDelete(label) {
+        const checked = document.querySelectorAll('.row-check:checked');
+        if (!checked.length) { alert(`Please select at least one ${label}.`); return; }
+        if (!confirm(`Delete ${checked.length} selected ${label}(s)? This cannot be undone.`)) return;
+
+        const container = document.getElementById('bulkDeleteIdsContainer');
+        container.innerHTML = '';
+        checked.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'ids';
+        input.value = cb.value;
+        container.appendChild(input);
+        });
+        document.getElementById('bulkDeleteForm').submit();
+        }
+
+
         // ── Sub-category cascade ──────────────────────────────────────────────────────
         async function loadSubs(parentId, targetId, url) {
         const sel = document.getElementById(targetId);
@@ -427,6 +460,8 @@
         sel.innerHTML = '<option value="0">All</option>';
         data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
         }
+
+
 
         // ── Excel ─────────────────────────────────────────────────────────────────────
         function exportExcel() {

@@ -1,4 +1,5 @@
-﻿using EditorEntitiesLayer.Entities;
+﻿using EditorDataLayer.Services;
+using EditorEntitiesLayer.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,10 +7,14 @@ namespace EditorDataLayer.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, int>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        private readonly ICurrentUserService _currentUser;
+
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options , ICurrentUserService currentUser)
        : base(options)
         {
+            _currentUser = currentUser;
         }
+        public DbSet<UserLog> UserLogs => Set<UserLog>();
 
         public DbSet<Websites> Websites { get; set; }
         public DbSet<Publication> Publications { get; set; }
@@ -38,6 +43,93 @@ namespace EditorDataLayer.Data
         public DbSet<Report> Reports { get; set; }
         public DbSet<ReportArticle> ReportArticles { get; set; }
         public DbSet<ReportNewspaper> ReportNewspapers { get; set; }
+
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            var userId = _currentUser.UserId;
+            var userName = _currentUser.UserName;
+            var controllerName = _currentUser.ControllerName;
+
+            var pendingNewRecordLogs = new List<(BaseEntity Entity, UserLog Log)>();
+            var readyLogs = new List<UserLog>();
+
+            foreach (var entry in ChangeTracker.Entries<BaseEntity>().ToList())
+            {
+                var entity = entry.Entity;
+                string? action = null;
+                bool isNewRecord = entry.State == EntityState.Added;
+
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        entity.CreateId = userId;
+                        entity.CreatedAt = now;
+                        action = "Create";
+                        break;
+
+                    case EntityState.Modified:
+                        var activeProp = entry.Property(e => e.IsActive);
+                        bool isSoftDelete = activeProp.OriginalValue && !activeProp.CurrentValue;
+
+                        if (isSoftDelete)
+                        {
+                            entity.DeleteId = userId;
+                            entity.DeletedAt = now;
+                            action = "Delete";
+                        }
+                        else
+                        {
+                            entity.UpdateId = userId;
+                            entity.UpdatedAt = now;
+                            action = "Update";
+                        }
+                        break;
+
+                    case EntityState.Deleted:
+                        action = "Delete";
+                        break;
+                }
+
+                if (action == null) continue;
+
+                var log = new UserLog
+                {
+                    UserId = userId,
+                    UserName = userName,
+                    LogDate = now,
+                    Action = action,
+                    ControllerName = controllerName,
+                    EntityName = entity.GetType().Name,
+                    RecordId = entity.Id
+                };
+
+                if (isNewRecord)
+                    pendingNewRecordLogs.Add((entity, log));
+                else
+                    readyLogs.Add(log);
+            }
+
+            if (readyLogs.Count > 0)
+                UserLogs.AddRange(readyLogs);
+
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            // Added rows don't have their identity Id until after the save above —
+            // resolve it now and persist their log rows in a second pass.
+            if (pendingNewRecordLogs.Count > 0)
+            {
+                foreach (var (entity, log) in pendingNewRecordLogs)
+                    log.RecordId = entity.Id;
+
+                UserLogs.AddRange(pendingNewRecordLogs.Select(p => p.Log));
+                await base.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

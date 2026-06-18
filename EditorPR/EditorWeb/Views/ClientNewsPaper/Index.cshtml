@@ -178,6 +178,8 @@
     <div class="sel-count">Selected <span id="selCount">0</span> newspapers</div>
     <button class="btn-export btn-xl" onclick="exportExcel()">⬇ Excel</button>
     <button class="btn-export btn-pdf" onclick="exportPDF()">⬇ PDF Report</button>
+    <button class="btn-export" style="background:#0ea5e9;color:#fff;" onclick="viewAsHtml()">📄 View as HTML</button>
+
     <form id="duplicateForm" asp-action="Duplicate" asp-controller="ClientNewsPaper"
           method="post" style="display:inline;">
         @Html.AntiForgeryToken()
@@ -192,6 +194,19 @@
             📋 Duplicate Selected
         </button>
     </form>
+    @if (isAdmin)
+    {
+        <form id="bulkDeleteForm" asp-action="BulkDelete" asp-controller="ClientNewsPaper"
+              method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="clientId" value="@clientId" />
+            <div id="bulkDeleteIdsContainer"></div>
+            <button type="button" class="btn-export" style="background:#dc2626;color:#fff;"
+                    onclick="confirmBulkDelete('newspaper')">
+                🗑 Delete Selected
+            </button>
+        </form>
+    }
     <button class="btn-export btn-desel" onclick="deselectAll()">✕ Deselect All</button>
 </div>
 
@@ -222,7 +237,7 @@
                     <th>Publication</th>
                     <th>Category</th>
                     <th>Sub-Category</th>
-                  @*   <th>Writer</th>
+                    @*   <th>Writer</th>
                     <th class="text-end">AD Value</th>
                     <th class="text-end">PR Value</th> *@
                     <th>Created By</th>
@@ -290,7 +305,7 @@
                         <td class="small">@(item.PublicationName ?? "—")</td>
                         <td class="small">@(item.CategoryName ?? "—")</td>
                         <td class="small">@(item.SubCategoryName ?? "—")</td>
-                     @*    <td class="small">@(item.WriterName ?? "—")</td>
+                        @*    <td class="small">@(item.WriterName ?? "—")</td>
                         <td class="text-end small">@item.ADValue.ToString("N0")</td>
                         <td class="text-end small fw-semibold text-success">@item.PRValue.ToString("N0")</td> *@
                         <td class="small text-muted">@(item.CreatedByUserName ?? "—")</td>
@@ -340,6 +355,8 @@
         </table>
     }
 </div>
+ 
+<script src="/js/clientnewspaper-print-view.js" ></script>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -389,6 +406,24 @@
         return confirm('Duplicate this record and all its children?');
         }
 
+        function confirmBulkDelete(label) {
+        const checked = document.querySelectorAll('.row-check:checked');
+        if (!checked.length) { alert(`Please select at least one ${label}.`); return; }
+        if (!confirm(`Delete ${checked.length} selected ${label}(s)? This cannot be undone.`)) return;
+
+        const container = document.getElementById('bulkDeleteIdsContainer');
+        container.innerHTML = '';
+        checked.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'ids';
+        input.value = cb.value;
+        container.appendChild(input);
+        });
+        document.getElementById('bulkDeleteForm').submit();
+        }
+
+      
         // ── Sub-category cascade ──────────────────────────────────────────────────────
         async function loadSubs(parentId, targetId, url) {
         const sel = document.getElementById(targetId);

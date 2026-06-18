@@ -154,15 +154,17 @@ namespace EditorWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ClientNewsPaperDTO model,
-                List<IFormFile>? imageFiles,
-                string? removedImages,
-                bool? addChild,
-                int? removeChild)
+        public async Task<IActionResult> Create(
+    ClientNewsPaperDTO model,
+    List<IFormFile>? imageFiles,
+    string? removedImages,
+    bool? addChild,
+    int? removeChild,
+    bool? saveAndDuplicate)   // ← new parameter
         {
             if (addChild == true)
             {
-                model.Children.Add(new ChildNewsPaperDTO { Date = DateTime.Today });  // ← was ChildArticleDTO
+                model.Children.Add(new ChildNewsPaperDTO { Date = DateTime.Today });
                 await PopulateDropdownsAsync(model);
                 return View(model);
             }
@@ -189,12 +191,27 @@ namespace EditorWeb.Controllers
                     model.Images = System.Text.Json.JsonSerializer.Serialize(paths);
             }
 
-            var (success, message) = await _service.CreateAsync(model);
+            var (success, message, newId) = await _service.CreateAsync(model);  // ← destructure NewId
             if (!success)
             {
                 ModelState.AddModelError(string.Empty, message);
                 await PopulateDropdownsAsync(model);
                 return View(model);
+            }
+
+            // ── Save & Duplicate ──────────────────────────────────────────────
+            if (saveAndDuplicate == true)
+            {
+                var (dupSuccess, dupMessage, dupId) = await _service.DuplicateAsync(newId);
+                if (dupSuccess)
+                {
+                    TempData["Success"] = "Saved and duplicated. Now editing the duplicate copy.";
+                    return RedirectToAction(nameof(Edit), new { id = dupId });
+                }
+                // Duplicate failed — original was saved, fall back to normal redirect
+                TempData["Success"] = message;
+                TempData["Error"] = $"Save succeeded but duplication failed: {dupMessage}";
+                return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
             }
 
             TempData["Success"] = message;
@@ -321,6 +338,36 @@ namespace EditorWeb.Controllers
             }
 
             var (success, message) = await _service.DeleteAsync(id);
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(nameof(Index), new { clientId });
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDelete(List<int> ids, int clientId)
+        {
+            if (ids == null || !ids.Any())
+            {
+                TempData["Error"] = "No newspapers selected.";
+                return RedirectToAction(nameof(Index), new { clientId });
+            }
+
+            foreach (var id in ids)
+            {
+                var item = await _service.GetByIdAsync(id);
+                if (item != null && !string.IsNullOrWhiteSpace(item.Images))
+                {
+                    try
+                    {
+                        var paths = JsonSerializer.Deserialize<List<string>>(item.Images) ?? new();
+                        foreach (var p in paths) DeleteImageFile(p);
+                    }
+                    catch { }
+                }
+            }
+
+            var (success, message) = await _service.BulkDeleteAsync(ids);
             TempData[success ? "Success" : "Error"] = message;
             return RedirectToAction(nameof(Index), new { clientId });
         }
