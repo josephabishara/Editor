@@ -35,21 +35,44 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             _context = context;
         }
 
-        // ── List — roots only ──────────────────────────────────────────────────
+        // ── List ───────────────────────────────────────────────────────────────
 
         public async Task<ClientNewsPaperListDTO> GetListAsync(int clientId)
         {
             var client = await _clientRepo.GetByIdAsync(clientId);
-            var items = await _clientNewsPaperRepo.GetByClientIdAsync(clientId);
-            return new ClientNewsPaperListDTO
+            var entities = (await _clientNewsPaperRepo.GetByClientIdAsync(clientId)).ToList();
+
+            var pubIds = entities.Select(e => e.PublicationId).Distinct().ToList();
+            var catIds = entities.Select(e => e.CategoryId)
+                                  .Concat(entities.Select(e => e.SubCategoryId))
+                                  .Where(id => id > 0).Distinct().ToList();
+            var userIds = entities.Select(e => e.CreateId)
+                                   .Where(id => id > 0).Distinct().ToList();   // ← int, not string
+
+            var pubLookup = await _context.Set<EditorEntitiesLayer.Entities.Publication>()
+                .Where(p => pubIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.PublicationName);
+
+            var catLookup = await _context.Set<ClientCategories>()
+                .Where(c => catIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.CategoryName);
+
+            var userLookup = await _context.Set<ApplicationUser>()
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.UserName);              // ← int key
+
+            var items = entities.Select(e =>
             {
-                ClientId = clientId,
-                ClientName = client?.Name ?? string.Empty,
-                Items = items
-                             .Where(n => n.ParentId == null)   // roots only
-                             .Select(MapToDTO)
-                             .ToList()
-            };
+                var dto = MapToDTO(e);
+                dto.PublicationName = pubLookup.GetValueOrDefault(e.PublicationId);
+                dto.CategoryName = catLookup.GetValueOrDefault(e.CategoryId);
+                dto.SubCategoryName = catLookup.GetValueOrDefault(e.SubCategoryId);
+                dto.CreatedByUserName = userLookup.GetValueOrDefault(e.CreateId);   // ← int key
+                dto.CreatedAt = e.CreatedAt;
+                return dto;
+            }).ToList();
+
+            return new ClientNewsPaperListDTO { ClientId = clientId, ClientName = client?.Name ?? "", Items = items };
         }
 
         public async Task<ClientNewsPaperDTO?> GetByIdAsync(int id)
@@ -59,7 +82,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
 
             var dto = MapToDTO(entity);
 
-            // Load children
             var children = await _clientNewsPaperRepo.GetChildrenAsync(id);
             dto.Children = children.Select(MapToChildDTO).ToList();
 
@@ -79,50 +101,27 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             model.PRValue = Math.Round(model.ADValue * 3.5m, 2);
             model.Reach = (model.Circulation ?? 0) * 4;
 
-            var newsPaper = new NewsPaper
-            {
-                PublicationId = model.PublicationId,
-                Date = model.Date,
-                Title = model.Title,
-                ADValue = model.ADValue,
-                PRValue = model.PRValue,
-                ArticleBranding = model.ArticleBranding,
-                HeadlineBranding = model.HeadlineBranding,
-                Toning = model.Toning,
-                Content = model.Content,
-                IsActive = true,
-                Deleted = 0,
-                CreatedAt = DateTime.UtcNow
-            };
+            // FK insert order: master NewsPaper first, then the client junction row.
+            var newsPaper = BuildNewsPaper(model);
             await _newsPaperRepo.AddAsync(newsPaper);
 
-            var clientNewsPaper = new ClientNewsPaper
-            {
-                NewsPaperId = newsPaper.Id,
-                ClientId = model.ClientId,
-                PublicationId = model.PublicationId,
-                CategoryId = model.CategoryId,
-                SubCategoryId = model.SubCategoryId,
-                WriterId = model.WriterId,
-                Date = model.Date,
-                Title = model.Title,
-                Pages = model.Pages,
-                Height = model.Height,
-                Width = model.Width,
-                ADValue = model.ADValue,
-                PRValue = model.PRValue,
-                ArticleBranding = model.ArticleBranding,
-                HeadlineBranding = model.HeadlineBranding,
-                Toning = model.Toning,
-                Content = model.Content,
-                Publish = false,
-                IsActive = true,
-                Deleted = 0,
-                CreatedAt = DateTime.UtcNow
-            };
+            var clientNewsPaper = BuildClientNewsPaper(model, newsPaper.Id, parentId: null);
             await _clientNewsPaperRepo.AddAsync(clientNewsPaper);
 
-            return (true, "Newspaper article created successfully.", clientNewsPaper.Id);  // ← NewId added
+            foreach (var child in model.Children)
+            {
+                child.PRValue = Math.Round(child.ADValue * 3.5m, 2);
+                child.Reach = (child.Circulation ?? 0) * 4;
+
+                var childMaster = BuildNewsPaperFromChild(child, model);
+                await _newsPaperRepo.AddAsync(childMaster);
+
+                var childRecord = BuildClientNewsPaperFromChild(
+                    child, model, childMaster.Id, parentId: clientNewsPaper.Id);
+                await _clientNewsPaperRepo.AddAsync(childRecord);
+            }
+
+            return (true, "Newspaper article created successfully.", clientNewsPaper.Id);
         }
 
         // ── Update ─────────────────────────────────────────────────────────────
@@ -139,7 +138,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             existing.UpdatedAt = DateTime.UtcNow;
             await _clientNewsPaperRepo.UpdateAsync(existing);
 
-            // Update NewsPaper master
             if (existing.NewsPaper != null)
             {
                 ApplyToNewsPaper(existing.NewsPaper, model);
@@ -157,7 +155,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
 
                 if (childDto.Id > 0)
                 {
-                    // Update existing child
                     var existingChild = existingChildren.FirstOrDefault(c => c.Id == childDto.Id);
                     if (existingChild != null)
                     {
@@ -176,7 +173,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
                 }
                 else
                 {
-                    // New child added on Edit
                     var childMaster = BuildNewsPaperFromChild(childDto, model);
                     await _newsPaperRepo.AddAsync(childMaster);
 
@@ -210,7 +206,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             var existing = await _clientNewsPaperRepo.GetByIdWithDetailsAsync(id);
             if (existing == null) return (false, "Record not found.");
 
-            // Soft-delete children first
             var children = await _clientNewsPaperRepo.GetChildrenAsync(id);
             foreach (var child in children)
             {
@@ -225,7 +220,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             existing.DeletedAt = DateTime.UtcNow;
             await _clientNewsPaperRepo.UpdateAsync(existing);
 
-            // Soft-delete master only if no other clients reference it
             var others = await _clientNewsPaperRepo.GetByNewsPaperIdAsync(existing.NewsPaperId);
             if (!others.Any(o => o.Id != id && o.IsActive))
             {
@@ -246,7 +240,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             int deleted = 0;
             foreach (var id in idList)
             {
-                var (success, _) = await DeleteAsync(id);   // reuses the master-cascade check already in DeleteAsync
+                var (success, _) = await DeleteAsync(id);
                 if (success) deleted++;
             }
 
@@ -331,28 +325,26 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
 
         // ── AJAX auto-fill ─────────────────────────────────────────────────────
 
-        public async Task<PublicationAutoFillDTO> GetPublicationAutoFillAsync(
-            int publicationId, int clientId)
+        public async Task<PublicationAutoFillDTO> GetPublicationAutoFillAsync(int publicationId, int clientId)
         {
             var pub = await _publicationRepo.GetByIdAsync(publicationId);
             if (pub == null) return new PublicationAutoFillDTO();
 
             var pcc = await _context.Set<PublicationCustomerCategory>()
-                .FirstOrDefaultAsync(p => p.PublicationId == publicationId
-                                       && p.CustomerId == clientId);
+                .FirstOrDefaultAsync(p => p.PublicationId == publicationId && p.CustomerId == clientId);
 
-            var adValue = pub.CmPrice;
-            var circulation = pub.Circulation ?? 0;
+            var adValue = pcc?.UnitPrice ?? 0m;
+            var circulation = pcc?.Circulation ?? 0;
 
             return new PublicationAutoFillDTO
             {
                 AdValue = adValue,
                 PrValue = Math.Round(adValue * 3.5m, 2),
-                MediaType = pub.MediaType,
+                MediaType = pcc?.MediaType,
                 MediaTier = pcc?.MediaTier ?? pub.MediaTier,
                 Frequency = pub.Frequency,
                 Language = pub.Language,
-                Circulation = pub.Circulation,
+                Circulation = circulation,
                 Reach = circulation * 4
             };
         }
@@ -374,7 +366,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             pictureInArticle = m.PictureinArticle == "Yes",
             Generation = m.Generation == "Generated",
             Content = m.Content,
-            Images = m.Images,       // ← images saved here too
+            Images = m.Images,
             IsActive = true,
             Deleted = 0,
             CreatedAt = DateTime.UtcNow
@@ -385,14 +377,16 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             {
                 PublicationId = child.PublicationId,
                 Date = child.Date,
-                Title = parent.Title,         // ← inherited
+                Title = parent.Title,
                 ADValue = child.ADValue,
                 PRValue = child.PRValue,
                 ArticleBranding = parent.ArticleBranding,
                 HeadlineBranding = parent.HeadlineBranding,
                 Toning = parent.Toning,
-                Content = parent.Content,       // ← inherited
-                Images = parent.Images,        // ← inherited
+                pictureInArticle = parent.PictureinArticle == "Yes",
+                Generation = parent.Generation == "Generated",
+                Content = parent.Content,
+                Images = parent.Images,
                 IsActive = true,
                 Deleted = 0,
                 CreatedAt = DateTime.UtcNow
@@ -438,23 +432,23 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             {
                 NewsPaperId = newsPaperId,
                 ClientId = parent.ClientId,
-                ParentId = parentId,              // ← links to parent row
-                PublicationId = child.PublicationId,   // ← child-specific
-                CategoryId = parent.CategoryId,     // ← inherited
-                SubCategoryId = parent.SubCategoryId,  // ← inherited
-                WriterId = child.WriterId,         // ← child-specific
-                Date = child.Date,             // ← child-specific
-                Title = parent.Title,           // ← inherited
-                Pages = child.Pages,            // ← child-specific
-                Height = child.Height,           // ← child-specific
-                Width = child.Width,            // ← child-specific
+                ParentId = parentId,
+                PublicationId = child.PublicationId,
+                CategoryId = parent.CategoryId,
+                SubCategoryId = parent.SubCategoryId,
+                WriterId = child.WriterId,
+                Date = child.Date,
+                Title = parent.Title,
+                Pages = child.Pages,
+                Height = child.Height,
+                Width = child.Width,
                 ADValue = child.ADValue,
                 PRValue = child.PRValue,
                 ArticleBranding = parent.ArticleBranding,
                 HeadlineBranding = parent.HeadlineBranding,
                 Toning = parent.Toning,
-                Content = parent.Content,         // ← inherited
-                Images = parent.Images,          // ← inherited
+                Content = parent.Content,
+                Images = parent.Images,
                 MediaType = child.MediaType,
                 MediaTier = child.MediaTier,
                 Frequency = child.Frequency,
@@ -484,7 +478,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             e.PRValue = m.PRValue;
             e.ArticleBranding = m.ArticleBranding;
             e.HeadlineBranding = m.HeadlineBranding;
-      
             e.Toning = m.Toning;
             e.Content = m.Content;
             e.Images = m.Images;
@@ -527,7 +520,6 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             e.Language = child.Language ?? parent.Language;
             e.Circulation = child.Circulation;
             e.Reach = child.Reach;
-            // inherited from parent:
             e.Title = parent.Title;
             e.Content = parent.Content;
             e.Images = parent.Images;
@@ -609,14 +601,14 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             Reach = e.Reach
         };
 
+        // ── Duplicate ──────────────────────────────────────────────────────────
 
         public async Task<(bool Success, string Message, int NewId)> DuplicateAsync(int id)
         {
             var original = await _clientNewsPaperRepo.GetByIdWithDetailsAsync(id);
             if (original == null) return (false, "Newspaper not found.", 0);
 
-            // ── Step 1: Duplicate NewsPaper master ────────────────────────────────────
-            var newMaster = new EditorEntitiesLayer.Entities.NewsPaper
+            var newMaster = new NewsPaper
             {
                 PublicationId = original.PublicationId,
                 Date = original.Date,
@@ -634,8 +626,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             };
             await _newsPaperRepo.AddAsync(newMaster);
 
-            // ── Step 2: Duplicate parent ClientNewsPaper ──────────────────────────────
-            var newParent = new EditorEntitiesLayer.Entities.ClientNewsPaper
+            var newParent = new ClientNewsPaper
             {
                 NewsPaperId = newMaster.Id,
                 ClientId = original.ClientId,
@@ -669,11 +660,10 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
             };
             await _clientNewsPaperRepo.AddAsync(newParent);
 
-            // ── Step 3: Duplicate each child ──────────────────────────────────────────
             var children = await _clientNewsPaperRepo.GetChildrenAsync(id);
             foreach (var child in children)
             {
-                var childMaster = new EditorEntitiesLayer.Entities.NewsPaper
+                var childMaster = new NewsPaper
                 {
                     PublicationId = child.PublicationId,
                     Date = child.Date,
@@ -691,7 +681,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
                 };
                 await _newsPaperRepo.AddAsync(childMaster);
 
-                var newChild = new EditorEntitiesLayer.Entities.ClientNewsPaper
+                var newChild = new ClientNewsPaper
                 {
                     NewsPaperId = childMaster.Id,
                     ClientId = child.ClientId,
@@ -728,6 +718,5 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
 
             return (true, "Newspaper duplicated successfully.", newParent.Id);
         }
-
     }
 }

@@ -10,5 +10,12 @@ namespace EditorRepositoryLayer.IRepositories
         Task<IEnumerable<GeneralArticle>> GetActiveAsync();
         Task<GeneralArticle?> GetByIdWithNavAsync(int id);   // includes Website + Writer
         Task<IEnumerable<GeneralArticle>> GetByIdsAsync(IEnumerable<int> ids);
+
+        // ── Filtered query: From/To Date, Title contains, WebsiteId ──────────
+        Task<IEnumerable<GeneralArticle>> GetFilteredAsync(
+            DateTime? fromDate,
+            DateTime? toDate,
+            string? title,
+            int? websiteId);
     }
 }

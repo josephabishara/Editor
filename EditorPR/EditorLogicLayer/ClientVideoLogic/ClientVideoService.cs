@@ -291,7 +291,8 @@ namespace EditorLogicLayer.ClientVideoLogic
                 PrValue = Math.Round(adValue * 3.5m, 2),
                 MediaTier = ccc?.MediaTier ?? channel.MediaTier,
                 Impression = impression,
-                Reach = impression * 4
+                Reach = impression * 4 
+             
             };
         }
 

@@ -107,9 +107,8 @@
                 <tr>
                     <th class="cb-col"><input type="checkbox" class="row-cb" id="cbAll" onchange="toggleAll(this)" /></th>
                     <th>#</th><th>Date</th><th>Title</th><th>Channel</th>
-                    <th>Program</th><th>Duration</th><th>Media Tier</th>
-                    <th>Impression</th><th>Reach</th>
-                    <th>AD Value</th><th>PR Value</th><th>Toning</th><th>Actions</th>
+                    <th>Program</th><th>Duration</th>
+                   <th>Toning</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -138,11 +137,11 @@
                         <td style="font-size:.78rem;">@(item.ChannelName ?? "—")</td>
                         <td style="font-size:.78rem;">@(item.Program ?? "—")</td>
                         <td style="font-size:.78rem;">@(item.Duration > 0 ? $"{item.Duration}s" : "—")</td>
-                        <td style="font-size:.78rem;">@(item.MediaTier ?? "—")</td>
+                      @*  <td style="font-size:.78rem;">@(item.MediaTier ?? "—")</td>
                         <td style="font-size:.78rem;">@item.Impression.ToString("N0")</td>
                         <td style="font-size:.78rem;">@item.Reach.ToString("N0")</td>
                         <td class="val-ad">@item.ADValue.ToString("N2")</td>
-                        <td class="val-pr">@item.PRValue.ToString("N2")</td>
+                        <td class="val-pr">@item.PRValue.ToString("N2")</td>*@
                         <td>
                             @if (!string.IsNullOrEmpty(item.Toning) && item.Toning != "None")
                             {

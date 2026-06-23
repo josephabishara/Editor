@@ -149,13 +149,15 @@
 
                 <div class="metric-details">
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="metric-label">Total AD Value</span>
-                        <strong>@Model.VideoTotalAD.ToString("N2")</strong>
+                        <span class="metric-label text-white"> - </span>
+                        @* <strong>@Model.VideoTotalAD.ToString("N2")</strong> *@
+                        <strong class="text-white"> - </strong>
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <span class="metric-label">Total PR Value</span>
-                        <strong class="text-success">@Model.VideoTotalPR.ToString("N2")</strong>
+                        <span class="metric-label text-white">Total PR Value</span>
+                    @*     <strong class="text-success">@Model.VideoTotalPR.ToString("N2")</strong> *@
+                        <strong class="text-white ">@Model.VideoTotalPR.ToString("N2")</strong>
                     </div>
                 </div>
 

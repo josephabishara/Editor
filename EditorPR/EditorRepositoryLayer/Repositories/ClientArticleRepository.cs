@@ -16,7 +16,7 @@ namespace EditorRepositoryLayer.Repositories
         public async Task<IEnumerable<ClientArticle>> GetByClientIdAsync(int clientId)
              => await _dbSet
                  .Where(a => a.ClientId == clientId && a.IsActive && a.Deleted == 0)
-                 .OrderByDescending(a => a.Date)
+                 .OrderByDescending(a => a.Id)
                  .ToListAsync();
 
         /// <summary>

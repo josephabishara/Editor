@@ -43,7 +43,7 @@ namespace EditorLogicLayer.ClientArticleLogic
             var client = await _clientRepo.GetByIdAsync(clientId);
 
             var rawItems = (await _clientArticleRepo.GetByClientIdAsync(clientId))
-                                .Where(a => a.ParentId == null)
+                                //.Where(a => a.ParentId == null)
                                 .ToList();
 
             if (!rawItems.Any())
@@ -150,7 +150,7 @@ namespace EditorLogicLayer.ClientArticleLogic
         //        a. Insert a child GeneralArticle  (inherits all except Website/Writer/Date/URL)
         //        b. Insert a child ClientArticle   (ParentId = parent.Id)
 
-        public async Task<(bool Success, string Message)> CreateAsync(ClientArticleDTO model)
+        public async Task<(bool Success, string Message, int NewId)> CreateAsync(ClientArticleDTO model)
         {
             // Auto-calculate for parent
             model.PRValue = Math.Round(model.ADValue * 3.5m, 2);
@@ -188,7 +188,7 @@ namespace EditorLogicLayer.ClientArticleLogic
                 ? $"Article created with {childCount} child article(s)."
                 : "Article created successfully.";
 
-            return (true, msg);
+            return (true, msg, parentArticle.Id);
         }
 
         // ── Update ─────────────────────────────────────────────────────────────
@@ -295,25 +295,6 @@ namespace EditorLogicLayer.ClientArticleLogic
 
             return (true, "Record deleted.");
         }
-
-        public async Task<(bool Success, string Message)> BulkDeleteAsync(IEnumerable<int> ids)
-        {
-            var idList = ids?.Distinct().ToList() ?? new List<int>();
-            if (!idList.Any()) return (false, "No records selected.");
-
-            int deleted = 0;
-            foreach (var id in idList)
-            {
-                var (success, _) = await DeleteAsync(id);   // children cascade automatically — same as single delete
-                if (success) deleted++;
-            }
-
-            return deleted == idList.Count
-                ? (true, $"{deleted} article(s) deleted successfully.")
-                : (false, $"{deleted} of {idList.Count} article(s) deleted — some records were not found.");
-        }
-
-
         // ── Publish ────────────────────────────────────────────────────────────
 
         public async Task<(bool Success, string Message)> PublishAsync(int id)
@@ -457,7 +438,7 @@ namespace EditorLogicLayer.ClientArticleLogic
                 Images = parent.Images,    // ← inherited
                 IsActive = true,
                 Deleted = 0,
-                
+
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -485,7 +466,7 @@ namespace EditorLogicLayer.ClientArticleLogic
                 ArticleBranding = m.ArticleBranding,
                 HeadlineBranding = m.HeadlineBranding,
                 PictureinArticle = m.PictureinArticle,
-                Generation = m.Generation == "Generated",
+                Generation = m.Generation == "Not Generated" ,
                 ArticleURL = m.ArticleURL,
                 Title = m.Title,
                 Content = m.Content,
@@ -493,7 +474,7 @@ namespace EditorLogicLayer.ClientArticleLogic
                 IsActive = true,
                 Deleted = 0,
                 Publish = m.Publish,
-                WebsiteType =m.WebsiteType,
+                WebsiteType = m.WebsiteType,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -521,13 +502,13 @@ namespace EditorLogicLayer.ClientArticleLogic
                 ArticleBranding = parent.ArticleBranding,
                 HeadlineBranding = parent.HeadlineBranding,
                 PictureinArticle = parent.PictureinArticle,
-                Generation = parent.Generation == "Generated",
+                Generation = parent.Generation == "Not Generated",
                 ArticleURL = child.ArticleURL,   // ← child-specific
                 Title = parent.Title,       // ← inherited
                 Content = parent.Content,     // ← inherited
                 Images = parent.Images,      // ← inherited
                 IsActive = true,
-                WebsiteType=parent.WebsiteType,
+                WebsiteType = parent.WebsiteType,
                 Deleted = 0,
                 CreatedAt = DateTime.UtcNow
             };
@@ -554,7 +535,7 @@ namespace EditorLogicLayer.ClientArticleLogic
             e.ArticleBranding = m.ArticleBranding;
             e.HeadlineBranding = m.HeadlineBranding;
             e.PictureinArticle = m.PictureinArticle;
-            e.Generation = m.Generation == "Generated";
+            e.Generation = m.Generation == "Not Generated" ;
             e.ArticleURL = m.ArticleURL;
             e.Title = m.Title;
             e.Content = m.Content;
@@ -571,7 +552,7 @@ namespace EditorLogicLayer.ClientArticleLogic
             g.ArticleBranding = m.ArticleBranding;
             g.HeadlineBranding = m.HeadlineBranding;
             g.PictureinArticle = m.PictureinArticle;
-            g.Generation = m.Generation == "Generated";
+            g.Generation = m.Generation == "Not Generated";
             g.ArticleURL = m.ArticleURL;
             g.Title = m.Title;
             g.Content = m.Content;
@@ -603,7 +584,7 @@ namespace EditorLogicLayer.ClientArticleLogic
             e.ArticleBranding = parent.ArticleBranding;
             e.HeadlineBranding = parent.HeadlineBranding;
             e.PictureinArticle = parent.PictureinArticle;
-            e.Generation = parent.Generation == "Generated";
+            e.Generation = parent.Generation == "Not Generated";
             e.WebsiteType = parent.WebsiteType;
         }
 
@@ -621,8 +602,8 @@ namespace EditorLogicLayer.ClientArticleLogic
             g.ArticleBranding = parent.ArticleBranding;
             g.HeadlineBranding = parent.HeadlineBranding;
             g.PictureinArticle = parent.PictureinArticle;
-            g.Generation = parent.Generation == "Generated";
-            
+            g.Generation = parent.Generation == "Not Generated";
+
         }
 
         // ── Mappers ────────────────────────────────────────────────────────────
@@ -657,8 +638,8 @@ namespace EditorLogicLayer.ClientArticleLogic
             Images = e.Images,
             Publish = e.Publish,
             CreatedAt = e.CreatedAt,
-            WebsiteType = e.WebsiteType
-          
+            WebsiteType = e.WebsiteType,
+           // CreatedByUserName = e.CreatedByUserName ?? string.Empty,
 
         };
 
@@ -721,7 +702,7 @@ namespace EditorLogicLayer.ClientArticleLogic
             ADValue = e.ADValue ?? 0,
             PRValue = e.PRValue ?? 0,
             MediaTier = e.MediaTier,
-            Language = e.Language 
+            Language = e.Language
         };
 
 
@@ -846,5 +827,23 @@ namespace EditorLogicLayer.ClientArticleLogic
 
             return (true, $"Article duplicated successfully.", newParent.Id);
         }
+
+        public async Task<(bool Success, string Message)> BulkDeleteAsync(IEnumerable<int> ids)
+        {
+            var idList = ids?.Distinct().ToList() ?? new List<int>();
+            if (!idList.Any()) return (false, "No records selected.");
+
+            int deleted = 0;
+            foreach (var id in idList)
+            {
+                var (success, _) = await DeleteAsync(id);   // children cascade automatically — same as single delete
+                if (success) deleted++;
+            }
+
+            return deleted == idList.Count
+                ? (true, $"{deleted} article(s) deleted successfully.")
+                : (false, $"{deleted} of {idList.Count} article(s) deleted — some records were not found.");
+        }
+
     }
 }

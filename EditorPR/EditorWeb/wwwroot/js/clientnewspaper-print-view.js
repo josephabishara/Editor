@@ -42,7 +42,7 @@ function viewAsHtml() {
             ${d.screenshot ? `<div class="img-wrap"><img src="${escapeHtml(d.screenshot)}" /></div>` : ''}
             <div class="content" ${rtlContent}>${content}</div>
             <div class="footer">
-                <div class="f-left">أهل مصر<br><small>AHL MASR FOUNDATION</small></div>
+                <div class="f-left"> ${escapeHtml(clientName)}   <br><small>  ${rtlTitle} </small></div>
                 <div class="f-page">${idx + 1} / ${rows.length}</div>
                 <div class="f-right">EDITOR<br><small>PR &amp; COMMUNICATIONS</small></div>
             </div>
@@ -57,15 +57,15 @@ function viewAsHtml() {
 <style>
   @page { size: A4; margin: 14mm; }
   * { box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color:#1e1e1e; margin:0; }
+  body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color:#1e1e1e; margin:0; padding-left : 150px; padding-right : 150px; }
   .toolbar { position: sticky; top:0; background:#0f172a; padding:.6rem 1rem; display:flex; gap:.6rem; }
   .toolbar button { border:none; border-radius:6px; padding:.45rem 1rem; font-weight:600; cursor:pointer; }
   .btn-print { background:#16a34a; color:#fff; }
   .btn-close { background:#475569; color:#fff; }
   .print-page { padding: 10mm 0; page-break-after: always; }
   .print-page:last-child { page-break-after: auto; }
-  .top-row { text-align:right; font-size:.8rem; color:#5a6a7a; margin-bottom:6px; }
-  .title { text-align:right; font-size:1.1rem; margin:0 0 8px; }
+  .top-row { text-align:left; font-size:.8rem; color:#5a6a7a; margin-bottom:6px; }
+  .title { text-align:left; font-size:1.1rem; margin:0 0 8px; }
   hr { border:none; border-top:1px solid #c8c8c8; margin-bottom:10px; }
   .grid { border:1px solid #c8c8c8; }
   .grid-row { display:grid; grid-template-columns: 1fr 1fr 1fr; }
@@ -74,7 +74,7 @@ function viewAsHtml() {
   .cell:last-child { border-right:none; }
   .lbl { background:#8b0000; color:#fff; font-size:.65rem; font-weight:700; padding:.35rem; min-width:80px; display:flex; align-items:center; }
   .val { padding:.35rem; font-size:.72rem; flex:1; display:flex; align-items:center; }
-  .title-lg { text-align:right; font-size:1.4rem; font-weight:700; margin:18px 0 10px; }
+  .title-lg { text-align:left; font-size:1.4rem; font-weight:700; margin:18px 0 10px; }
   .img-wrap { text-align:center; margin-bottom:14px; }
   .img-wrap img { max-width:90mm; max-height:60mm; border:1px solid #ddd; }
   .content { font-size:.85rem; line-height:1.5; column-count:2; column-gap:6mm; text-align:justify; }

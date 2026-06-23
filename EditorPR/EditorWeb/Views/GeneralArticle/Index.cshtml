@@ -1,7 +1,25 @@
-@model IEnumerable<EditorViewModelLayer.GeneralArticleViewModel.GeneralArticleDTO>
+﻿@model EditorViewModelLayer.GeneralArticleViewModel.GeneralArticleIndexVM
 @{
     ViewData["Title"] = "General Articles";
 }
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" />
+<style>
+    /* Match Bootstrap form-control-sm height inside Select2 */
+    .select2-container--default .select2-selection--single {
+        height: 31px;
+        border: 1px solid #ced4da;
+    }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 29px;
+            font-size: .875rem;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 29px;
+        }
+</style>
 
 @if (TempData["Success"] != null)
 {
@@ -32,12 +50,56 @@
         <a asp-action="DownloadTemplate" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-download me-1"></i> Template
         </a>
-        <a asp-action="ExportToExcel" class="btn btn-outline-success btn-sm">
+        <a id="btnExportAll"
+           asp-action="ExportToExcel"
+           asp-route-FromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")"
+           asp-route-ToDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")"
+           asp-route-Title="@Model.Filter.Title"
+           asp-route-WebsiteId="@Model.Filter.WebsiteId"
+           class="btn btn-outline-success btn-sm">
             <i class="bi bi-file-earmark-excel me-1"></i> Export All
         </a>
         <button type="button" class="btn btn-warning btn-sm" id="btnExportSelected">
             <i class="bi bi-check2-square me-1"></i> Export Selected
         </button>
+    </div>
+</div>
+
+@* ── Filter Bar ─────────────────────────────────────────────────────────── *@
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label asp-for="Filter.FromDate" class="form-label small mb-1">From Date</label>
+                <input asp-for="Filter.FromDate" type="date" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Filter.ToDate" class="form-label small mb-1">To Date</label>
+                <input asp-for="Filter.ToDate" type="date" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Filter.Title" class="form-label small mb-1">Title</label>
+                <input asp-for="Filter.Title" type="text" class="form-control form-control-sm" placeholder="Search by title..." />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Filter.WebsiteId" class="form-label small mb-1">Website</label>
+                <select asp-for="Filter.WebsiteId" id="websiteFilterSelect" class="form-select form-select-sm">
+                    <option value="">-- All Websites --</option>
+                    @foreach (var w in Model.Websites)
+                    {
+                        <option value="@w.Value" selected="@w.Selected">@w.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-search me-1"></i> Filter
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-x-circle me-1"></i> Clear
+                </a>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -72,7 +134,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model)
+                    @foreach (var item in Model.Items)
                     {
                         <tr>
                             <td>
@@ -119,7 +181,7 @@
                             </td>
                         </tr>
                     }
-                    @if (!Model.Any())
+                    @if (!Model.Items.Any())
                     {
                         <tr>
                             <td colspan="10" class="text-center text-muted py-4">
@@ -134,7 +196,16 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
     <script>
+        $(function () {
+            $('#websiteFilterSelect').select2({
+                placeholder: '-- All Websites --',
+                allowClear: true,
+                width: '100%'
+            });
+        });
+
         // Select All toggle
         document.getElementById('selectAll').addEventListener('change', function () {
             document.querySelectorAll('.row-check')

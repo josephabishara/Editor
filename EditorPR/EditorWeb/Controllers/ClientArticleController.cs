@@ -1,6 +1,5 @@
-﻿using EditorDataLayer.Services;
-using EditorLogicLayer.ClientArticleLogic;
-using EditorLogicLayer.Helpers;
+﻿using EditorLogicLayer.ClientArticleLogic;
+using EditorRepositoryLayer.IRepositories;
 using EditorViewModelLayer.MediaViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,15 +12,17 @@ namespace EditorWeb.Controllers
     [Authorize(Roles = "Admin,Manager,EditorWeb")]
     public class ClientArticleController : Controller
     {
+        private readonly IClientArticleRepository _clientArticleRepo;
         private readonly IClientArticleService _service;
         private readonly IWebHostEnvironment _env;
         private readonly IHttpClientFactory _http;
-        //private readonly ICurrentUserService _currentUser;
         public ClientArticleController(
+            IClientArticleRepository clientArticleRepo,
             IClientArticleService service,
             IWebHostEnvironment env,
             IHttpClientFactory http)
         {
+            _clientArticleRepo = clientArticleRepo;
             _service = service;
             _env = env;
             _http = http;
@@ -36,55 +37,6 @@ namespace EditorWeb.Controllers
         private static List<SelectListItem> ToSL(List<MediaSelectOption> src)
             => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
 
-        // ── INDEX ──────────────────────────────────────────────────────────────
-
-        //[HttpGet]
-        //[Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
-        //public async Task<IActionResult> Index(
-        //    int clientId,
-        //    string? title = null,
-        //    string? dateFrom = null,
-        //    string? dateTo = null,
-        //    int categoryId = 0,
-        //    int subCategoryId = 0,
-        //    int writerId = 0,
-        //    int websiteId = 0)
-        //{
-        //    if (clientId <= 0) return RedirectToAction("Index", "Dashboard");
-
-        //    var list = await _service.GetListAsync(clientId);
-        //    var items = list.Items.AsEnumerable();
-
-        //    if (!string.IsNullOrWhiteSpace(title))
-        //        items = items.Where(i => i.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
-        //    if (DateTime.TryParse(dateFrom, out var from))
-        //        items = items.Where(i => i.Date.Date >= from.Date);
-        //    if (DateTime.TryParse(dateTo, out var to))
-        //        items = items.Where(i => i.Date.Date <= to.Date);
-        //    if (categoryId > 0) items = items.Where(i => i.CategoryId == categoryId);
-        //    if (subCategoryId > 0) items = items.Where(i => i.SubCategoryId == subCategoryId);
-        //    if (writerId > 0) items = items.Where(i => i.WriterId == writerId);
-        //    if (websiteId > 0) items = items.Where(i => i.WebsiteId == websiteId);
-
-        //    list.WebsiteOptions = await _service.GetWebsiteOptionsAsync(websiteId);
-        //    list.CategoryOptions = await _service.GetCategoryOptionsAsync(clientId, categoryId);
-        //    list.SubCategoryOptions = categoryId > 0
-        //        ? await _service.GetSubCategoryOptionsAsync(categoryId, subCategoryId)
-        //        : new List<MediaSelectOption>();
-        //    list.WriterOptions = await _service.GetWriterOptionsAsync(writerId);
-        //    list.Items = items.ToList();
-
-        //    ViewBag.ClientId = clientId;
-        //    ViewBag.FilterTitle = title;
-        //    ViewBag.FilterDateFrom = dateFrom;
-        //    ViewBag.FilterDateTo = dateTo;
-        //    ViewBag.FilterCategoryId = categoryId;
-        //    ViewBag.FilterSubId = subCategoryId;
-        //    ViewBag.FilterWriterId = writerId;
-        //    ViewBag.FilterWebsiteId = websiteId;
-
-        //    return View(list);
-        //}
 
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
@@ -160,29 +112,18 @@ namespace EditorWeb.Controllers
             return View(model);
         }
 
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Create(ClientArticleDTO model)
-        //{
-        //    if (!ModelState.IsValid) { await PopulateDropdownsAsync(model); return View(model); }
-        //    var (success, message) = await _service.CreateAsync(model);
-        //    if (!success) { ModelState.AddModelError(string.Empty, message); await PopulateDropdownsAsync(model); return View(model); }
-        //    TempData["Success"] = message;
-        //    return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
-        //}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ClientArticleDTO model, List<IFormFile>? imageFiles)
+        public async Task<IActionResult> Create(
+            ClientArticleDTO model,
+            List<IFormFile>? imageFiles,
+            bool? saveAndDuplicate)   // ← new: "Duplicate" button
         {
-
-
             if (!ModelState.IsValid)
             {
                 await PopulateDropdownsAsync(model);
                 return View(model);
             }
-
-            model.CreatedByUserName = User.Identity?.Name ?? "Unknown";
 
             // ── Upload new images ──────────────────────────────────────────
             if (imageFiles != null && imageFiles.Count > 0)
@@ -192,12 +133,27 @@ namespace EditorWeb.Controllers
                     model.Images = JsonSerializer.Serialize(paths);
             }
 
-            var (success, message) = await _service.CreateAsync(model);
+            var (success, message, newId) = await _service.CreateAsync(model);
             if (!success)
             {
                 ModelState.AddModelError(string.Empty, message);
                 await PopulateDropdownsAsync(model);
                 return View(model);
+            }
+
+            // ── Save & Duplicate ────────────────────────────────────────────
+            if (saveAndDuplicate == true)
+            {
+                var (dupSuccess, dupMessage, dupId) = await _service.DuplicateAsync(newId);
+                if (dupSuccess)
+                {
+                    TempData["Success"] = "Saved and duplicated. Now editing the duplicate copy.";
+                    return RedirectToAction(nameof(Edit), new { id = dupId });
+                }
+                // Duplicate failed — original was saved, fall back to normal redirect
+                TempData["Success"] = message;
+                TempData["Error"] = $"Save succeeded but duplication failed: {dupMessage}";
+                return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
             }
 
             TempData["Success"] = message;
@@ -218,7 +174,7 @@ namespace EditorWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, ClientArticleDTO model, List<IFormFile>? imageFiles, string? removedImages)   // posted as hidden field from the view
+        public async Task<IActionResult> Edit(int id, ClientArticleDTO model, List<IFormFile>? imageFiles, string? removedImages, bool? saveAndDuplicate)   // posted as hidden field from the view
         {
             if (id != model.Id) return BadRequest();
 
@@ -269,7 +225,18 @@ namespace EditorWeb.Controllers
                 await PopulateDropdownsAsync(model);
                 return View(model);
             }
-
+            if (saveAndDuplicate == true)
+            {
+                var (dupSuccess, dupMessage, dupId) = await _service.DuplicateAsync(model.Id);
+                if (dupSuccess)
+                {
+                    TempData["Success"] = "Saved and duplicated. Now editing the duplicate copy.";
+                    return RedirectToAction(nameof(Edit), new { id = dupId });
+                }
+                TempData["Success"] = message;
+                TempData["Error"] = $"Save succeeded but duplication failed: {dupMessage}";
+                return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
+            }
             TempData["Success"] = message;
             return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
         }
@@ -293,22 +260,6 @@ namespace EditorWeb.Controllers
             return RedirectToAction(nameof(Index), new { clientId });
         }
 
-        [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> BulkDelete(List<int> ids, int clientId)
-        {
-            if (ids == null || !ids.Any())
-            {
-                TempData["Error"] = "No articles selected.";
-                return RedirectToAction(nameof(Index), new { clientId });
-            }
-
-            var (success, message) = await _service.BulkDeleteAsync(ids);
-            TempData[success ? "Success" : "Error"] = message;
-            return RedirectToAction(nameof(Index), new { clientId });
-        }
-
         [HttpGet]
         public async Task<IActionResult> GetSubCategories(int parentId)
         {
@@ -322,6 +273,24 @@ namespace EditorWeb.Controllers
             var data = await _service.GetWebsiteAutoFillAsync(websiteId, clientId);
             return Json(data);
         }
+
+        // ── BULK DELETE ────────────────────────────────────────────────────────
+        // Was previously a dead, repo-bypassing helper that returned a tuple
+        // instead of IActionResult, so MVC never routed to it (form posted to
+        // "BulkDelete" but no such action existed → 404 / no-op).
+        // Fixed: real action, delegates to the service layer (which already
+        // has a correct BulkDeleteAsync that soft-deletes children + parent).
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDelete(List<int> ids, int clientId)
+        {
+            var (success, message) = await _service.BulkDeleteAsync(ids ?? new List<int>());
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(nameof(Index), new { clientId });
+        }
+
         // ── PUBLISH ────────────────────────────────────────────────────────────
 
         [HttpPost]
@@ -399,7 +368,7 @@ namespace EditorWeb.Controllers
             if (string.IsNullOrEmpty(model.HeadlineBranding)) model.HeadlineBranding = "Branded";
             if (string.IsNullOrEmpty(model.Toning)) model.Toning = "Neutral";
             if (string.IsNullOrEmpty(model.PictureinArticle)) model.PictureinArticle = "Yes";
-            if (string.IsNullOrEmpty(model.Generation)) model.Generation = "Generation";
+            if (string.IsNullOrEmpty(model.Generation)) model.Generation = "Not Generated";
         }
         private async Task<List<string>> SaveImagesAsync(IEnumerable<IFormFile> files)
         {

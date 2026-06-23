@@ -19,7 +19,7 @@ namespace EditorRepositoryLayer.Repositories
                 .Include(c => c.Writer)
                 .Include(c => c.NewsPaper)
                 .Where(c => c.ClientId == clientId && c.IsActive && c.Deleted == 0)
-                .OrderByDescending(c => c.Date)
+                .OrderByDescending(c => c.Id)
                 .ToListAsync();
 
         public async Task<ClientNewsPaper?> GetByIdWithDetailsAsync(int id)

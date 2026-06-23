@@ -85,7 +85,7 @@
                     <label asp-for="PublicationId">Publication <span style="color:var(--red)">*</span></label>
                     <select asp-for="PublicationId" asp-items="pubSL"
                             onchange="autoFillPublication(this.value)" class="select-search" required>
-                        <option value="0">— Select —</option>
+                     
                     </select>
                     <span asp-validation-for="PublicationId" class="field-error"></span>
                 </div>
@@ -107,12 +107,14 @@
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
                     <label asp-for="WriterId">
-                        <a asp-action="create" asp-controller="Writer" asp-route-state="1" class="btn btn-sm">Add Writer</a>
+                        <button type="button" class="btn btn-sm btn-link p-0" style="font-size:.78rem;"
+                                data-bs-toggle="modal" data-bs-target="#writerModal">
+                            + Add Writer
+                        </button>
                         Writer
                 </label>
                    
-                    <select asp-for="WriterId" asp-items="writerSL" class="select-search">
-                        <option value="0">— None —</option>
+                    <select asp-for="WriterId" asp-items="writerSL" class="select-search" required >
                     </select>
                 </div>
                 <div class="fg">
@@ -168,7 +170,7 @@
             <br />
             <div class="fg" style="margin-bottom:.9rem;">
                 <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
-                <input asp-for="Title" placeholder="Enter article headline…" />
+                <input asp-for="Title" placeholder="Enter article headline…" required/>
                 <span asp-validation-for="Title" class="field-error"></span>
             </div>
 
@@ -188,17 +190,128 @@
             </div>
             <br />
 
-            <div class="fg">
+         
+            <div id="screenshotBlock"
+                 style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;
+                padding:1rem 1.1rem;margin-bottom:.9rem;">
 
+                <label style="font-size:.8rem;font-weight:700;color:#0369a1;display:block;margin-bottom:.6rem;">
+                    📸 Screenshot from URL
+                    <span style="font-size:.72rem;font-weight:400;color:#64748b;margin-left:.4rem;">
+                        — capture a page and add it to images
+                    </span>
+                </label>
+
+                @*   {{-- URL row --}} *@
+                <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;">
+                    <input type="url" id="screenshotUrl"
+                           placeholder="https://example.com/article"
+                           style="flex:1;padding:.45rem .7rem;border:1.5px solid #bae6fd;border-radius:7px;
+                    font-size:.85rem;outline:none;transition:border-color .15s;box-sizing:border-box;"
+                           onfocus="this.style.borderColor='#0284c7'"
+                           onblur="this.style.borderColor='#bae6fd'" />
+
+                    <button type="button" id="btnUseArticleUrl" onclick="useArticleUrl()"
+                            title="Copy the Article URL field"
+                            style="display:inline-flex;align-items:center;gap:.3rem;background:#e0f2fe;
+                        color:#0369a1;border:none;border-radius:7px;padding:.45rem .7rem;
+                        font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                        ⬆ Use Article URL
+                    </button>
+                </div>
+
+                @*  {{-- Options row --}} *@
+                <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem;">
+
+                    @*  {{-- Capture mode --}} *@
+                    <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:#475569;">
+                        <label style="font-weight:600;white-space:nowrap;">Mode:</label>
+                        <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;">
+                            <input type="radio" name="ssMode" id="ssCrop" value="crop" checked />
+                            Crop
+                        </label>
+                        <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;">
+                            <input type="radio" name="ssMode" id="ssFullpage" value="fullpage" />
+                            Full Page
+                        </label>
+                    </div>
+
+                    @*  {{-- Width --}} *@
+                    <div style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;color:#475569;">
+                        <label style="font-weight:600;white-space:nowrap;">Width:</label>
+                        <select id="ssWidth"
+                                style="padding:.3rem .5rem;border:1.5px solid #bae6fd;border-radius:6px;
+                            font-size:.8rem;background:#fff;color:#1e293b;">
+                            <option value="800">800 px</option>
+                            <option value="1024">1024 px</option>
+                            <option value="1280" selected>1280 px  (default)</option>
+                            <option value="1440">1440 px</option>
+                            <option value="1920">1920 px</option>
+                        </select>
+                    </div>
+
+                    @*   {{-- Crop height (hidden when fullpage is selected) --}} *@
+                    <div id="cropHeightGroup"
+                         style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;color:#475569;">
+                        <label style="font-weight:600;white-space:nowrap;">Height (crop):</label>
+                        <select id="ssCropHeight"
+                                style="padding:.3rem .5rem;border:1.5px solid #bae6fd;border-radius:6px;
+                            font-size:.8rem;background:#fff;color:#1e293b;">
+                            <option value="600">600 px</option>
+                            <option value="800">800 px</option>
+                            <option value="900" selected>900 px  (default)</option>
+                            <option value="1080">1080 px</option>
+                            <option value="1200">1200 px</option>
+                            <option value="1600">1600 px</option>
+                            <option value="2000">2000 px</option>
+                            <option value="3000">3000 px</option>
+                            <option value="5000">5000 px  (very tall)</option>
+                        </select>
+                    </div>
+
+                    @*   {{-- Take screenshot button --}} *@
+                    <button type="button" id="btnScreenshot" onclick="screenshotFromUrl()"
+                            style="display:inline-flex;align-items:center;gap:.35rem;background:#0284c7;
+                        color:#fff;border:none;border-radius:7px;padding:.45rem 1rem;
+                        font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;
+                        transition:background .15s;"
+                            onmouseover="this.style.background='#0369a1'"
+                            onmouseout="this.style.background='#0284c7'">
+                        <span id="screenshotSpinner"
+                              style="display:none;width:13px;height:13px;
+                        border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+                        border-radius:50%;animation:spin .6s linear infinite;"></span>
+                        📸 Take Screenshot
+                    </button>
+                </div>
+
+                <div id="screenshotStatus"
+                     style="font-size:.78rem;color:#0369a1;display:none;margin-bottom:.4rem;"></div>
+
+                <div id="screenshotPreview" style="display:none;">
+                    <img id="screenshotImg"
+                         style="max-width:100%;max-height:200px;border-radius:7px;
+                    border:1.5px solid #0284c7;object-fit:contain;display:block;" />
+                    <div style="font-size:.75rem;color:#64748b;margin-top:.25rem;" id="screenshotDimLabel"></div>
+                    <button type="button" onclick="removeScreenshot()"
+                            style="display:inline-flex;align-items:center;gap:.25rem;margin-top:.3rem;
+                        background:none;border:none;color:#dc2626;font-size:.75rem;
+                        cursor:pointer;padding:0;">
+                        ✕ Remove screenshot
+                    </button>
+                </div>
+            </div>
+            @* ── Image Drop Zone ── *@
+            <div class="fg">
                 <div id="dropZone"
                      style="border:2px dashed var(--rule,#cbd5e1);border-radius:10px;
-                    padding:1.4rem 1rem;text-align:center;background:#f8fafc;
-                    cursor:pointer;min-height:110px;transition:border-color .2s,background .2s;">
+         padding:1.4rem 1rem;text-align:center;background:#f8fafc;
+         cursor:pointer;min-height:110px;transition:border-color .2s,background .2s;">
                     <div style="font-size:2rem;line-height:1;">📁</div>
                     <p style="color:#64748b;margin:.4rem 0 .2rem;font-size:.88rem;">
                         Drag &amp; drop images here, or <strong>click to browse</strong>
                     </p>
-                    <small style="color:#94a3b8;">JPG · PNG · GIF · WebP &nbsp;|&nbsp; Multiple allowed</small>
+                    <small style="color:#94a3b8;">JPG · PNG · GIF · WebP &nbsp;|&nbsp; Multiple selection allowed</small>
                     <input type="file" name="imageFiles" id="imageFilesInput"
                            multiple accept=".jpg,.jpeg,.png,.gif,.webp" style="display:none;" />
                 </div>
@@ -216,8 +329,8 @@
                                      onerror="this.src='/images/no-image.png'" />
                                 <button type="button" class="remove-existing" data-path="@path" title="Remove"
                                         style="position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;
-                                    border:none;border-radius:50%;width:20px;height:20px;font-size:11px;
-                                    line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                                 border:none;border-radius:50%;width:20px;height:20px;font-size:11px;
+                                 line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                                     ✕
                                 </button>
                             </div>
@@ -350,13 +463,13 @@
                 </div>
             </template>
 
-
+            @* 
             <button type="submit" name="addChild" value="true" formnovalidate
                     style="background:transparent;border:1px dashed #cbd5e1;border-radius:8px;
                 width:100%;padding:.6rem;color:#64748b;font-size:.85rem;
                 cursor:pointer;margin-top:.3rem;">
                 + Add Also Mention
-            </button>
+            </button>*@
         </div>
 
         @* ── CARD 3: Auto-filled from Publication ─────────────────────────────── *@
@@ -418,17 +531,246 @@
             }
 
             <button type="submit" name="save" value="true" class="btn-save">
-                @(isEdit ? "💾 Save" : "✅ Save")
+              💾 Save
             </button>
         </div>
 
     </form>
+
+    @* ── Quick "Add Writer" modal ─────────────────────────────────────────── *@
+    <div class="modal fade" id="writerModal" tabindex="-1" aria-labelledby="writerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="writerModalLabel">Add New Writer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="fg">
+                        <label for="newWriterName">Writer Name <span style="color:var(--red)">*</span></label>
+                        <input type="text" id="newWriterName" class="form-control" placeholder="Enter writer name…" />
+                        <span id="writerModalError" class="field-error" style="display:none;"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveWriter">Save Writer</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
  
 
 @section Scripts {
     <script>
         const clientId = @Model.ClientId;
+
+         // ── Quick "Add Writer" modal ─────────────────────────────────────────────
+        (function () {
+            const modalEl   = document.getElementById('writerModal');
+            const nameInput = document.getElementById('newWriterName');
+            const errorEl   = document.getElementById('writerModalError');
+            const btnSave   = document.getElementById('btnSaveWriter');
+            const writerSel = document.getElementById('WriterId');
+
+            const modal = new bootstrap.Modal(modalEl);
+
+            modalEl.addEventListener('shown.bs.modal', () => {
+                errorEl.style.display = 'none';
+                nameInput.value = '';
+                nameInput.focus();
+            });
+
+            nameInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); btnSave.click(); }
+            });
+
+            btnSave.addEventListener('click', async function () {
+                const name = nameInput.value.trim();
+                if (!name) {
+                    errorEl.textContent = 'Writer name is required.';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const fd = new FormData();
+                fd.append('writerName', name);
+                fd.append('__RequestVerificationToken', token);
+
+                btnSave.disabled = true;
+                btnSave.textContent = 'Saving…';
+
+                try {
+                    const resp = await fetch('@Url.Action("CreateQuick", "Writer")', {
+                        method: 'POST',
+                        body: fd
+                    });
+
+                    const data = await resp.json();
+
+                    if (!resp.ok) {
+                        errorEl.textContent = data?.error || 'Failed to create writer.';
+                        errorEl.style.display = 'block';
+                        return;
+                    }
+
+                    // ── Insert + select the new writer in the dropdown ──────────────
+                    const opt = new Option(data.writerName, data.id, true, true);
+
+                    if (window.jQuery && jQuery(writerSel).data('select2')) {
+                        // Select2 is active on this control — append via jQuery so it re-renders
+                        jQuery(writerSel).append(opt).val(data.id).trigger('change');
+                    } else {
+                        writerSel.add(opt);
+                        writerSel.value = data.id;
+                    }
+
+                    modal.hide();
+                } catch (err) {
+                    errorEl.textContent = 'Network error — please try again.';
+                    errorEl.style.display = 'block';
+                } finally {
+                    btnSave.disabled = false;
+                    btnSave.textContent = 'Save Writer';
+                }
+            });
+        })();
+
+
+        function addPathToImages(path) {
+        const hdn = document.getElementById('hdnImages');
+        let paths = [];
+        try { paths = JSON.parse(hdn.value || '[]'); } catch {}
+        if (!paths.includes(path)) { paths.push(path); hdn.value = JSON.stringify(paths); }
+        }
+
+        function removePathFromImages(path) {
+        const hdn = document.getElementById('hdnImages');
+        let paths = [];
+        try { paths = JSON.parse(hdn.value || '[]'); } catch {}
+        hdn.value = JSON.stringify(paths.filter(p => p !== path));
+        }
+
+        // FIX BUG 2: data-screenshot-thumb marks this as a screenshot so
+        // renderPreviews() (which only removes [data-upload-thumb]) won't erase it
+        function addThumbToGrid(path, label) {
+        const grid = document.getElementById('newPreviewGrid');
+        const wrap = document.createElement('div');
+        wrap.style.cssText      = 'position:relative;';
+        wrap.dataset.screenshotThumb = '1';
+        wrap.innerHTML = `
+        <img src="${path}"
+        style="width:88px;height:88px;object-fit:cover;
+        border-radius:6px;border:2px solid #0284c7;" />
+        <span style="position:absolute;bottom:0;left:0;right:0;
+        background:rgba(2,132,199,.85);color:#fff;font-size:9px;
+        padding:2px 4px;border-radius:0 0 6px 6px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</span>`;
+        grid.appendChild(wrap);
+        }
+
+        // ── Toggle crop height group when mode changes ────────────────────────────────
+        document.querySelectorAll('input[name="ssMode"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+        document.getElementById('cropHeightGroup').style.display =
+        this.value === 'fullpage' ? 'none' : 'flex';
+        });
+        });
+
+        function useArticleUrl() {
+        const src = document.getElementById('articleUrlField')?.value?.trim();
+        if (src) { document.getElementById('screenshotUrl').value = src; }
+        }
+
+        let _screenshotPath = null;
+
+        async function screenshotFromUrl() {
+        const urlInput   = document.getElementById('screenshotUrl');
+        const previewEl  = document.getElementById('screenshotPreview');
+        const previewImg = document.getElementById('screenshotImg');
+        const dimLabel   = document.getElementById('screenshotDimLabel');
+        const spinner    = document.getElementById('screenshotSpinner');
+        const btn        = document.getElementById('btnScreenshot');
+
+        const targetUrl = urlInput.value.trim();
+        if (!targetUrl) { setScreenshotStatus('⚠️ Please enter a URL first.', '#c2410c'); return; }
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        setScreenshotStatus('⚠️ URL must start with http:// or https://', '#c2410c'); return;
+        }
+
+        // Read options
+        const mode        = document.querySelector('input[name="ssMode"]:checked')?.value ?? 'crop';
+        const width       = document.getElementById('ssWidth').value;
+        const cropHeight  = document.getElementById('ssCropHeight').value;
+
+        spinner.style.display   = 'inline-block';
+        btn.disabled            = true;
+        previewEl.style.display = 'none';
+        setScreenshotStatus(
+        mode === 'fullpage'
+        ? `⏳ Capturing full page at ${width}px wide… (may take 10–20 s)`
+        : `⏳ Capturing ${width}×${cropHeight}px screenshot…`,
+        '#0369a1'
+        );
+
+        try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+        // Send mode + dimensions as form fields — controller reads them via [FromForm]
+        const formData = new FormData();
+        formData.append('__RequestVerificationToken', token);
+        formData.append('url',         targetUrl);
+        formData.append('captureMode', mode);
+        formData.append('width',       width);
+        formData.append('cropHeight',  cropHeight);
+
+        const resp = await fetch('/ClientArticle/CaptureScreenshot', {
+        method: 'POST',
+        body:   formData
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || `Server error ${resp.status}`);
+
+        _screenshotPath     = data.path;
+        previewImg.src      = data.path;
+        previewEl.style.display = 'block';
+
+        const dimText = mode === 'fullpage'
+        ? `Full page · ${width}px wide`
+        : `${width} × ${cropHeight}px`;
+        dimLabel.textContent = dimText;
+
+        setScreenshotStatus('✅ Screenshot captured and added to images.', '#15803d');
+
+        addPathToImages(data.path);
+        addThumbToGrid(data.path, `📸 ${dimText}`);
+
+        } catch (err) {
+        setScreenshotStatus(`❌ ${err.message}`, '#dc2626');
+        console.error('Screenshot error:', err);
+        } finally {
+        spinner.style.display = 'none';
+        btn.disabled          = false;
+        }
+        }
+
+        function removeScreenshot() {
+        if (!_screenshotPath) return;
+        removePathFromImages(_screenshotPath);
+        document.querySelectorAll('#newPreviewGrid [data-screenshot-thumb]').forEach(el => el.remove());
+        _screenshotPath = null;
+        document.getElementById('screenshotPreview').style.display = 'none';
+        document.getElementById('screenshotStatus').style.display  = 'none';
+        }
+
+        function setScreenshotStatus(msg, color) {
+        const el = document.getElementById('screenshotStatus');
+        el.textContent = msg; el.style.color = color; el.style.display = 'block';
+        }
+
 
         // ── Publication auto-fill (parent) ───────────────────────────────────────────
         async function autoFillPublication(pubId) {

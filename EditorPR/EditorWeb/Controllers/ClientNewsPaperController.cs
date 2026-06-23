@@ -2,6 +2,7 @@
 using EditorViewModelLayer.MediaViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
@@ -84,9 +85,11 @@ namespace EditorWeb.Controllers
             string? title = null,
             string? dateFrom = null,
             string? dateTo = null,
+            string? createdFrom = null,    
+            string? createdTo = null,    
             int categoryId = 0,
             int subCategoryId = 0,
-            int writerId = 0,
+            //int writerId = 0,
             int publicationId = 0)
         {
             if (clientId <= 0) return RedirectToAction("Index", "Dashboard");
@@ -102,15 +105,20 @@ namespace EditorWeb.Controllers
                 items = items.Where(i => i.Date.Date <= to.Date);
             if (categoryId > 0) items = items.Where(i => i.CategoryId == categoryId);
             if (subCategoryId > 0) items = items.Where(i => i.SubCategoryId == subCategoryId);
-            if (writerId > 0) items = items.Where(i => i.WriterId == writerId);
+            // if (writerId > 0) items = items.Where(i => i.WriterId == writerId);
             if (publicationId > 0) items = items.Where(i => i.PublicationId == publicationId);
+
+            if (DateTime.TryParse(createdFrom, out var cFrom))
+                items = items.Where(i => i.CreatedAt.Date >= cFrom.Date);
+            if (DateTime.TryParse(createdTo, out var cTo))
+                items = items.Where(i => i.CreatedAt.Date <= cTo.Date);
 
             list.PublicationOptions = await _service.GetPublicationOptionsAsync(publicationId);
             list.CategoryOptions = await _service.GetCategoryOptionsAsync(clientId, categoryId);
             list.SubCategoryOptions = categoryId > 0
                 ? await _service.GetSubCategoryOptionsAsync(categoryId, subCategoryId)
                 : new List<MediaSelectOption>();
-            list.WriterOptions = await _service.GetWriterOptionsAsync(writerId);
+           // list.WriterOptions = await _service.GetWriterOptionsAsync(writerId);
             list.Items = items.ToList();
 
             ViewBag.ClientId = clientId;
@@ -119,8 +127,10 @@ namespace EditorWeb.Controllers
             ViewBag.FilterDateTo = dateTo;
             ViewBag.FilterCategoryId = categoryId;
             ViewBag.FilterSubId = subCategoryId;
-            ViewBag.FilterWriterId = writerId;
+            //ViewBag.FilterWriterId = writerId;
             ViewBag.FilterPubId = publicationId;
+            ViewBag.FilterCreatedFrom = createdFrom;
+            ViewBag.FilterCreatedTo = createdTo;
 
             return View(list);
         }
@@ -155,12 +165,12 @@ namespace EditorWeb.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
-    ClientNewsPaperDTO model,
-    List<IFormFile>? imageFiles,
-    string? removedImages,
-    bool? addChild,
-    int? removeChild,
-    bool? saveAndDuplicate)   // ← new parameter
+            ClientNewsPaperDTO model,
+            List<IFormFile>? imageFiles,
+            string? removedImages,
+            bool? addChild,
+            int? removeChild,
+            bool? saveAndDuplicate)   // ← new parameter
         {
             if (addChild == true)
             {
@@ -244,7 +254,8 @@ namespace EditorWeb.Controllers
             List<IFormFile>? imageFiles,
             string? removedImages,
             bool? addChild,
-            int? removeChild)
+            int? removeChild,
+            bool? saveAndDuplicate)
         {
             if (id != model.Id) return BadRequest();
 
@@ -301,6 +312,19 @@ namespace EditorWeb.Controllers
                 ModelState.AddModelError(string.Empty, message);
                 await PopulateDropdownsAsync(model);
                 return View(model);
+            }
+
+            if (saveAndDuplicate == true)
+            {
+                var (dupSuccess, dupMessage, dupId) = await _service.DuplicateAsync(model.Id);
+                if (dupSuccess)
+                {
+                    TempData["Success"] = "Saved and duplicated. Now editing the duplicate copy.";
+                    return RedirectToAction(nameof(Edit), new { id = dupId });
+                }
+                TempData["Success"] = message;
+                TempData["Error"] = $"Save succeeded but duplication failed: {dupMessage}";
+                return RedirectToAction(nameof(Index), new { clientId = model.ClientId });
             }
 
             TempData["Success"] = message;
@@ -454,7 +478,7 @@ namespace EditorWeb.Controllers
             if (string.IsNullOrEmpty(model.HeadlineBranding)) model.HeadlineBranding = "Branded";
             if (string.IsNullOrEmpty(model.Toning)) model.Toning = "Neutral";
             if (string.IsNullOrEmpty(model.PictureinArticle)) model.PictureinArticle = "Yes";
-            if (string.IsNullOrEmpty(model.Generation)) model.Generation = "Generation";
+            if (string.IsNullOrEmpty(model.Generation)) model.Generation = "Not Generated";
         }
     }
 }

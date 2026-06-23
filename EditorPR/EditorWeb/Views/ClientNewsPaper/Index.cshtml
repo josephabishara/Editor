@@ -11,8 +11,10 @@
     var fTo = ViewBag.FilterDateTo as string ?? "";
     var fCat = (int)(ViewBag.FilterCategoryId ?? 0);
     var fSub = (int)(ViewBag.FilterSubId ?? 0);
-    var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
+    // var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
     var fPub = (int)(ViewBag.FilterPubId ?? 0);
+    var fCreatedFrom = ViewBag.FilterCreatedFrom as string ?? "";
+    var fCreatedTo = ViewBag.FilterCreatedTo as string ?? "";
 
     bool isAdmin = User.IsInRole("Admin");
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
@@ -164,10 +166,18 @@
                 </select>
             </div>
             <div class="fg"><label>Sub Category</label><select name="subCategoryId" id="fSub" asp-items="subSL"><option value="0">All</option></select></div>
-            <div class="fg"><label>Writer</label><select name="writerId" asp-items="writerSL"><option value="0">All</option></select></div>
+        </div>
+        <br />
+        <div class="filter-grid">
             <div class="fg"><label>Publication</label><select name="publicationId" asp-items="pubSL"><option value="0">All</option></select></div>
+            <div class="fg"><label>Created From</label><input type="date" name="createdFrom" value="@fCreatedFrom" /></div>
+            <div class="fg"><label>Created To</label><input type="date" name="createdTo" value="@fCreatedTo" /></div>
+       
             <div class="fg" style="display:flex;gap:.4rem;">
                 <button type="submit" class="btn-filter">Search</button>
+            </div>
+            <div class="fg" style="display:flex;gap:.4rem;">
+           
                 <a href="@Url.Action("Index", new { clientId })" class="btn-reset">Reset</a>
             </div>
         </div>
@@ -232,14 +242,13 @@
                         <input type="checkbox" class="row-cb" id="cbAll" onchange="toggleAll(this)" />
                     </th>
                     <th>#</th>
+                    <th>Parent</th>
                     <th>Date</th>
                     <th>Title</th>
                     <th>Publication</th>
                     <th>Category</th>
                     <th>Sub-Category</th>
-                    @*   <th>Writer</th>
-                    <th class="text-end">AD Value</th>
-                    <th class="text-end">PR Value</th> *@
+                    
                     <th>Created By</th>
                     <th>Created At</th>
                     <th class="text-center">Actions</th>
@@ -256,6 +265,7 @@
                     var encodedTitle = HtmlEncoder.Default.Encode(item.Title ?? "");
 
                     <tr data-id="@item.Id"
+                        data-parentid="@(item.ParentId?.ToString() ?? "")"
                         data-date="@item.Date.ToString("dd-MM-yyyy")"
                         data-title="@encodedTitle"
                         data-publication="@(item.PublicationName ?? "")"
@@ -289,7 +299,8 @@
                             <input type="checkbox" class="row-cb row-check"
                                    value="@item.Id" onchange="onRowCheck()" />
                         </td>
-                        <td class="text-muted small">@rowNum</td>
+                        <td class="text-muted small">@item.Id</td>
+                        <td class="small">@(item.ParentId)</td>
                         <td class="small text-nowrap">@item.Date.ToString("dd MMM yyyy")</td>
                         <td>
                             <a asp-action="Details" asp-route-id="@item.Id"
@@ -438,13 +449,13 @@
         function exportExcel() {
         const rows = getSelectedRows();
         if (!rows.length) { alert('Please select at least one newspaper.'); return; }
-        const headers = ['Date','Title','Publication','Category','Sub-Category','Writer',
+        const headers = ['Id', 'Parent ID','Date','Title','Publication','Category','Sub-Category','Writer',
         'Media Type','Media Tier','Frequency','Language',
         'Circulation','Reach','AD Value','PR Value',
         'Toning','Article Branding','Headline Branding',
         'Picture in Article','Generation','Pages','Height','Width'];
         const data = rows.map(d => [
-        d.date, d.title, d.publication, d.category, d.subcategory, d.writer,
+        d.id ,d.parentid || '—',d.date, d.title, d.publication, d.category, d.subcategory, d.writer,
         d.mediatype, d.mediatier, d.frequency, d.language,
         d.circulation, d.reach, d.ad, d.pr,
         d.toning, d.articlebrand, d.headlinebrand,
@@ -673,7 +684,7 @@
         [ ['Media Tier',       d.mediatier],    ['Size',              d.size],          ['Writer',      d.writer]      ],
         [ ['Language',         d.language],     ['Tone',              d.toning],        ['Generation',  d.generation]  ],
         [ ['Picture In Article', d.picture],    ['Headline Branding', d.headlinebrand], ['',            '']            ],
-        [ ['Article Branding', d.articlebrand], ['',                  ''],              ['',            '']            ],
+        [ ['Article Branding', d.articlebrand], ['Parent ID',        d.parentid || '—'],['',            '']            ],
         ];
 
         gridDef.forEach((rowCells, ri) => {
@@ -763,7 +774,7 @@
         // Left — Ahl Masr (Arabic label + English sub)
         useArabicFont(doc, 11, 'normal');
         doc.setTextColor(...DARK_RED);
-        doc.text(fixArabic('أهل مصر'), ML + 28, fY + 7, { align: 'right' });
+        doc.text(fixArabic('EDITOR'), ML + 28, fY + 7, { align: 'right' });
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(6);
         doc.setTextColor(...SLATE);

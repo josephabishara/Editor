@@ -37,7 +37,7 @@
     <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
        style="display:inline-flex;align-items:center;gap:.4rem;color:var(--slate);
         font-size:.82rem;text-decoration:none;margin-bottom:1.1rem;">
-        ← Back to Articles
+        ← Back  
     </a>
 
     @await Html.PartialAsync("_navdashboard")
@@ -82,7 +82,7 @@
             <div class="fg-3">
                 <div class="fg">
                     <label asp-for="WebsiteId">Website <span style="color:var(--red)">*</span></label>
-                    <select asp-for="WebsiteId" asp-items="webSL"
+                    <select asp-for="WebsiteId" asp-items="webSL" required
                             onchange="autoFillWebsite(this.value)" class="select-search">
                         <option value="0">— Select —</option>
                     </select>
@@ -90,14 +90,14 @@
                 </div>
                 <div class="fg">
                     <label asp-for="CategoryId">Category</label>
-                    <select asp-for="CategoryId" asp-items="catSL"
+                    <select asp-for="CategoryId" asp-items="catSL" required
                             id="catSel" onchange="loadSubs(this.value)">
                         <option value="0">— None —</option>
                     </select>
                 </div>
                 <div class="fg">
                     <label asp-for="SubCategoryId">Sub Category</label>
-                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel">
+                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel" required>
                         <option value="0">— None —</option>
                     </select>
                 </div>
@@ -105,7 +105,7 @@
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
                     <label asp-for="WriterId">Writer</label>
-                    <select asp-for="WriterId" asp-items="writerSL" class="select-search">
+                    <select asp-for="WriterId" asp-items="writerSL" class="select-search" required>
                         <option value="0">— None —</option>
                     </select>
                 </div>
@@ -168,7 +168,7 @@
             <br />
             <div class="fg" style="margin-bottom:.9rem;">
                 <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
-                <input asp-for="Title" placeholder="Enter article headline…" />
+                <input asp-for="Title" placeholder="Enter article headline…" required />
                 <span asp-validation-for="Title" class="field-error"></span>
             </div>
 
@@ -425,7 +425,12 @@
         <div class="form-footer">
             <a href="@Url.Action("Index", new { clientId = Model.ClientId })"
                class="btn-cancel">Cancel</a>
-            <button type="submit" class="btn-save">💾 Save </button>
+            <button type="submit" name="saveAndDuplicate" value="true" class="btn-save"
+                    style="background:#f59e0b;"
+                    onclick="this.form.querySelectorAll('[name=saveAndDuplicate]').forEach(el => el.value = 'true')">
+                📋 Save &amp; Duplicate
+            </button>
+            <button type="submit" name="save" value="false" class="btn-save">💾 Save </button>
         </div>
 
     </form>

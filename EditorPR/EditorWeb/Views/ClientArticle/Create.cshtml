@@ -3,12 +3,12 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
     bool isEdit = Model.Id > 0;
-    ViewData["Title"] = isEdit ? "Edit Website" : "Add Website";
+    ViewData["Title"] = isEdit ? "Edit Article  " : "Add Article  ";
 
     List<SelectListItem> ToSL(List<MediaSelectOption> src)
         => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
 
-    var webSL = ToSL(Model.WebsiteOptions);
+    var siteSL = ToSL(Model.WebsiteOptions);
     var catSL = ToSL(Model.CategoryOptions);
     var subSL = ToSL(Model.SubCategoryOptions);
     var writerSL = ToSL(Model.WriterOptions);
@@ -17,18 +17,23 @@
     var yesNoSL = ToSL(Model.YesNoOptions);
     var genSL = ToSL(Model.GenerationOptions);
 
+    // Parse existing images
     var existingImagePaths = new List<string>();
     if (!string.IsNullOrEmpty(Model.Images))
     {
         try { existingImagePaths = System.Text.Json.JsonSerializer.Deserialize<List<string>>(Model.Images) ?? new(); }
         catch { }
     }
+
+    // Ensure Children list is initialised
+    if (Model.Children == null) Model.Children = new List<ChildArticleDTO>();
+
+    // On Create, start with one blank child row
+    if (!isEdit && Model.Children.Count == 0)
+        Model.Children.Add(new ChildArticleDTO { Date = DateTime.Today });
 }
 
 @await Html.PartialAsync("_MediaStyles")
- 
-
- 
 
 <div class="form-wrap">
 
@@ -41,7 +46,7 @@
     @await Html.PartialAsync("_navdashboard")
 
     <div class="m-header" style="margin-bottom:1.4rem;">
-        <div class="m-header-icon" style="background:#cffafe;">@(isEdit ? "✏️" : "🌐")</div>
+        <div class="m-header-icon" style="background:#dbeafe;">@(isEdit ? "✏️" : "📰")</div>
         <div>
             <h1>@ViewData["Title"]</h1>
             <p>@Model.ClientName</p>
@@ -53,55 +58,62 @@
         <div class="val-summary">
             <strong>Please fix the errors below:</strong>
             <ul>
-                @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
                 {
-                    <li>@err.ErrorMessage</li>
+                    <li>@e.ErrorMessage</li>
                 }
             </ul>
         </div>
     }
 
-    <form method="post" enctype="multipart/form-data"
+    <form method="post"
+          enctype="multipart/form-data"
           action="@(isEdit ? Url.Action("Edit", new { id = Model.Id }) : Url.Action("Create"))">
 
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="ClientId" />
         <input type="hidden" asp-for="ArticleId" />
+
         <input type="hidden" name="Images" id="hdnImages" value="@Model.Images" />
         <input type="hidden" name="removedImages" id="hdnRemovedImages" value="[]" />
 
-        @* ── CARD 1: Source & Classification ── *@
+        @* ── CARD 1: Source & Classification ─────────────────────────────────── *@
         <div class="form-card">
-
             <div class="fg-3">
                 <div class="fg">
                     <label asp-for="WebsiteId">Website <span style="color:var(--red)">*</span></label>
-                    <select asp-for="WebsiteId" asp-items="webSL"
+                    <select asp-for="WebsiteId" asp-items="siteSL"
                             onchange="autoFillWebsite(this.value)" class="select-search" required>
-                        <option value="0">— Select —</option>
                     </select>
                     <span asp-validation-for="WebsiteId" class="field-error"></span>
                 </div>
                 <div class="fg">
                     <label asp-for="CategoryId">Category</label>
-                    <select asp-for="CategoryId" asp-items="catSL" class="select-search"
-                            id="catSel" onchange="loadSubs(this.value)">
+                    <select asp-for="CategoryId" asp-items="catSL"
+                            id="catSel" onchange="loadSubs(this.value)" class="select-search" required>
                         <option value="0">— None —</option>
                     </select>
                 </div>
                 <div class="fg">
                     <label asp-for="SubCategoryId">Sub Category</label>
-                    <select asp-for="SubCategoryId" asp-items="subSL" class="select-search" id="subSel">
+                    <select asp-for="SubCategoryId" asp-items="subSL" id="subSel" class="select-search" required>
                         <option value="0">— None —</option>
                     </select>
                 </div>
             </div>
-
             <div class="fg-3" style="margin-top:.9rem;">
                 <div class="fg">
-                    <label asp-for="ArticleURL">Article URL</label>
-                    <input asp-for="ArticleURL" type="url" placeholder="https://…" id="articleUrlField" />
+                    <label asp-for="WriterId">
+                        <button type="button" class="btn btn-sm btn-link p-0" style="font-size:.78rem;"
+                                data-bs-toggle="modal" data-bs-target="#writerModal">
+                            + Add Writer
+                        </button>
+                        Writer
+                    </label>
+                    <select asp-for="WriterId" asp-items="writerSL" id="WriterId" class="select-search">
+                        <option value="0">— None —</option>
+                    </select>
                 </div>
                 <div class="fg">
                     <label asp-for="Date">Date <span style="color:var(--red)">*</span></label>
@@ -109,17 +121,11 @@
                     <span asp-validation-for="Date" class="field-error"></span>
                 </div>
                 <div class="fg">
-                    <label asp-for="WriterId">
-                        Writer
-                        <a asp-action="Create" asp-controller="Writer" asp-route-state="1" class="btn btn-sm">Add Writer</a>
-                    </label>
-                    <select asp-for="WriterId" asp-items="writerSL" class="select-search">
-                        <option value="0">— None —</option>
-                    </select>
+                    <label asp-for="ArticleURL">Article URL</label>
+                    <input asp-for="ArticleURL" placeholder="https://…" />
                 </div>
             </div>
             <br />
-
             <div class="fg-3">
                 <div class="fg">
                     <label asp-for="ArticleBranding">Article Branding</label>
@@ -134,8 +140,8 @@
                     <select asp-for="PictureinArticle" asp-items="yesNoSL"></select>
                 </div>
             </div>
-
-            <div class="fg-3" style="margin-top:.9rem;">
+            <br />
+            <div class="fg-3">
                 <div class="fg">
                     <label asp-for="Toning">Toning</label>
                     <select asp-for="Toning" asp-items="toningSL"></select>
@@ -146,91 +152,28 @@
                 </div>
             </div>
             <br />
-
             <div class="fg" style="margin-bottom:.9rem;">
                 <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
-                <input asp-for="Title" placeholder="Enter article headline…" />
+                <input asp-for="Title" placeholder="Enter article headline…" required />
                 <span asp-validation-for="Title" class="field-error"></span>
             </div>
 
             <div class="fg" style="margin-bottom:.9rem;">
-                <label asp-for="Content">Content</label>
+                <label asp-for="Content">Translation</label>
                 <textarea id="textarea" class="form-control" asp-for="Content" placeholder="Content"></textarea>
                 <script src="~/lib/tinymce/tinymce.min.js"></script>
                 <script>
                     tinymce.init({
-                    selector: '#textarea',
-                    plugins: "tooltip print preview fullpage paste searchreplace autolink directionality visualblocks visualchars fullscreen image link media template codesample code table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists textcolor wordcount imagetools contextmenu colorpicker textpattern",
-                    toolbar1: 'formatselect | bold italic strikethrough forecolor backcolor | link | alignleft aligncenter alignright alignjustify | numlist bullist outdent indent | removeformat',
-                    height: "200",
-                    paste_data_images: true
+                        selector: '#textarea',
+                        plugins: "paste searchreplace autolink visualblocks fullscreen image link media table code lists wordcount",
+                        toolbar1: 'formatselect | bold italic forecolor backcolor | link | alignleft aligncenter alignright | numlist bullist | removeformat',
+                        height: "200",
+                        paste_data_images: true
                     });
                 </script>
             </div>
             <br />
 
-            @* ── 📸 SCREENSHOT FROM URL ── *@
-         @*    <div id="screenshotBlock"
-                 style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;
-                padding:1rem 1.1rem;margin-bottom:.9rem;">
-
-                <label style="font-size:.8rem;font-weight:700;color:#0369a1;display:block;margin-bottom:.5rem;">
-                    📸 Screenshot from URL
-                    <span style="font-size:.72rem;font-weight:400;color:#64748b;margin-left:.4rem;">
-                        — capture a page and add it to images
-                    </span>
-                </label>
-
-                <div style="display:flex;gap:.5rem;align-items:center;">
-                    <input type="url" id="screenshotUrl"
-                           placeholder="https://example.com/article"
-                           style="flex:1;padding:.45rem .7rem;border:1.5px solid #bae6fd;
-                    border-radius:7px;font-size:.85rem;outline:none;
-                    transition:border-color .15s;box-sizing:border-box;"
-                           onfocus="this.style.borderColor='#0284c7'"
-                           onblur="this.style.borderColor='#bae6fd'" />
-
-                    <button type="button" id="btnUseArticleUrl" onclick="useArticleUrl()"
-                            title="Copy the Article URL field above"
-                            style="display:inline-flex;align-items:center;gap:.3rem;
-                        background:#e0f2fe;color:#0369a1;border:none;border-radius:7px;
-                        padding:.45rem .7rem;font-size:.78rem;font-weight:600;
-                        cursor:pointer;white-space:nowrap;">
-                        ⬆ Use Article URL
-                    </button>
-
-                    <button type="button" id="btnScreenshot" onclick="screenshotFromUrl()"
-                            style="display:inline-flex;align-items:center;gap:.35rem;
-                        background:#0284c7;color:#fff;border:none;border-radius:7px;
-                        padding:.45rem 1rem;font-size:.82rem;font-weight:700;
-                        cursor:pointer;white-space:nowrap;transition:background .15s;"
-                            onmouseover="this.style.background='#0369a1'"
-                            onmouseout="this.style.background='#0284c7'">
-                        <span id="screenshotSpinner"
-                              style="display:none;width:13px;height:13px;
-                        border:2px solid rgba(255,255,255,.4);
-                        border-top-color:#fff;border-radius:50%;
-                        animation:spin .6s linear infinite;"></span>
-                        📸 Take Screenshot
-                    </button>
-                </div>
-
-                <div id="screenshotStatus"
-                     style="margin-top:.5rem;font-size:.78rem;color:#0369a1;display:none;"></div>
-
-                <div id="screenshotPreview" style="margin-top:.6rem;display:none;">
-                    <img id="screenshotImg"
-                         style="max-width:220px;max-height:140px;border-radius:7px;
-                    border:1.5px solid #0284c7;object-fit:cover;display:block;" />
-                    <button type="button" onclick="removeScreenshot()"
-                            style="display:inline-flex;align-items:center;gap:.25rem;
-                        margin-top:.35rem;background:none;border:none;
-                        color:#dc2626;font-size:.75rem;cursor:pointer;padding:0;">
-                        ✕ Remove screenshot
-                    </button>
-                </div>
-            </div> *@
-            
             <div id="screenshotBlock"
                  style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;
                 padding:1rem 1.1rem;margin-bottom:.9rem;">
@@ -242,7 +185,7 @@
                     </span>
                 </label>
 
-              @*   {{-- URL row --}} *@
+                @*   {{-- URL row --}} *@
                 <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;">
                     <input type="url" id="screenshotUrl"
                            placeholder="https://example.com/article"
@@ -260,10 +203,10 @@
                     </button>
                 </div>
 
-               @*  {{-- Options row --}} *@
+                @*  {{-- Options row --}} *@
                 <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem;">
 
-                   @*  {{-- Capture mode --}} *@
+                    @*  {{-- Capture mode --}} *@
                     <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:#475569;">
                         <label style="font-weight:600;white-space:nowrap;">Mode:</label>
                         <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;">
@@ -276,7 +219,7 @@
                         </label>
                     </div>
 
-                   @*  {{-- Width --}} *@
+                    @*  {{-- Width --}} *@
                     <div style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;color:#475569;">
                         <label style="font-weight:600;white-space:nowrap;">Width:</label>
                         <select id="ssWidth"
@@ -290,7 +233,7 @@
                         </select>
                     </div>
 
-                  @*   {{-- Crop height (hidden when fullpage is selected) --}} *@
+                    @*   {{-- Crop height (hidden when fullpage is selected) --}} *@
                     <div id="cropHeightGroup"
                          style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;color:#475569;">
                         <label style="font-weight:600;white-space:nowrap;">Height (crop):</label>
@@ -309,7 +252,7 @@
                         </select>
                     </div>
 
-                  @*   {{-- Take screenshot button --}} *@
+                    @*   {{-- Take screenshot button --}} *@
                     <button type="button" id="btnScreenshot" onclick="screenshotFromUrl()"
                             style="display:inline-flex;align-items:center;gap:.35rem;background:#0284c7;
                         color:#fff;border:none;border-radius:7px;padding:.45rem 1rem;
@@ -341,13 +284,12 @@
                     </button>
                 </div>
             </div>
-
             @* ── Image Drop Zone ── *@
             <div class="fg">
                 <div id="dropZone"
                      style="border:2px dashed var(--rule,#cbd5e1);border-radius:10px;
-                    padding:1.4rem 1rem;text-align:center;background:#f8fafc;
-                    cursor:pointer;min-height:110px;transition:border-color .2s,background .2s;">
+         padding:1.4rem 1rem;text-align:center;background:#f8fafc;
+         cursor:pointer;min-height:110px;transition:border-color .2s,background .2s;">
                     <div style="font-size:2rem;line-height:1;">📁</div>
                     <p style="color:#64748b;margin:.4rem 0 .2rem;font-size:.88rem;">
                         Drag &amp; drop images here, or <strong>click to browse</strong>
@@ -370,8 +312,8 @@
                                      onerror="this.src='/images/no-image.png'" />
                                 <button type="button" class="remove-existing" data-path="@path" title="Remove"
                                         style="position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;
-                                    border:none;border-radius:50%;width:20px;height:20px;font-size:11px;
-                                    line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                                         border:none;border-radius:50%;width:20px;height:20px;font-size:11px;
+                                         line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                                     ✕
                                 </button>
                             </div>
@@ -379,202 +321,288 @@
                     </div>
                 }
             </div>
-        </div>
+            <br />
 
-        @* ── CARD 2: Child Articles ── *@
-        <div class="form-card" id="childrenCard">
-            <div class="form-card-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>📎 Also Mention (Other Sources)</span>
+            @* ══════════════════════════════════════════════════════════════════
+               CHILDREN SECTION — hidden by default, shown via JS
+            ══════════════════════════════════════════════════════════════════ *@
+
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                margin-top:1rem;padding:.55rem .7rem;background:#f1f5f9;
+                border-radius:8px;border:1px solid #e2e8f0;">
+                <span style="font-size:.85rem;font-weight:700;color:#475569;">
+                    📎 Also Mention
+                    <span id="childBadge"
+                          style="display:none;background:#3b82f6;color:#fff;border-radius:999px;
+                    font-size:.72rem;padding:.1rem .5rem;margin-left:.4rem;">0</span>
+                </span>
                 <button type="button" id="btnAddChild"
-                        style="background:var(--blue,#3b82f6);color:#fff;border:none;
-                    border-radius:6px;padding:.3rem .9rem;font-size:.82rem;cursor:pointer;">
-                    + Also Mention
+                        style="background:#3b82f6;color:#fff;border:none;border-radius:6px;
+                    padding:.32rem .85rem;font-size:.82rem;font-weight:600;cursor:pointer;">
+                    + Add Also Mention
                 </button>
             </div>
-            <div id="childRowsContainer"></div>
+
+            <div id="childrenSection" style="display:none; margin-top:.6rem;">
+                <div id="childRowsContainer"></div>
+            </div>
+
+            @* Hidden template stamped with server option lists *@
             <template id="childRowTemplate">
-                <div class="child-row" data-index="__IDX__"
-                     style="border:1px solid #e2e8f0;border-radius:8px;padding:.9rem;
-                    margin-bottom:.75rem;background:#f8fafc;position:relative;">
-                    <div style="position:absolute;top:8px;right:10px;">
+                <div class="child-row"
+                     style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
+                    padding:.9rem;margin-bottom:.75rem;position:relative;">
+
+                    <div style="position:absolute;top:10px;right:12px;">
                         <button type="button" class="btn-remove-child"
                                 style="background:#ef4444;color:#fff;border:none;border-radius:50%;
-                            width:22px;height:22px;font-size:12px;cursor:pointer;line-height:1;">
+                            width:22px;height:22px;font-size:12px;cursor:pointer;line-height:1;"
+                                title="Remove">
                             ✕
                         </button>
                     </div>
-                    <div style="font-size:.78rem;font-weight:600;color:#64748b;margin-bottom:.6rem;">
-                        Child #<span class="child-number">1</span>
+
+                    <div style="font-size:.78rem;font-weight:700;color:#64748b;margin-bottom:.7rem;">
+                        Also Mention #<span class="child-number">1</span>
+                        <span class="child-new-badge"
+                              style="color:#22c55e;font-weight:400;margin-left:.3rem;">New</span>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.7rem;">
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem;margin-bottom:.6rem;">
                         <div>
-                            <label style="font-size:.8rem;font-weight:600;">Website <span style="color:#ef4444">*</span></label>
-                            <select name="Children[__IDX__].WebsiteId" class="child-website-sel"
-                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;"
+                            <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.25rem;">
+                                Website <span style="color:#ef4444">*</span>
+                            </label>
+                            <select name="Children[__IDX__].WebsiteId"
+                                    class="child-site-sel select-search-child"
+                                    style="width:100%;padding:.38rem .5rem;border:1px solid #cbd5e1;
+                                border-radius:6px;font-size:.85rem;"
                                     onchange="autoFillChild(this,__IDX__)">
                                 <option value="0">— Select —</option>
-                                {{WEBSITE_OPTIONS}}
+                                {{SITE_OPTIONS}}
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:.8rem;font-weight:600;">Writer</label>
+                            <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.25rem;">
+                                Writer
+                            </label>
                             <select name="Children[__IDX__].WriterId"
-                                    style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;">
+                                    class="select-search-child"
+                                    style="width:100%;padding:.38rem .5rem;border:1px solid #cbd5e1;
+                                border-radius:6px;font-size:.85rem;">
                                 <option value="0">— None —</option>
                                 {{WRITER_OPTIONS}}
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:.8rem;font-weight:600;">Date <span style="color:#ef4444">*</span></label>
-                            <input type="date" name="Children[__IDX__].Date"
-                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;" />
-                        </div>
-                        <div>
-                            <label style="font-size:.8rem;font-weight:600;">Article URL</label>
-                            <input type="url" name="Children[__IDX__].ArticleURL" placeholder="https://…"
-                                   style="width:100%;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.85rem;" />
+                            <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.25rem;">
+                                Date <span style="color:#ef4444">*</span>
+                            </label>
+                            <input type="date"
+                                   name="Children[__IDX__].Date"
+                                   value="{{TODAY}}"
+                                   style="width:100%;padding:.38rem .5rem;border:1px solid #cbd5e1;
+                            border-radius:6px;font-size:.85rem;" />
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-top:.6rem;">
+
+                    <div style="display:grid;grid-template-columns:1fr;gap:.7rem;margin-bottom:.6rem;">
                         <div>
-                            <label style="font-size:.75rem;color:#64748b;">AD Value</label>
-                            <input type="number" step="0.01" name="Children[__IDX__].ADValue" class="child-ad"
-                                   id="childAD___IDX__" value="0" oninput="recalcChildPR(this,__IDX__)"
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.83rem;background:#f1f5f9;" />
+                            <label style="font-size:.75rem;color:#64748b;display:block;margin-bottom:.2rem;">Article URL</label>
+                            <input type="text" name="Children[__IDX__].ArticleURL" placeholder="https://…"
+                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;
+                            border-radius:6px;font-size:.83rem;" />
                         </div>
-                        <div>
-                            <label style="font-size:.75rem;color:#64748b;">PR Value (×3.5)</label>
-                            <input type="number" step="0.01" name="Children[__IDX__].PRValue" class="child-pr"
-                                   id="childPR___IDX__" value="0" readonly
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
-                        </div>
-                        <div>
-                            <label style="font-size:.75rem;color:#64748b;">Media Tier</label>
-                            <input type="text" name="Children[__IDX__].MediaTier" class="child-tier" readonly
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #e2e8f0;border-radius:6px;font-size:.83rem;background:#e2e8f0;" />
-                        </div>
-                        <div>
-                            <label style="font-size:.75rem;color:#64748b;">Language</label>
-                            <input type="text" name="Children[__IDX__].Language"
-                                   style="width:100%;padding:.3rem .5rem;border:1px solid #cbd5e1;border-radius:6px;font-size:.83rem;" />
-                        </div>
+                    </div>
+
+                    @* hidden auto-filled fields still posted so model binds *@
+                    <div style="display:none;">
+                        <input type="number" step="0.01"
+                               name="Children[__IDX__].ADValue"
+                               class="child-ad"
+                               id="childAD___IDX__"
+                               value="0" />
+                        <input type="number" step="0.01"
+                               name="Children[__IDX__].PRValue"
+                               class="child-pr"
+                               id="childPR___IDX__"
+                               value="0" readonly />
+                        <input type="number" name="Children[__IDX__].Impression" id="childImpression___IDX__" value="0" />
+                        <input type="number" name="Children[__IDX__].Reach" id="childReach___IDX__" value="0" readonly />
+                        <input type="text" name="Children[__IDX__].MediaType" id="childMediaType___IDX__" value="" />
+                        <input type="text" name="Children[__IDX__].MediaTier" id="childMediaTier___IDX__" value="" />
+                        <input type="text" name="Children[__IDX__].Frequency" id="childFrequency___IDX__" value="" />
+                        <input type="text" name="Children[__IDX__].Language" id="childLanguage___IDX__" value="" />
+                        <input type="hidden" name="Children[__IDX__].Id" value="0" />
                     </div>
                 </div>
             </template>
         </div>
 
-        @* ── CARD 3: Auto-fill (hidden) ── *@
+        @* ── CARD 3: Auto-filled from Website ──────────────────────────────────── *@
         <div class="form-card" style="display:none;">
+            <div class="form-card-title">
+                🔄 Website Data
+                <span class="badge-autofill">Auto-filled on Website change</span>
+            </div>
             <div class="fg-4">
-                <div class="fg"><label asp-for="MediaType">Media Type</label><input asp-for="MediaType" class="autofill" id="afMediaType" readonly /></div>
-                <div class="fg"><label asp-for="MediaTier">Media Tier</label><input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly /></div>
-                <div class="fg"><label asp-for="Frequency">Frequency</label><input asp-for="Frequency" class="autofill" id="afFrequency" readonly /></div>
-                <div class="fg"><label asp-for="Language">Language</label><input asp-for="Language" class="autofill" id="afLanguage" readonly /></div>
+                <div class="fg">
+                    <label asp-for="MediaType">Media Type</label>
+                    <input asp-for="MediaType" class="autofill" id="afMediaType" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="MediaTier">Media Tier</label>
+                    <input asp-for="MediaTier" class="autofill" id="afMediaTier" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Frequency">Frequency</label>
+                    <input asp-for="Frequency" class="autofill" id="afFrequency" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="Language">Language</label>
+                    <input asp-for="Language" class="autofill" id="afLanguage" readonly />
+                </div>
             </div>
             <div class="fg-4" style="margin-top:.9rem;">
-                <div class="fg"><label asp-for="Impression">Impression</label><input asp-for="Impression" type="number" id="afImpression" class="autofill" /></div>
-                <div class="fg"><label asp-for="Reach">Reach</label><input asp-for="Reach" class="autofill" id="afReach" readonly /></div>
-                <div class="fg"><label asp-for="ADValue">AD Value</label><input asp-for="ADValue" type="number" step="0.01" id="afAD" class="autofill" /></div>
-                <div class="fg"><label asp-for="PRValue">PR Value</label><input asp-for="PRValue" class="autofill" id="afPR" readonly /></div>
+                <div class="fg">
+                    <label asp-for="Impression">Impression</label>
+                    <input asp-for="Impression" type="number" id="afImpression" oninput="recalcReach()" class="autofill" />
+                </div>
+                <div class="fg">
+                    <label asp-for="Reach">Reach (Impression × 4)</label>
+                    <input asp-for="Reach" class="autofill" id="afReach" readonly />
+                </div>
+                <div class="fg">
+                    <label asp-for="ADValue">AD Value (Unit Price)</label>
+                    <input asp-for="ADValue" type="number" step="0.01" id="afAD"
+                           oninput="recalcPR()" class="autofill" />
+                </div>
+                <div class="fg">
+                    <label asp-for="PRValue">PR Value (AD × 3.5)</label>
+                    <input asp-for="PRValue" class="autofill" id="afPR" readonly />
+                </div>
             </div>
         </div>
 
-        @* ── Footer ── *@
+        @* ── Footer ──────────────────────────────────────────────────────────── *@
         <div class="form-footer">
             <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
-            <button type="submit" class="btn-save">@(isEdit ? "💾 Save" : "✅ Save")</button>
+
+            @if (!isEdit)
+            {
+                <button type="submit" name="saveAndDuplicate" value="true" class="btn-save"
+                        style="background:#f59e0b;">
+                    📋 Save &amp; Duplicate
+                </button>
+            }
+
+            <button type="submit" name="saveAndDuplicate" value="false" class="btn-save">
+                💾 Save
+            </button>
         </div>
 
     </form>
+
+    @* ── Quick "Add Writer" modal ─────────────────────────────────────────── *@
+    <div class="modal fade" id="writerModal" tabindex="-1" aria-labelledby="writerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="writerModalLabel">Add New Writer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="fg">
+                        <label for="newWriterName">Writer Name <span style="color:var(--red)">*</span></label>
+                        <input type="text" id="newWriterName" class="form-control" placeholder="Enter writer name…" />
+                        <span id="writerModalError" class="field-error" style="display:none;"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveWriter">Save Writer</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
 
 @section Scripts {
     <script>
         const clientId = @Model.ClientId;
 
-        // ── "Use Article URL" shortcut ────────────────────────────────────────────────
-        // function useArticleUrl() {
-        // const src = document.getElementById('articleUrlField')?.value?.trim();
-        // if (src) {
-        // document.getElementById('screenshotUrl').value = src;
-        // document.getElementById('screenshotUrl').focus();
-        // }
-        // }
+        // ── Quick "Add Writer" modal ─────────────────────────────────────────────
+        (function () {
+            const modalEl   = document.getElementById('writerModal');
+            const nameInput = document.getElementById('newWriterName');
+            const errorEl   = document.getElementById('writerModalError');
+            const btnSave   = document.getElementById('btnSaveWriter');
+            const writerSel = document.getElementById('WriterId');
 
-        // ── Screenshot capture ────────────────────────────────────────────────────────
-        
-       // let _screenshotPath = null;
+            const modal = new bootstrap.Modal(modalEl);
 
-      
-        // async function screenshotFromUrl() {
-        // const urlInput   = document.getElementById('screenshotUrl');
-        // const previewEl  = document.getElementById('screenshotPreview');
-        // const previewImg = document.getElementById('screenshotImg');
-        // const spinner    = document.getElementById('screenshotSpinner');
-        // const btn        = document.getElementById('btnScreenshot');
+            modalEl.addEventListener('shown.bs.modal', () => {
+                errorEl.style.display = 'none';
+                nameInput.value = '';
+                nameInput.focus();
+            });
 
-        // const targetUrl = urlInput.value.trim();
-        // if (!targetUrl) {
-        // setScreenshotStatus('⚠️ Please enter a URL first.', '#c2410c');
-        // return;
-        // }
-        // if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-        // setScreenshotStatus('⚠️ URL must start with http:// or https://', '#c2410c');
-        // return;
-        // }
+            nameInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); btnSave.click(); }
+            });
 
-        // spinner.style.display   = 'inline-block';
-        // btn.disabled            = true;
-        // previewEl.style.display = 'none';
-        // setScreenshotStatus('⏳ Capturing screenshot… (may take 5–15 seconds)', '#0369a1');
+            btnSave.addEventListener('click', async function () {
+                const name = nameInput.value.trim();
+                if (!name) {
+                    errorEl.textContent = 'Writer name is required.';
+                    errorEl.style.display = 'block';
+                    return;
+                }
 
-        // try {
-        // // ── Build FormData — antiforgery token + url as form fields ──────────
-        // const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const fd = new FormData();
+                fd.append('writerName', name);
+                fd.append('__RequestVerificationToken', token);
 
-        // const formData = new FormData();
-        // formData.append('__RequestVerificationToken', token);   // ← antiforgery field
-        // formData.append('url', targetUrl);                      // ← [FromForm] string url
+                btnSave.disabled = true;
+                btnSave.textContent = 'Saving…';
 
-        // // DO NOT set Content-Type manually — browser sets multipart/form-data + boundary
-        // const resp = await fetch('/ClientArticle/CaptureScreenshot', {
-        // method: 'POST',
-        // body:   formData
-        // });
+                try {
+                    const resp = await fetch('@Url.Action("CreateQuick", "Writer")', {
+                        method: 'POST',
+                        body: fd
+                    });
 
-        // const data = await resp.json();
-        // if (!resp.ok) throw new Error(data.error || `Server error ${resp.status}`);
+                    const data = await resp.json();
 
-        // _screenshotPath = data.path;
-        // previewImg.src  = data.path;
-        // previewEl.style.display = 'block';
-        // setScreenshotStatus('✅ Screenshot captured and added to images.', '#15803d');
+                    if (!resp.ok) {
+                        errorEl.textContent = data?.error || 'Failed to create writer.';
+                        errorEl.style.display = 'block';
+                        return;
+                    }
 
-        // addPathToImages(data.path);
-        // addThumbToGrid(data.path, '📸 screenshot');
+                    // ── Insert + select the new writer in the dropdown ──────────────
+                    const opt = new Option(data.writerName, data.id, true, true);
 
-        // } catch (err) {
-        // setScreenshotStatus(`❌ ${err.message}`, '#dc2626');
-        // console.error('Screenshot error:', err);
-        // } finally {
-        // spinner.style.display = 'none';
-        // btn.disabled          = false;
-        // }
-        // }
+                    if (window.jQuery && jQuery(writerSel).data('select2')) {
+                        // Select2 is active on this control — append via jQuery so it re-renders
+                        jQuery(writerSel).append(opt).val(data.id).trigger('change');
+                    } else {
+                        writerSel.add(opt);
+                        writerSel.value = data.id;
+                    }
 
-        // function removeScreenshot() {
-        // if (!_screenshotPath) return;
-        // removePathFromImages(_screenshotPath);
-        // document.querySelectorAll('#newPreviewGrid [data-screenshot-thumb]').forEach(el => el.remove());
-        // _screenshotPath = null;
-        // document.getElementById('screenshotPreview').style.display = 'none';
-        // document.getElementById('screenshotStatus').style.display  = 'none';
-        // }
-
-        // function setScreenshotStatus(msg, color) {
-        // const el = document.getElementById('screenshotStatus');
-        // el.textContent = msg; el.style.color = color; el.style.display = 'block';
-        // }
+                    modal.hide();
+                } catch (err) {
+                    errorEl.textContent = 'Network error — please try again.';
+                    errorEl.style.display = 'block';
+                } finally {
+                    btnSave.disabled = false;
+                    btnSave.textContent = 'Save Writer';
+                }
+            });
+        })();
 
         function addPathToImages(path) {
         const hdn = document.getElementById('hdnImages');
@@ -707,196 +735,278 @@
         const el = document.getElementById('screenshotStatus');
         el.textContent = msg; el.style.color = color; el.style.display = 'block';
         }
-
-        // ── Website auto-fill ─────────────────────────────────────────────────────────
-        async function autoFillWebsite(webId) {
-        if (!webId || webId == '0') return;
-        const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
-        document.getElementById('afMediaType').value  = d.mediaType  ?? '';
-        document.getElementById('afMediaTier').value  = d.mediaTier  ?? '';
-        document.getElementById('afFrequency').value  = d.frequency  ?? '';
-        document.getElementById('afLanguage').value   = d.language   ?? '';
-        document.getElementById('afImpression').value = d.impression ?? '';
-        document.getElementById('afReach').value      = d.reach      ?? '';
-        document.getElementById('afAD').value         = d.adValue    ?? '';
-        document.getElementById('afPR').value         = d.prValue    ?? '';
+        // ── Website auto-fill (parent) ───────────────────────────────────────────────
+        async function autoFillWebsite(websiteId) {
+            if (!websiteId || websiteId == '0') return;
+            const d = await (await fetch(
+                `/ClientArticle/GetWebsiteAutoFill?websiteId=${websiteId}&clientId=${clientId}`
+            )).json();
+            document.getElementById('afMediaType').value   = d.mediaType   ?? '';
+            document.getElementById('afMediaTier').value   = d.mediaTier   ?? '';
+            document.getElementById('afFrequency').value   = d.frequency   ?? '';
+            document.getElementById('afLanguage').value    = d.language    ?? '';
+            document.getElementById('afImpression').value  = d.impression  ?? '';
+            document.getElementById('afReach').value       = d.reach       ?? '';
+            document.getElementById('afAD').value          = d.adValue     ?? '';
+            document.getElementById('afPR').value          = d.prValue     ?? '';
         }
 
+        function recalcPR() {
+            const ad = parseFloat(document.getElementById('afAD').value) || 0;
+            document.getElementById('afPR').value = (ad * 3.5).toFixed(2);
+            document.querySelector('[name="PRValue"]').value = (ad * 3.5).toFixed(2);
+        }
+
+        function recalcReach() {
+            const imp = parseFloat(document.getElementById('afImpression').value) || 0;
+            document.getElementById('afReach').value = (imp * 4).toFixed(0);
+            document.querySelector('[name="Reach"]').value = (imp * 4).toFixed(0);
+        }
+
+        // ── Sub-category cascade ──────────────────────────────────────────────────────
         async function loadSubs(parentId) {
-        const sel = document.getElementById('subSel');
-        sel.innerHTML = '<option value="0">Loading…</option>';
-        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
-        const data = await (await fetch(`/ClientArticle/GetSubCategories?parentId=${parentId}`)).json();
-        sel.innerHTML = '<option value="0">— None —</option>';
-        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+            const sel = document.getElementById('subSel');
+            sel.innerHTML = '<option value="0">Loading…</option>';
+            if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">— None —</option>'; return; }
+            const data = await (await fetch(`/ClientArticle/GetSubCategories?parentId=${parentId}`)).json();
+            sel.innerHTML = '<option value="0">— None —</option>';
+            data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
         }
 
+        // ── Per-child auto-fill ───────────────────────────────────────────────────────
+        async function autoFillChild(sel, idx) {
+            const websiteId = sel.value;
+            if (!websiteId || websiteId == '0') return;
+            const d = await (await fetch(
+                `/ClientArticle/GetWebsiteAutoFill?websiteId=${websiteId}&clientId=${clientId}`
+            )).json();
+            const adEl  = document.getElementById(`childAD_${idx}`);
+            const prEl  = document.getElementById(`childPR_${idx}`);
+            const impEl = document.getElementById(`childImpression_${idx}`);
+            const rchEl = document.getElementById(`childReach_${idx}`);
+            const mtEl  = document.getElementById(`childMediaType_${idx}`);
+            const mtrEl = document.getElementById(`childMediaTier_${idx}`);
+            const frqEl = document.getElementById(`childFrequency_${idx}`);
+            const lngEl = document.getElementById(`childLanguage_${idx}`);
+            if (adEl)  adEl.value  = d.adValue ?? '';
+            if (prEl)  prEl.value  = ((d.adValue ?? 0) * 3.5).toFixed(2);
+            if (impEl) impEl.value = d.impression ?? 0;
+            if (rchEl) rchEl.value = d.reach ?? ((d.impression ?? 0) * 4);
+            if (mtEl)  mtEl.value  = d.mediaType ?? '';
+            if (mtrEl) mtrEl.value = d.mediaTier ?? '';
+            if (frqEl) frqEl.value = d.frequency ?? '';
+            if (lngEl) lngEl.value = d.language ?? '';
+        }
+
+        function recalcChildPR(idx) {
+            const ad = parseFloat(document.getElementById(`childAD_${idx}`).value) || 0;
+            document.getElementById(`childPR_${idx}`).value = (ad * 3.5).toFixed(2);
+        }
+
+        // ── Select2 ────────────────────────────────────────────────────────────────────
         $(document).ready(function () {
-        $('.select-search').select2({ placeholder: 'Search...', allowClear: true });
+            $('.select-search').select2({ placeholder: 'Search...', allowClear: true });
         });
 
-        // ── Image drop zone IIFE ──────────────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════════════
+        // CHILDREN — client-side add / remove
+        // ══════════════════════════════════════════════════════════════════════════════
         (function () {
-        const dropZone   = document.getElementById('dropZone');
-        const fileInput  = document.getElementById('imageFilesInput');
-        const newGrid    = document.getElementById('newPreviewGrid');
-        const hdnImages  = document.getElementById('hdnImages');
-        const hdnRemoved = document.getElementById('hdnRemovedImages');
+            const section    = document.getElementById('childrenSection');
+            const container  = document.getElementById('childRowsContainer');
+            const badge      = document.getElementById('childBadge');
+            const template   = document.getElementById('childRowTemplate');
+            const btnAdd     = document.getElementById('btnAddChild');
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', e => {
-        e.preventDefault(); dropZone.style.borderColor='#3b82f6'; dropZone.style.background='#eff6ff';
-        });
-        ['dragleave','dragend'].forEach(evt =>
-        dropZone.addEventListener(evt, () => { dropZone.style.borderColor=''; dropZone.style.background=''; })
-        );
-        dropZone.addEventListener('drop', e => {
-        e.preventDefault(); dropZone.style.borderColor=''; dropZone.style.background='';
-        mergeFiles(e.dataTransfer.files); renderPreviews(fileInput.files);
-        });
-        fileInput.addEventListener('change', () => renderPreviews(fileInput.files));
+            // Serialise server-side option lists once at page load
+            const siteOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                                                                    Model.WebsiteOptions.Select(o => new { value = o.Value, text = o.Text })));
 
-        function renderPreviews(files) {
-        // FIX BUG 2: only remove upload thumbs, preserve screenshot thumbs
-        newGrid.querySelectorAll('[data-upload-thumb]').forEach(el => el.remove());
+    const writerOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                                                        Model.WriterOptions.Select(o => new { value = o.Value, text = o.Text })));
 
-        Array.from(files).forEach(file => {
-        if (!file.type.startsWith('image/')) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
-        const wrap = document.createElement('div');
-        wrap.style.cssText    = 'position:relative;';
-        wrap.dataset.uploadThumb = '1';  // ← tagged so renderPreviews can find it
-        wrap.innerHTML = `
-        <img src="${ev.target.result}"
-        style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;" />
-        <span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);
-        color:#fff;font-size:9px;padding:2px 4px;border-radius:0 0 6px 6px;
-        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${file.name}</span>`;
-        newGrid.appendChild(wrap);
-        };
-        reader.readAsDataURL(file);
-        });
-        }
+    const today = new Date().toISOString().slice(0, 10);
 
-        function mergeFiles(dropped) {
-        const dt = new DataTransfer();
-        if (fileInput.files) Array.from(fileInput.files).forEach(f => dt.items.add(f));
-        Array.from(dropped).forEach(f => dt.items.add(f));
-        fileInput.files = dt.files;
-        }
+            let childIndex = 0;
 
-        document.querySelectorAll('.remove-existing').forEach(btn => {
-        btn.addEventListener('click', function () {
-        const path = this.dataset.path;
-        this.closest('.existing-thumb').remove();
-        let current = [];
-        try { current = JSON.parse(hdnImages.value || '[]'); } catch {}
-        current = current.filter(p => p !== path);
-        hdnImages.value = JSON.stringify(current);
-        let removed = [];
-        try { removed = JSON.parse(hdnRemoved.value || '[]'); } catch {}
-        if (!removed.includes(path)) removed.push(path);
-        hdnRemoved.value = JSON.stringify(removed);
-        });
-        });
+            function buildOptions(list, selectedVal) {
+                return list.map(o =>
+                    `<option value="${o.value}"${o.value == selectedVal ? ' selected' : ''}>${o.text}</option>`
+                ).join('');
+            }
+
+            function updateBadge() {
+                const count = container.querySelectorAll('.child-row').length;
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline' : 'none';
+                section.style.display = count > 0 ? 'block' : 'none';
+            }
+
+            function addChildRow(data) {
+                const idx = childIndex++;
+
+                let html = template.innerHTML
+                    .replaceAll('__IDX__', idx)
+                    .replace('{{SITE_OPTIONS}}',   buildOptions(siteOptions,   data?.websiteId ?? 0))
+                    .replace('{{WRITER_OPTIONS}}', buildOptions(writerOptions, data?.writerId  ?? 0))
+                    .replace('{{TODAY}}', data?.date ?? today);
+
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = html;
+                const row = wrapper.firstElementChild;
+
+                // Stamp child number
+                row.querySelector('.child-number').textContent = container.querySelectorAll('.child-row').length + 1;
+
+                // If restoring existing child (Edit mode) update id badge
+                if (data?.id > 0) {
+                    row.querySelector('.child-new-badge').textContent = `(ID: ${data.id})`;
+                    row.querySelector('.child-new-badge').style.color = '#94a3b8';
+                    row.querySelector(`[name="Children[${idx}].Id"]`).value = data.id;
+                }
+
+                // Restore values if supplied (Edit mode)
+                if (data?.articleURL !== undefined) {
+                    const urlEl = row.querySelector(`[name="Children[${idx}].ArticleURL"]`);
+                    if (urlEl) urlEl.value = data.articleURL ?? '';
+                }
+                if (data?.adValue !== undefined) {
+                    const adEl = row.querySelector(`[name="Children[${idx}].ADValue"]`);
+                    const prEl = row.querySelector(`[name="Children[${idx}].PRValue"]`);
+                    if (adEl) adEl.value = data.adValue;
+                    if (prEl) prEl.value = data.prValue ?? (data.adValue * 3.5).toFixed(2);
+                }
+                if (data?.impression !== undefined) {
+                    const impEl = row.querySelector(`[name="Children[${idx}].Impression"]`);
+                    const rchEl = row.querySelector(`[name="Children[${idx}].Reach"]`);
+                    if (impEl) impEl.value = data.impression;
+                    if (rchEl) rchEl.value = data.reach ?? (data.impression * 4);
+                }
+                if (data?.mediaType  !== undefined) row.querySelector(`[name="Children[${idx}].MediaType"]`).value  = data.mediaType  ?? '';
+                if (data?.mediaTier  !== undefined) row.querySelector(`[name="Children[${idx}].MediaTier"]`).value  = data.mediaTier  ?? '';
+                if (data?.frequency  !== undefined) row.querySelector(`[name="Children[${idx}].Frequency"]`).value  = data.frequency  ?? '';
+                if (data?.language   !== undefined) row.querySelector(`[name="Children[${idx}].Language"]`).value   = data.language   ?? '';
+
+                // Remove button
+                row.querySelector('.btn-remove-child').addEventListener('click', function () {
+                    row.remove();
+                    renumber();
+                    updateBadge();
+                });
+
+                container.appendChild(row);
+                updateBadge();
+
+                // Init Select2 on the new selects (scoped to this row only)
+                $(row).find('.select-search-child').select2({ placeholder: 'Search...', allowClear: true });
+            }
+
+            function renumber() {
+                container.querySelectorAll('.child-row').forEach((row, i) => {
+                    row.querySelector('.child-number').textContent = i + 1;
+                });
+            }
+
+            btnAdd.addEventListener('click', () => addChildRow(null));
+
+            // ── EDIT MODE: re-populate existing children ───────────────────────────────
+    @if (isEdit && Model.Children != null && Model.Children.Any())
+            {
+                        <text>
+                            const existingChildren = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                                                                                                                Model.Children.Select(c => new
+                                                                                                                                {
+                                                                                                                                            id = c.Id,
+                                                                                                                                            websiteId = c.WebsiteId,
+                                                                                                                                            writerId = c.WriterId,
+                                                                                                                                            date = c.Date.ToString("yyyy-MM-dd"),
+                                                                                                                                            articleURL = c.ArticleURL,
+                                                                                                                                            adValue = c.ADValue,
+                                                                                                                                            prValue = c.PRValue,
+                                                                                                                                            impression = c.Impression,
+                                                                                                                                            reach = c.Reach,
+                                                                                                                                            mediaType = c.MediaType,
+                                                                                                                                            mediaTier = c.MediaTier,
+                                                                                                                                            frequency = c.Frequency,
+                                                                                                                                            language = c.Language
+                                                                                                                                })));
+
+            existingChildren.forEach(child => addChildRow(child));
+        </text>
+                        }
+
         })();
 
-        // ── Children IIFE ─────────────────────────────────────────────────────────────
+        // ── Image upload ───────────────────────────────────────────────────────────────
         (function () {
-        const websiteOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                    Model.WebsiteOptions.Select(o => new { value = o.Value, text = o.Text })));
-        const writerOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                    Model.WriterOptions.Select(o => new { value = o.Value, text = o.Text })));
+            const dropZone   = document.getElementById('dropZone');
+            const fileInput  = document.getElementById('imageFilesInput');
+            const newGrid    = document.getElementById('newPreviewGrid');
+            const hdnImages  = document.getElementById('hdnImages');
+            const hdnRemoved = document.getElementById('hdnRemovedImages');
 
-        function buildOptions(list, sel) {
-        return list.map(o =>
-        `<option value="${o.value}"${o.value==sel?' selected':''}>${o.text}</option>`
-        ).join('');
-        }
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', e => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#3b82f6';
+                dropZone.style.background  = '#eff6ff';
+            });
+            ['dragleave', 'dragend'].forEach(evt =>
+                dropZone.addEventListener(evt, () => {
+                    dropZone.style.borderColor = '';
+                    dropZone.style.background  = '';
+                })
+            );
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault();
+                dropZone.style.borderColor = '';
+                dropZone.style.background  = '';
+                mergeFiles(e.dataTransfer.files);
+                renderPreviews(fileInput.files);
+            });
+            fileInput.addEventListener('change', () => renderPreviews(fileInput.files));
 
-        let childIndex = 0;
-        const container = document.getElementById('childRowsContainer');
-        const template  = document.getElementById('childRowTemplate');
-        const today     = new Date().toISOString().split('T')[0];
-
-        document.getElementById('btnAddChild').addEventListener('click', () => {
-        addChildRow(childIndex++);
-        });
-
-        function addChildRow(idx, data) {
-        let html = template.innerHTML
-        .replaceAll('__IDX__', idx)
-        .replace('{{WEBSITE_OPTIONS}}', buildOptions(websiteOptions, data?.websiteId ?? 0))
-        .replace('{{WRITER_OPTIONS}}',  buildOptions(writerOptions,  data?.writerId  ?? 0));
-
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = html;
-        const row = wrapper.firstElementChild;
-        row.querySelector('.child-number').textContent = idx + 1;
-
-        if (data?.date)
-        row.querySelector(`[name="Children[${idx}].Date"]`).value = data.date;
-        if (data?.id > 0) {
-        const hdnId = document.createElement('input');
-        hdnId.type = 'hidden'; hdnId.name = `Children[${idx}].Id`; hdnId.value = data.id;
-        row.appendChild(hdnId);
-        }
-
-        row.querySelector('.btn-remove-child').addEventListener('click', function () {
-        row.remove();
-        container.querySelectorAll('.child-row').forEach((r, i) =>
-        r.querySelector('.child-number').textContent = i + 1);
-        });
-        container.appendChild(row);
-        }
-
-        window.autoFillChild = async function (sel, idx) {
-        const webId = sel.value;
-        if (!webId || webId == '0') return;
-        const d = await (await fetch(`/ClientArticle/GetWebsiteAutoFill?websiteId=${webId}&clientId=${clientId}`)).json();
-        const row = sel.closest('.child-row');
-        row.querySelector(`[name="Children[${idx}].ADValue"]`).value   = d.adValue   ?? '';
-        row.querySelector(`[name="Children[${idx}].PRValue"]`).value   = d.prValue   ?? '';
-        row.querySelector(`[name="Children[${idx}].MediaTier"]`).value = d.mediaTier ?? '';
-        row.querySelector(`[name="Children[${idx}].Language"]`).value  = d.language  ?? '';
-        };
-
-        window.recalcChildPR = function (adInput, idx) {
-        const ad = parseFloat(adInput.value) || 0;
-        adInput.closest('.child-row').querySelector(`[name="Children[${idx}].PRValue"]`).value = (ad * 3.5).toFixed(2);
-        };
-
-        @if (Model.Children != null && Model.Children.Any())
-        {
-            <text>
-                const existingChildren = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                                Model.Children.Select(c => new
-                                {
-                                    id = c.Id,
-                                    websiteId = c.WebsiteId,
-                                    writerId = c.WriterId,
-                                    date = c.Date.ToString("yyyy-MM-dd"),
-                                    articleURL = c.ArticleURL ?? "",
-                                    adValue = c.ADValue,
-                                    prValue = c.PRValue,
-                                    mediaTier = c.MediaTier ?? "",
-                                    language = c.Language ?? ""
-                                })));
-
-                existingChildren.forEach(child => {
-                addChildRow(childIndex, child);
-                const row = container.lastElementChild;
-                const idx = childIndex;
-                row.querySelector(`[name="Children[${idx}].ArticleURL"]`).value = child.articleURL;
-                row.querySelector(`[name="Children[${idx}].ADValue"]`).value    = child.adValue;
-                row.querySelector(`[name="Children[${idx}].PRValue"]`).value    = child.prValue;
-                row.querySelector(`[name="Children[${idx}].MediaTier"]`).value  = child.mediaTier;
-                row.querySelector(`[name="Children[${idx}].Language"]`).value   = child.language;
-                childIndex++;
+            function renderPreviews(files) {
+                newGrid.innerHTML = '';
+                Array.from(files).forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                        const wrap = document.createElement('div');
+                        wrap.style.cssText = 'position:relative;';
+                        wrap.innerHTML = `
+                            <img src="${ev.target.result}"
+                                 style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;" />
+                            <span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);
+                                color:#fff;font-size:9px;padding:2px 4px;border-radius:0 0 6px 6px;
+                                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${file.name}</span>`;
+                        newGrid.appendChild(wrap);
+                    };
+                    reader.readAsDataURL(file);
                 });
-            </text>
-        }
+            }
+
+            function mergeFiles(dropped) {
+                const dt = new DataTransfer();
+                if (fileInput.files) Array.from(fileInput.files).forEach(f => dt.items.add(f));
+                Array.from(dropped).forEach(f => dt.items.add(f));
+                fileInput.files = dt.files;
+            }
+
+            document.querySelectorAll('.remove-existing').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const path = this.dataset.path;
+                    this.closest('.existing-thumb').remove();
+                    let current = [];
+                    try { current = JSON.parse(hdnImages.value || '[]'); } catch {}
+                    current = current.filter(p => p !== path);
+                    hdnImages.value = JSON.stringify(current);
+                    let removed = [];
+                    try { removed = JSON.parse(hdnRemoved.value || '[]'); } catch {}
+                    if (!removed.includes(path)) removed.push(path);
+                    hdnRemoved.value = JSON.stringify(removed);
+                });
+            });
         })();
     </script>
 }

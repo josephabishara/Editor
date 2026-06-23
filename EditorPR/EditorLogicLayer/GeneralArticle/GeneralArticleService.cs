@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using EditorRepositoryLayer.IRepositories;
 using EditorViewModelLayer.GeneralArticleViewModel;
+using EditorViewModelLayer.MediaViewModel;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -84,6 +85,41 @@ namespace EditorLogicLayer.GeneralArticle
 
             await _repo.UpdateAsync(existing);
             return (true, "Article deleted successfully.");
+        }
+
+        // ── Filtering (Index) ───────────────────────────────────────────────────
+
+        public async Task<IEnumerable<GeneralArticleDTO>> GetFilteredAsync(GeneralArticleFilterDTO filter)
+        {
+            var list = await _repo.GetFilteredAsync(
+                filter.FromDate,
+                filter.ToDate,
+                filter.Title,
+                filter.WebsiteId);
+
+            return list.Select(MapToDTO);
+        }
+
+        public async Task<GeneralArticleIndexVM> GetIndexViewModelAsync(GeneralArticleFilterDTO filter)
+        {
+            // Sequential awaits — single DbContext, avoid Task.WhenAll concurrency issues
+            var items = await GetFilteredAsync(filter);
+            var websites = await _websiteRepo.GetActiveWebsitesAsync();
+
+            return new GeneralArticleIndexVM
+            {
+                Items = items,
+                Filter = filter,
+                Websites = websites
+                    .OrderBy(w => w.WebsiteName)
+                    .Select(w => new MediaSelectOption
+                    {
+                        Value = w.Id.ToString(),
+                        Text = w.WebsiteName,
+                        Selected = filter.WebsiteId.HasValue && filter.WebsiteId.Value == w.Id
+                    })
+                    .ToList()
+            };
         }
 
         // ── Export to Excel ────────────────────────────────────────────────────

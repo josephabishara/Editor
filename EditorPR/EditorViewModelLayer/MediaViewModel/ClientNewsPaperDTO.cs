@@ -92,7 +92,7 @@ namespace EditorViewModelLayer.MediaViewModel
         public string? PictureinArticle { get; set; } = "Yes";
 
         [Display(Name = "Generation")]
-        public string? Generation { get; set; } = "Generated";
+        public string? Generation { get; set; } = "Not Generated";
 
         [Display(Name = "Toning")]
         public string? Toning { get; set; }

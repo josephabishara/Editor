@@ -63,9 +63,11 @@ namespace EditorLogicLayer.Dashboard
 
                 ArticleCount = await _dashRepo.GetArticleCountAsync(clientId, from, to),
                 ArticleTotalPR = await _dashRepo.GetArticleTotalPRAsync(clientId, from, to),
+                ArticleTotalAD = await _dashRepo.GetArticleTotalADAsync(clientId, from, to),
 
                 NewsPaperCount = await _dashRepo.GetNewsPaperCountAsync(clientId, from, to),
                 NewsPaperTotalPR = await _dashRepo.GetNewsPaperTotalPRAsync(clientId, from, to),
+                NewsPaperTotalAD = await _dashRepo.GetNewsPaperTotalADAsync(clientId, from, to),
 
                 VideoCount = await _dashRepo.GetVideoCountAsync(clientId, from, to),
                 VideoTotalAD = await _dashRepo.GetVideoTotalADAsync(clientId, from, to),

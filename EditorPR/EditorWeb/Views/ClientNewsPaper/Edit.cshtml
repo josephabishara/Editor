@@ -162,7 +162,7 @@
      
             <div class="fg" style="margin-bottom:.9rem;">
                 <label asp-for="Title">Title <span style="color:var(--red)">*</span></label>
-                <input asp-for="Title" placeholder="Enter article headline…" />
+                <input asp-for="Title" placeholder="Enter article headline…" required />
                 <span asp-validation-for="Title" class="field-error"></span>
             </div>
 
@@ -403,7 +403,15 @@
         @* ── Footer ──────────────────────────────────────────────────────────── *@
         <div class="form-footer">
             <a href="@Url.Action("Index", new { clientId = Model.ClientId })" class="btn-cancel">Cancel</a>
-            <button type="submit" name="save" value="true" class="btn-save">💾 Save </button>
+
+                <button type="submit" name="saveAndDuplicate" value="true" class="btn-save"
+                        style="background:#f59e0b;"
+                        onclick="this.form.querySelectorAll('[name=saveAndDuplicate]').forEach(el => el.value = 'true')">
+                    📋 Save &amp; Duplicate
+                </button>
+            <button type="submit" name="save" value="false" class="btn-save">💾 Save </button>
+
+          
         </div>
 
     </form>

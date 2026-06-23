@@ -118,14 +118,19 @@ namespace EditorWeb.Controllers
         }
 
 
+        // POST: /writer/CreateQuick
+        // Called via fetch(FormData) from a Bootstrap modal on other Create/Edit pages.
+        // NOTE: [FromForm] (not [FromBody]) is required here — ValidateAntiForgeryToken
+        // only reads the token from form fields, never from a JSON body.
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateQuick([FromBody] WriterDTO model)
+        public async Task<IActionResult> CreateQuick([FromForm] string writerName)
         {
-            if (string.IsNullOrWhiteSpace(model?.WriterName))
+            if (string.IsNullOrWhiteSpace(writerName))
                 return BadRequest(new { error = "Writer name is required." });
 
+            var model = new WriterDTO { WriterName = writerName.Trim() };
             var (success, message) = await _writerService.CreateAsync(model);
 
             if (!success)
@@ -143,6 +148,7 @@ namespace EditorWeb.Controllers
 
             return Ok(new { id = created.Id, writerName = created.WriterName });
         }
+
 
     }
 }

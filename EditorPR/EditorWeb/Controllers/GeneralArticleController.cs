@@ -19,10 +19,10 @@ namespace EditorWeb.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(GeneralArticleFilterDTO filter)
         {
-            var articles = await _service.GetAllAsync();
-            return View(articles);
+            var vm = await _service.GetIndexViewModelAsync(filter);
+            return View(vm);
         }
 
         // ── Details ────────────────────────────────────────────────────────────

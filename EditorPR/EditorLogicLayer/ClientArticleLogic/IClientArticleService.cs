@@ -10,12 +10,14 @@ namespace EditorLogicLayer.ClientArticleLogic
     {
         Task<ClientArticleListDTO> GetListAsync(int clientId);
         Task<ClientArticleDTO?> GetByIdAsync(int id);
-        Task<(bool Success, string Message)> CreateAsync(ClientArticleDTO model);
+        //Task<(bool Success, string Message)> CreateAsync(ClientArticleDTO model);
+        Task<(bool Success, string Message, int NewId)> CreateAsync(ClientArticleDTO model);
         Task<(bool Success, string Message)> UpdateAsync(ClientArticleDTO model);
         Task<(bool Success, string Message)> DeleteAsync(int id);
         Task<(bool Success, string Message)> PublishAsync(int id);
         Task<(bool Success, string Message)> UnpublishAsync(int id);
         Task<(bool Success, string Message)> BulkDeleteAsync(IEnumerable<int> ids);
+    
 
 
         // Dropdown builders

@@ -28,6 +28,7 @@ namespace EditorDataLayer.Data
         public DbSet<ClientCategories> ClientCategories { get; set; }
         public DbSet<News> News { get; set; }
         public DbSet<ClientNews> ClientNews { get; set; }
+
         // ═══════════════════════════════════════════════════════════════════════════
         // ApplicationDbContext — add DbSets
         // ═══════════════════════════════════════════════════════════════════════════

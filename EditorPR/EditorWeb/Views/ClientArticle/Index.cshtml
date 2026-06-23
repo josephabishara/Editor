@@ -11,10 +11,11 @@
     var fTo = ViewBag.FilterDateTo as string ?? "";
     var fCat = (int)(ViewBag.FilterCategoryId ?? 0);
     var fSub = (int)(ViewBag.FilterSubId ?? 0);
-    // var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
-    // var fWebsite = (int)(ViewBag.FilterWebsiteId ?? 0);
     var fCreatedFrom = ViewBag.FilterCreatedFrom as string ?? "";
     var fCreatedTo = ViewBag.FilterCreatedTo as string ?? "";
+    // var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
+    // var fWebsite = (int)(ViewBag.FilterWebsiteId ?? 0);
+
 
     bool isAdmin = User.IsInRole("Admin");
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("EditorWeb");
@@ -182,14 +183,14 @@
                 <input type="date" name="createdFrom" value="@fCreatedFrom" />
             </div>
 
-           
+
             <div class="fg">
                 <label>Created To</label>
                 <input type="date" name="createdTo" value="@fCreatedTo" />
             </div>
             <div class="fg" style="display:flex;gap:.4rem;">
                 <button type="submit" class="btn-filter">Search</button>
-             
+
             </div>
             <div class="fg" style="display:flex;gap:.4rem;">
                 <a href="@Url.Action("Index", new { clientId })" class="btn-reset">Reset</a>
@@ -220,13 +221,13 @@
     </form>
     @if (isAdmin)
     {
-        <form id="bulkDeleteForm" asp-action="BulkDelete" asp-controller="ClientNewsPaper"
+        <form id="bulkDeleteForm" asp-action="BulkDelete" asp-controller="ClientArticle"
               method="post" style="display:inline;">
             @Html.AntiForgeryToken()
             <input type="hidden" name="clientId" value="@clientId" />
             <div id="bulkDeleteIdsContainer"></div>
             <button type="button" class="btn-export" style="background:#dc2626;color:#fff;"
-                    onclick="confirmBulkDelete('newspaper')">
+                    onclick="confirmBulkDelete('article')">
                 🗑 Delete Selected
             </button>
         </form>
@@ -256,13 +257,14 @@
                         <input type="checkbox" class="row-cb" id="cbAll" onchange="toggleAll(this)" />
                     </th>
                     <th>#</th>
+                    <th>Parent</th>
                     <th>Date</th>
                     <th>Title</th>
                     <th>Website</th>
                     <th>Category</th>
                     <th>Sub-Category</th>
-                    @* <th>Writer</th>
-                    <th class="text-end">AD Value</th>
+
+                    @*   <th class="text-end">AD Value</th>
                     <th class="text-end">PR Value</th> *@
                     <th>Created By</th>
                     <th>Created At</th>
@@ -282,9 +284,11 @@
                     var encodedContent = HtmlEncoder.Default.Encode(item.Content ?? "");
 
                     <tr data-id="@item.Id"
-                        data-date="@item.Date.ToString("dd MMM yyyy")"
-                        data-title="@Html.Raw((item.Title ?? "").Replace("\"", "&quot;"))"
+                        data-parentid="@(item.ParentId?.ToString() ?? "")"
+                        data-date="@item.Date.ToString("dd-MM-yyyy")"
+                        data-title="@item.Title"
                         data-website="@(item.WebsiteName ?? "")"
+                        data-categorytype="@(item.CategoryName ?? "")"
                         data-category="@(item.CategoryName ?? "")"
                         data-subcategory="@(item.SubCategoryName ?? "")"
                         data-writer="@(item.WriterName ?? "")"
@@ -301,7 +305,7 @@
                         data-headlinebrand="@(item.HeadlineBranding ?? "")"
                         data-picture="@(item.PictureinArticle ?? "")"
                         data-generation="@(item.Generation ?? "")"
-                        data-url="@(item.ArticleURL ?? "")"
+                        data-articleurl="@(item.ArticleURL ?? "")"
                         data-createdby="@(item.CreatedByUserName ?? "")"
                         data-createdat="@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")"
                         data-screenshot="@firstImg"
@@ -311,7 +315,10 @@
                             <input type="checkbox" class="row-cb row-check"
                                    value="@item.Id" onchange="onRowCheck()" />
                         </td>
-                        <td class="text-muted small">@rowNum</td>
+
+                        <td class="text-muted small">@item.Id</td>
+                        <td class="small">@(item.ParentId)</td>
+
                         <td class="small text-nowrap">@item.Date.ToString("dd MMM yyyy")</td>
                         <td>
                             <a asp-action="Details" asp-route-id="@item.Id"
@@ -331,8 +338,8 @@
                         <td class="small">@(item.WebsiteName ?? "—")</td>
                         <td class="small">@(item.CategoryName ?? "—")</td>
                         <td class="small">@(item.SubCategoryName ?? "—")</td>
-                        @*     <td class="small">@(item.WriterName ?? "—")</td>
-                        <td class="text-end small">@item.ADValue.ToString("N0")</td>
+
+                        @*     <td class="text-end small">@item.ADValue.ToString("N0")</td>
                         <td class="text-end small fw-semibold text-success">@item.PRValue.ToString("N0")</td> *@
                         <td class="small text-muted">@(item.CreatedByUserName ?? "—")</td>
                         <td class="small text-nowrap text-muted">
@@ -382,6 +389,8 @@
     }
 </div>
 
+<script src="/js/clientarticle-print-view.js"></script>
+
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -422,11 +431,13 @@
         btnDup.style.opacity = '.5';
         }
         }
+
         function getSelectedRows() {
         const rows = [];
         document.querySelectorAll('.row-check:checked').forEach(cb => rows.push(cb.closest('tr').dataset));
         return rows;
         }
+
         function confirmDuplicate() {
         const hdnId = document.getElementById('hdnSelectedId');
         if (!hdnId.value || hdnId.value === '0') return false;
@@ -468,13 +479,13 @@
         const rows = getSelectedRows();
         if (!rows.length) { alert('Please select at least one Website.'); return; }
         const headers = [
-        'Date','Title','Website','Category','Sub-Category','Writer',
+        'Id','Parent ID','Date','Title','Website','Category','Sub-Category','Writer',
         'Media Type','Media Tier','Frequency','Language',
         'Impression','Reach','AD Value','PR Value',
         'Toning','Website Branding','Headline Branding','Picture in Website','Generation','URL'
         ];
         const data = rows.map(d => [
-        d.date, d.title, d.website, d.category, d.subcategory, d.writer,
+        d.id ,d.parentid || '—', d.date, d.title, d.website, d.category, d.subcategory, d.writer,
         d.mediatype, d.mediatier, d.frequency, d.language,
         d.impression, d.reach, d.ad, d.pr,
         d.toning, d.articlebrand, d.headlinebrand, d.picture, d.generation, d.url
@@ -484,6 +495,28 @@
         ws['!cols'] = headers.map((_, i) => ({ wch: i === 1 ? 40 : i === 2 ? 22 : 15 }));
         XLSX.utils.book_append_sheet(wb, ws, 'Website');
         XLSX.writeFile(wb, `${clientName}_Articles_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // ── Shared text helpers (must be top-level/global — used by clientarticle-print-view.js too) ──
+        function decodeContent(raw) {
+        if (!raw) return '';
+        try {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = raw;                    // browser decodes HTML entities
+        const decoded = txt.value;
+        const div = document.createElement('div');
+        div.innerHTML = decoded;               // strip any remaining HTML tags
+        return (div.textContent || div.innerText || '').replace(/\s+/g,' ').trim();
+        } catch { return ''; }
+        }
+
+        function isArabic(str) {
+        return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
+        }
+
+        function fixArabic(str) {
+        if (!str || !isArabic(str)) return str;
+        return str.split(' ').reverse().join(' ');
         }
 
         // ══════════════════════════════════════════════════════════════════════════════
@@ -511,19 +544,6 @@
         const C_LW = 28, C_VW = 32;
         const GAP  = 1;
         const ROW_H = 7.5;
-
-        // FIX BUG 4: decode the HTML-encoded content attribute
-        function decodeContent(raw) {
-        if (!raw) return '';
-        try {
-        const txt = document.createElement('textarea');
-        txt.innerHTML = raw;                    // browser decodes HTML entities
-        const decoded = txt.value;
-        const div = document.createElement('div');
-        div.innerHTML = decoded;               // strip any remaining HTML tags
-        return (div.textContent || div.innerText || '').replace(/\s+/g,' ').trim();
-        } catch { return ''; }
-        }
 
         // Draw one label + value cell pair
         function drawCell(doc, x, y, label, value, shade) {
@@ -626,7 +646,7 @@
         [ ['Frequency',        d.frequency],      ['Ad Value',          d.ad],            ['Language',          d.language]     ],
         [ ['Impression',       d.impression],     ['PR Value',          d.pr],            ['Writer',            d.writer]       ],
         [ ['Reach',            d.reach],          ['Tone',              d.toning],        ['Website Branding',  d.articlebrand] ],
-        [ ['Headline Branding',d.headlinebrand],  ['Picture In Website',d.picture],       ['Website URL',       d.url]          ],
+        [ ['Headline Branding',d.headlinebrand],  ['Picture In Website',d.picture],       ['Parent ID',      d.parentid || '—'],],
         [ ['Generation',       d.generation],     ['Created By',        d.createdby],     ['Created At',        d.createdat]    ],
         ];
 
@@ -682,7 +702,7 @@
         doc.setTextColor(...DARK_RED);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('أهل مصر', ML, fY + 7);
+        doc.text('EDITOR', ML, fY + 7);
         doc.setFontSize(6);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...SLATE);
