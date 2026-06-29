@@ -923,8 +923,7 @@ namespace EditorLogicLayer.Client
             UnitPrice = c.UnitPrice
         };
 
-        private static PublicationCustomerCategoryDTO MapPublicationCategoryToDTO(
-    PublicationCustomerCategory p) => new()
+        private static PublicationCustomerCategoryDTO MapPublicationCategoryToDTO(PublicationCustomerCategory p) => new()
     {
         Id = p.Id,
         CustomerId = p.CustomerId,
@@ -1008,9 +1007,7 @@ namespace EditorLogicLayer.Client
         }
 
         // ── Publication Categories Export / Import ────────────────────────────────────
-        public async Task<(bool Success, string Message, int UpdatedCount)>
-     ImportPublicationCategoriesFromExcelAsync(
-         int clientId, Stream fileStream, string fileName)
+        public async Task<(bool Success, string Message, int UpdatedCount)>  ImportPublicationCategoriesFromExcelAsync(int clientId, Stream fileStream, string fileName)
         {
             var ext = Path.GetExtension(fileName).ToLowerInvariant();
             if (ext != ".xlsx" && ext != ".xls")
@@ -1095,7 +1092,76 @@ namespace EditorLogicLayer.Client
             }
         }
 
+        // ── Report Cover PDF ─────────────────────────────────────────────────────
 
-      
+        public async Task<(bool Success, string Message)> ChangeReportCoverAsync(int clientId, UploadFileDTO file)
+        {
+            var existing = await _clientRepo.GetByIdAsync(clientId);
+            if (existing == null)
+                return (false, "Client not found.");
+
+            var (savedPath, error) = await SaveReportCoverAsync(file);
+            if (savedPath == null)
+                return (false, error!);
+
+            // Delete old cover file from disk if it exists
+            if (!string.IsNullOrEmpty(existing.ReportCoverPdf))
+            {
+                var oldFullPath = Path.Combine(
+                    _env.WebRootPath,
+                    existing.ReportCoverPdf.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+                if (System.IO.File.Exists(oldFullPath))
+                    System.IO.File.Delete(oldFullPath);
+            }
+
+            existing.ReportCoverPdf = savedPath;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await _clientRepo.UpdateAsync(existing);
+            return (true, "Report cover PDF updated successfully.");
+        }
+
+        private static readonly string[] AllowedCoverExtensions = { ".pdf" };
+        private static readonly string[] AllowedCoverContentTypes = { "application/pdf" };
+        private const long MaxCoverFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+
+        private async Task<(string? Path, string? Error)> SaveReportCoverAsync(UploadFileDTO file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return (null, "Please select a PDF file.");
+
+                if (file.Length > MaxCoverFileSizeBytes)
+                    return (null, "Cover PDF must be smaller than 10 MB.");
+
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!AllowedCoverExtensions.Contains(extension))
+                    return (null, "Only PDF files are allowed.");
+
+                if (!AllowedCoverContentTypes.Contains(file.ContentType))
+                    return (null, "Invalid file type. Only PDF is allowed.");
+
+                var folder = Path.Combine(_env.WebRootPath, "uploads", "clients", "report-covers");
+                Directory.CreateDirectory(folder);
+
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var fullPath = Path.Combine(folder, fileName);
+
+                using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await file.FileStream.CopyToAsync(stream);
+                }
+
+                var relativePath = $"/uploads/clients/report-covers/{fileName}";
+                return (relativePath, null);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Failed to save file: {ex.Message}");
+            }
+        }
+
     }
 }

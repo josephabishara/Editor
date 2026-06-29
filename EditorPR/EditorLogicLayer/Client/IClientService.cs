@@ -44,5 +44,10 @@ namespace EditorLogicLayer.Client
         byte[] ExportChannelCategoriesToExcel(IEnumerable<ChannelCustomerCategoryDTO> categories, string clientName);
         Task<(bool Success, string Message, int UpdatedCount)> ImportChannelCategoriesFromExcelAsync(int clientId, Stream fileStream, string fileName);
 
+        // ── Report Cover ────────────────────────────────────────────────────────
+
+        Task<(bool Success, string Message)> ChangeReportCoverAsync(int clientId, UploadFileDTO file);
+
+
     }
 }

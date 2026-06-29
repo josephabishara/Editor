@@ -39,6 +39,22 @@ namespace EditorRepositoryLayer.Repositories
                 .Where(n => n.ParentId == parentId && n.IsActive && n.Deleted == 0)
                 .OrderBy(n => n.Date)
                 .ToListAsync();
+
+        public async Task<IEnumerable<ClientNewsPaper>> GetByClientIdAsync(int clientId, DateTime? from, DateTime? to)
+        {
+            var query = _dbSet
+                .Include(c => c.Client)
+                .Include(c => c.Writer)
+                .Include(c => c.NewsPaper)
+                .Where(c => c.ClientId == clientId && c.IsActive && c.Deleted == 0);
+
+            if (from.HasValue)
+                query = query.Where(c => c.Date >= from.Value);
+            if (to.HasValue)
+                query = query.Where(c => c.Date <= to.Value.AddDays(1).AddTicks(-1));
+
+            return await query.OrderByDescending(c => c.Date).ToListAsync();
+        }
     }
 
 

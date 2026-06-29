@@ -579,5 +579,58 @@ namespace EditorWeb.Controllers
         }
 
 
+        // GET: /Client/ChangeReportCover/5
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> ChangeReportCover(int id)
+        {
+            var client = await _clientService.GetByIdAsync(id);
+            if (client == null) return NotFound();
+            return View(client); // ClientDTO — view shows current cover (if any) + upload form
+        }
+
+        // POST: /Client/ChangeReportCover/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Manager,Auditor")]
+        public async Task<IActionResult> ChangeReportCover(int id, IFormFile? coverFile)
+        {
+            try
+            {
+                if (coverFile == null || coverFile.Length == 0)
+                {
+                    ModelState.AddModelError("coverFile", "Please select a PDF file to upload.");
+                    var client = await _clientService.GetByIdAsync(id);
+                    return View(client);
+                }
+
+                var uploadDto = new UploadFileDTO
+                {
+                    FileName = coverFile.FileName,
+                    FileStream = coverFile.OpenReadStream(),
+                    ContentType = coverFile.ContentType,
+                    Length = coverFile.Length
+                };
+
+                var (success, message) = await _clientService.ChangeReportCoverAsync(id, uploadDto);
+                if (!success)
+                {
+                    ModelState.AddModelError("coverFile", message);
+                    var client = await _clientService.GetByIdAsync(id);
+                    return View(client);
+                }
+
+                TempData["Success"] = message;
+            }
+            catch (Exception ex)
+            {
+                return Content(ex.Message);
+            }
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+
+
     }
 }

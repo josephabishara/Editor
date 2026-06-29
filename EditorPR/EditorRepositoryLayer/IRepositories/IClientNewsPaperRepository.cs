@@ -13,5 +13,8 @@ namespace EditorRepositoryLayer.IRepositories
 
         Task<IEnumerable<ClientNewsPaper>> GetChildrenAsync(int parentId);
 
+        Task<IEnumerable<ClientNewsPaper>> GetByClientIdAsync(int clientId, DateTime? from, DateTime? to);
+
+
     }
 }

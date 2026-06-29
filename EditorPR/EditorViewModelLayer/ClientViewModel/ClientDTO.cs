@@ -65,5 +65,6 @@ namespace EditorViewModelLayer.ClientViewModel
         public List<WebsiteCustomerCategoryDTO> WebsiteCategories { get; set; } = new();
         public List<PublicationCustomerCategoryDTO> PublicationCategories { get; set; } = new();
         public List<ChannelCustomerCategoryDTO> ChannelCategories { get; set; } = new();
+        public string? ReportCoverPdf { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using EditorEntitiesLayer.Entities;
+using EditorViewModelLayer.GeneralArticleViewModel;
 using EditorViewModelLayer.MediaViewModel;
 using System;
 using System.Collections.Generic;
@@ -30,6 +31,9 @@ namespace EditorLogicLayer.ClientArticleLogic
         Task<WebsiteAutoFillDTO> GetWebsiteAutoFillAsync(int websiteId, int clientId);
         // Task<IEnumerable<ClientArticle>> GetChildrenAsync(int parentId);
         Task<(bool Success, string Message, int NewId)> DuplicateAsync(int id);
+
+        Task<List<ShareClientOptionDTO>> GetShareClientOptionsAsync(int generalArticleId);
+        Task<(bool Success, string Message, int CreatedCount)> ShareToClientsAsync(ShareArticleToClientsDTO model);
 
     }
 }

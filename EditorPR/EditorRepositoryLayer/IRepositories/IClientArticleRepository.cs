@@ -10,6 +10,9 @@ namespace EditorRepositoryLayer.IRepositories
         Task<IEnumerable<ClientArticle>> GetByClientIdAsync(int clientId);
         Task<ClientArticle?> GetByIdWithDetailsAsync(int id);
         Task<IEnumerable<ClientArticle>> GetChildrenAsync(int parentId);
+        Task<IEnumerable<ClientArticle>> GetByClientIdAsync(int clientId, DateTime? from, DateTime? to);
+        Task<IEnumerable<int>> GetClientIdsByArticleIdAsync(int generalArticleId);
+
 
     }
 }

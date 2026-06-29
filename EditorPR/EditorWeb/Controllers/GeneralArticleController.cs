@@ -1,4 +1,5 @@
-﻿using EditorLogicLayer.GeneralArticle;
+﻿using EditorLogicLayer.ClientArticleLogic;
+using EditorLogicLayer.GeneralArticle;
 using EditorViewModelLayer.GeneralArticleViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,14 @@ namespace EditorWeb.Controllers
     public class GeneralArticleController : Controller
     {
         private readonly IGeneralArticleService _service;
+        private readonly IClientArticleService _clientArticleService;
 
-
-        public GeneralArticleController(IGeneralArticleService service)
-            => _service = service;
+        public GeneralArticleController(IGeneralArticleService service, IClientArticleService clientArticleService)
+        {
+            _service = service;
+            _clientArticleService = clientArticleService;
+        }
+            
 
         // ── Index ──────────────────────────────────────────────────────────────
 
@@ -210,6 +215,60 @@ namespace EditorWeb.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "GeneralArticles_ImportTemplate.xlsx");
         }
+
+
+        // ── Share to Clients ───────────────────────────────────────────────────
+        // Creates one ClientArticle per selected client from this GeneralArticle.
+        // No new GeneralArticle is created — every ClientArticle.ArticleId points
+        // back at this same row. Category/SubCategory are chosen per-client
+        // (ClientCategories is scoped by ClientId), so the modal loads those via
+        // AJAX once a client is checked.
+
+        // GET: /GeneralArticle/GetShareClients/5
+        // Returns the full client checklist for the Share modal.
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> GetShareClients(int id)
+        {
+            var options = await _clientArticleService.GetShareClientOptionsAsync(id);
+            return Json(options.Select(o => new
+            {
+                clientId = o.ClientId,
+                clientName = o.ClientName,
+                alreadyShared = o.AlreadyShared
+            }));
+        }
+
+        // GET: /GeneralArticle/GetShareCategories?clientId=5
+        // Top-level categories for one client row in the modal.
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> GetShareCategories(int clientId)
+        {
+            var opts = await _clientArticleService.GetCategoryOptionsAsync(clientId);
+            return Json(opts.Select(o => new { value = o.Value, text = o.Text }));
+        }
+
+        // GET: /GeneralArticle/GetShareSubCategories?parentId=12
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> GetShareSubCategories(int parentId)
+        {
+            var opts = await _clientArticleService.GetSubCategoryOptionsAsync(parentId);
+            return Json(opts.Select(o => new { value = o.Value, text = o.Text }));
+        }
+
+        // POST: /GeneralArticle/ShareToClients
+        [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ShareToClients(ShareArticleToClientsDTO model)
+        {
+            var (success, message, count) = await _clientArticleService.ShareToClientsAsync(model);
+            TempData[success ? "Success" : "Error"] = message;
+            return RedirectToAction(nameof(Details), new { id = model.GeneralArticleId });
+        }
+
 
 
         // Helper method:

@@ -43,6 +43,10 @@ namespace EditorEntitiesLayer.Entities
         // Identity link — the ApplicationUser created for this client
         public int? ApplicationUserId { get; set; }
 
+        [MaxLength(500)]
+        public string? ReportCoverPdf { get; set; }
+
+
         // Navigation
         public ICollection<Assistant> AssistantList { get; set; } = new List<Assistant>();
         public ICollection<WebsiteCustomerCategory> WebsiteCategories { get; set; } = new List<WebsiteCustomerCategory>();

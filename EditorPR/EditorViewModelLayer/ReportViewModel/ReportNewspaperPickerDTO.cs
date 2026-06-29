@@ -12,10 +12,29 @@ namespace EditorViewModelLayer.ReportViewModel
 
         public string? Title { get; set; }
 
-        // Publication info — NewsPaper has PublicationId FK; Publication has PublicationName
         public int PublicationId { get; set; }
 
-        public string? PublicationName { get; set; }    // NewsPaper.Publication.PublicationName
+        public string? PublicationName { get; set; }
+
+        public string? WriterName { get; set; }
+
+        // ── Category / SubCategory — drives report grouping & sort order ────────
+        public int CategoryId { get; set; }
+
+        public string? CategoryName { get; set; }
+
+        public int SubCategoryId { get; set; }
+
+        public string? SubCategoryName { get; set; }
+
+        public int CategoryOrder { get; set; }
+
+        public int SubCategoryOrder { get; set; }
+
+        // ── Content — used by the Preview page ───────────────────────────────────
+        public string? Content { get; set; }
+
+        public List<string> ImagePaths { get; set; } = new();   // reserved — populated if/when scanned clippings are added
 
         public decimal PRValue { get; set; }
 
@@ -26,6 +45,28 @@ namespace EditorViewModelLayer.ReportViewModel
         public string? HeadlineBranding { get; set; }
 
         public string? Toning { get; set; }
+
+        public string? MediaType { get; set; }
+
+        public string? MediaTier { get; set; }
+
+        public string? Frequency { get; set; }
+
+        public int? Circulation { get; set; }
+        public int PageNumber { get; set; }
+
+        public int Reach { get; set; }
+
+        // ,[Height]      ,[Width]
+        public decimal Height { get; set; }
+        public decimal Width { get; set; }
+
+        // Language  
+        public string? Language { get; set; }
+
+        public bool Generation { get; set; }  
+
+        public string? PictureinArticle { get; set; }
 
         /// <summary>
         /// True when this newspaper is already linked to the current report.

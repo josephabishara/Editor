@@ -1,0 +1,63 @@
+@model EditorViewModelLayer.ClientViewModel.ClientDTO
+
+@{
+    ViewData["Title"] = "Report Cover PDF";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-file-pdf me-2"></i>Report Cover PDF — @Model.Name</h5>
+            </div>
+            <div class="card-body">
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger">
+                        <asp-validation-summary asp-validation-summary="ModelOnly" />
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.ReportCoverPdf))
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Current Cover</label>
+                        <div class="border rounded p-3 d-flex align-items-center justify-content-between">
+                            <span><i class="bi bi-file-earmark-pdf text-danger me-2"></i>@System.IO.Path.GetFileName(Model.ReportCoverPdf)</span>
+                            <a href="@Model.ReportCoverPdf" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye me-1"></i> View
+                            </a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        No report cover PDF has been uploaded yet for this client.
+                    </div>
+                }
+
+                <form asp-action="ChangeReportCover" asp-route-id="@Model.Id"
+                      method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Upload New Cover (PDF only, max 10 MB)</label>
+                        <input type="file" name="coverFile" accept="application/pdf" class="form-control" required />
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i> Upload Cover
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

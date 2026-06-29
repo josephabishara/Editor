@@ -5,6 +5,27 @@
     var grandPR = Model.Articles.Sum(a => a.PRValue) + Model.TotalPRValue;
     var grandAD = Model.Articles.Sum(a => a.ADValue) + Model.TotalADValue;
     var grandItems = Model.ArticleCount + Model.NewspaperCount;
+
+    // ── Single source of truth for the per-page footer ───────────────────────────
+    // Called once per .paper instead of duplicating the markup on every page.
+    // Edit the footer in exactly one place from now on.
+    void RenderFooter()
+    {
+        <div class="report-footer">
+            <span class="footer-brand"><strong>EditorPR</strong> — Media Monitoring &amp; PR Management</span>
+            <span class="footer-logo">
+                @if (!string.IsNullOrEmpty(Model.CustomerLogoUrl))
+                {
+                    <img src="@Model.CustomerLogoUrl" alt="@Model.CustomerName logo" />
+                }
+                else
+                {
+                    <span>@Model.CustomerName</span>
+                }
+                <span>&nbsp;|&nbsp; @Model.ReportDate.ToString("MMMM yyyy")</span>
+            </span>
+        </div>
+    }
 }
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
@@ -13,11 +34,20 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>@Model.ReportName — Media Report</title>
     <style>
-            /* ── Reset ───────────────────────────────────────────────────────────────── */
             *, *::before, *::after {
                 box-sizing: border-box;
                 margin: 0;
                 padding: 0
+            }
+
+            /* Without this, Chrome/Edge strip background colors when printing —
+               the #1 reason a printed/PDF page looks different from the on-screen
+               preview. Forces every maroon header, badge, and table row to print
+               exactly as it appears on screen. */
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                color-adjust: exact;
             }
 
             html {
@@ -26,7 +56,7 @@
 
             body {
                 font-family: 'Segoe UI',Arial,sans-serif;
-                color: #721a24;
+                color: #1a1a1a;
                 background: #fff;
                 padding: 0
             }
@@ -70,46 +100,169 @@
                 align-items: center;
                 gap: 6px;
                 text-decoration: none;
-                transition: background .15s;
             }
-
-                .btn:hover {
-                    background: rgba(255,255,255,.2)
-                }
 
             .btn-print {
-                background: #c0392b;
-                border-color: #c0392b
+                background: #1a1a2e;
+                border-color: #1a1a2e
             }
 
-                .btn-print:hover {
-                    background: #a93226
+                .btn-print:disabled {
+                    opacity: .5;
+                    cursor: not-allowed;
                 }
 
-            .btn-close-w {
-                background: transparent
+            /* ── Page wrapper ────────────────────────────────────────────────────────── */
+            body {
+                background: #e9e9ec
             }
 
-            /* ── Page wrapper ────────────────────────────────────────────────────────── */
             .page {
                 max-width: 900px;
                 margin: 32px auto;
-                padding: 0 24px 48px;
+                padding: 0
             }
+
+            /* On-screen "paper" treatment — every logical page gets a visible white sheet
+                           with shadow + page number, so the document looks paginated even when just
+                           scrolling in the browser (page-break-* CSS only takes effect when printing). */
+            .paper {
+                background: #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,.15), 0 0 0 1px rgba(0,0,0,.05);
+                margin-bottom: 28px;
+                padding: 36px 40px 44px;
+                position: relative;
+                min-height: 1040px;
+            }
+
+                .paper .page-number {
+                    position: absolute;
+                    top: 14px;
+                    right: 24px;
+                    font-size: 9px;
+                    color: #bbb;
+                    z-index: 1;
+                }
+
+            /* ── Cover page (page 1) ─────────────────────────────────────────────────── */
+            .cover-page {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                height: 100%;
+            }
+
+                .cover-page iframe {
+                    width: 100%;
+                    max-width: 760px;
+                    height: 950px;
+                    border: 1px solid #ddd;
+                    background: #fff
+                }
+
+            .cover-fallback {
+                border: 2px dashed #ccc;
+                padding: 60px 40px;
+                border-radius: 8px;
+                color: #888;
+                max-width: 600px;
+            }
+
+                .cover-fallback h2 {
+                    font-size: 22px;
+                    color: #721a24;
+                    margin-bottom: 10px
+                }
+
+                .cover-fallback a.cover-link {
+                    display: inline-block;
+                    margin-top: 14px;
+                    padding: 8px 18px;
+                    border-radius: 5px;
+                    background: #721a24;
+                    color: #fff;
+                    text-decoration: none;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+
+            .cover-loading {
+                font-size: 13px;
+                color: #999
+            }
+
+            .cover-page canvas {
+                max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 0 auto;
+                box-shadow: 0 0 0 1px #eee
+            }
+
+            /* ── Category divider page ───────────────────────────────────────────────── */
+            .category-divider {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                margin-top: 250px;
+                height: 100%;
+                border-bottom: 6px solid #721a24;
+                padding-bottom: 50px;
+            }
+
+                .category-divider .cat-eyebrow {
+                    font-size: 13px;
+                    letter-spacing: 3px;
+                    text-transform: uppercase;
+                    color: #c0392b;
+                    margin-bottom: 18px;
+                    font-weight: 700;
+                }
+
+                .category-divider h1 {
+                    font-size: 40px;
+                    font-weight: 700;
+                    color: #721a24;
+                    margin-bottom: 12px
+                }
+
+                .category-divider .cat-sub {
+                    font-size: 17px;
+                    color: #555;
+                    margin-bottom: 30px
+                }
+
+                .category-divider .cat-stats {
+                    display: flex;
+                    gap: 36px;
+                    font-size: 13px;
+                    color: #555
+                }
+
+                    .category-divider .cat-stats strong {
+                        color: #721a24;
+                        font-size: 22px;
+                        display: block;
+                        margin-bottom: 2px
+                    }
 
             /* ── Report title block ──────────────────────────────────────────────────── */
             .report-title-block {
                 border-bottom: 2px solid #721a24;
                 padding-bottom: 14px;
-                margin-bottom: 20px;
+                margin-bottom: 20px
             }
 
                 .report-title-block h1 {
-                    font-size: 20px;
+                    font-size: 30px;
                     font-weight: 700;
                     line-height: 1.4;
                     color: #721a24;
-                    margin-bottom: 8px;
+                    margin-bottom: 8px
                 }
 
             .report-meta-row {
@@ -118,7 +271,7 @@
                 gap: 12px;
                 flex-wrap: wrap;
                 font-size: 11.5px;
-                color: #555;
+                color: #555
             }
 
                 .report-meta-row strong {
@@ -130,7 +283,7 @@
                 padding: 2px 10px;
                 border-radius: 20px;
                 font-size: 11px;
-                font-weight: 600;
+                font-weight: 600
             }
 
             .badge-daily {
@@ -158,22 +311,23 @@
                 color: #856404
             }
 
-            /* ── Meta grid (mimics reference: label-col + value-col, 3 columns) ──────── */
+            /* ── Meta grid ────────────────────────────────────────────────────────────── */
             .meta-grid {
                 display: grid;
                 grid-template-columns: repeat(3,1fr);
-                gap: 0;
                 border: 1px solid #ddd;
-                margin-bottom: 24px;
-            }
-
-            .meta-row {
-                display: contents;
+                margin-bottom: 24px
             }
 
             .meta-cell {
                 display: flex;
+                border-right: 1px solid #e8e8e8;
+                border-bottom: 1px solid #e8e8e8
             }
+
+                .meta-cell:nth-child(3n) {
+                    border-right: none
+                }
 
             .meta-label {
                 background: #721a24;
@@ -182,7 +336,7 @@
                 font-size: 12px;
                 font-weight: 500;
                 min-width: 130px;
-                white-space: nowrap;
+                white-space: nowrap
             }
 
             .meta-value {
@@ -190,12 +344,7 @@
                 color: #721a24;
                 padding: 7px 12px;
                 font-size: 12px;
-                border-bottom: 1px solid #e8e8e8;
-                flex: 1;
-            }
-
-            .meta-cell:not(:last-child) .meta-value {
-                border-right: 1px solid #e8e8e8;
+                flex: 1
             }
 
             /* ── Section heading ─────────────────────────────────────────────────────── */
@@ -214,7 +363,6 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 0;
             }
 
                 .section-heading .section-sub {
@@ -222,16 +370,17 @@
                     font-weight: 400;
                     opacity: .8;
                     text-transform: none;
-                    letter-spacing: 0;
+                    letter-spacing: 0
                 }
 
-            /* ── Article card (matches reference: title bar + 3-col meta grid) ────────── */
-            .article-card {
+            /* ── Article / Newspaper card ────────────────────────────────────────────── */
+            .media-card {
                 border: 1px solid #ddd;
                 margin-bottom: 20px;
+                page-break-inside: avoid
             }
 
-            .article-card-title {
+            .media-card-title {
                 background: #f7f7f7;
                 border-bottom: 1px solid #ddd;
                 padding: 10px 14px;
@@ -239,80 +388,143 @@
                 font-weight: 700;
                 line-height: 1.45;
                 color: #721a24;
-                text-align: right; /* RTL titles */
-                direction: rtl;
             }
 
-                .article-card-title a {
+                .media-card-title.rtl-title {
+                    direction: rtl;
+                    text-align: center;
+                }
+
+                .media-card-title a {
                     color: #721a24;
                     text-decoration: none
                 }
 
-                    .article-card-title a:hover {
+                    .media-card-title a:hover {
                         color: #c0392b;
                         text-decoration: underline
                     }
 
-            /* same label/value pattern as reference image */
-            .article-meta-grid {
+            .media-meta-grid {
                 display: grid;
-                grid-template-columns: repeat(3,1fr);
-                border-collapse: collapse;
+                grid-template-columns: repeat(3,1fr)
             }
 
-            .article-meta-cell {
+            .mc {
                 display: flex;
                 border-right: 1px solid #e8e8e8;
-                border-bottom: 1px solid #e8e8e8;
+                border-bottom: 1px solid #e8e8e8
             }
 
-                .article-meta-cell:nth-child(3n) {
+                .mc:nth-child(3n) {
                     border-right: none
                 }
 
-            .article-meta-label {
+                .mc.full {
+                    grid-column: span 3;
+                    border-right: none
+                }
+
+            .ml {
                 background: #721a24;
                 color: #fff;
                 padding: 6px 10px;
                 font-size: 11.5px;
                 font-weight: 500;
                 min-width: 120px;
-                white-space: nowrap;
+                white-space: nowrap
             }
 
-            .article-meta-value {
+            .mv {
                 background: #fff;
                 color: #721a24;
                 padding: 6px 10px;
                 font-size: 11.5px;
-                flex: 1;
+                flex: 1
             }
 
-                .article-meta-value a {
+                .mv a {
                     color: #c0392b;
                     text-decoration: none;
                     word-break: break-all
                 }
 
-                    .article-meta-value a:hover {
-                        text-decoration: underline
-                    }
-
-            /* ── Newspaper card ──────────────────────────────────────────────────────── */
-            .newspaper-card {
-                border: 1px solid #ddd;
-                margin-bottom: 20px;
+            /* ── Content section ─────────────────────────────────────────────────────── */
+            .content-block {
+                border-top: 1px solid #ddd
             }
 
-            .newspaper-card-title {
-                background: #f7f7f7;
-                border-bottom: 1px solid #ddd;
-                padding: 10px 14px;
-                font-size: 13.5px;
-                font-weight: 700;
-                line-height: 1.45;
-                color: #721a24;
+                .content-block .content-label {
+                    background: #721a24;
+                    color: #fff;
+                    padding: 6px 10px;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: .4px;
+                }
+
+                .content-block .content-body {
+                    padding: 14px 16px;
+                    font-size: 12.5px;
+                    line-height: 1.8;
+                    color: #1a1a1a
+                }
+
+            .content-body p {
+                margin-bottom: 8px
             }
+
+            .content-body img {
+                max-width: 100%
+            }
+
+            /* ── Multi-image pages — each extra image gets its own page ─────────────── */
+            .image-page {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                padding: 24px;
+            }
+
+                .image-page .image-page-label {
+                    font-size: 11px;
+                    color: #888;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 14px
+                }
+
+                .image-page img {
+                    max-width: 100%;
+                    max-height: 780px;
+                    border: 1px solid #ddd;
+                    object-fit: contain
+                }
+
+                .image-page .image-page-caption {
+                    font-size: 12px;
+                    color: #555;
+                    margin-top: 14px;
+                    text-align: center;
+                    max-width: 600px
+                }
+
+            /* first image of a multi-image article renders inline in the card, not as a separate page */
+            .inline-image {
+                padding: 14px 16px;
+                border-top: 1px solid #ddd
+            }
+
+                .inline-image img {
+                    max-width: 100%;
+                    max-height: 360px;
+                    border: 1px solid #ddd;
+                    display: block;
+                    margin: 0 auto
+                }
 
             /* ── Grand total table ───────────────────────────────────────────────────── */
             .totals-table {
@@ -326,22 +538,18 @@
                     color: #fff;
                     padding: 7px 12px;
                     text-align: left;
-                    font-weight: 600;
+                    font-weight: 600
                 }
 
-                    .totals-table th.r {
+                    .totals-table th.r, .totals-table td.r {
                         text-align: right
                     }
 
                 .totals-table td {
                     padding: 7px 12px;
                     border-bottom: 1px solid #e8e8e8;
-                    color: #721a24;
+                    color: #721a24
                 }
-
-                    .totals-table td.r {
-                        text-align: right
-                    }
 
                 .totals-table tr:nth-child(even) td {
                     background: #f9f9f9
@@ -352,18 +560,22 @@
                     color: #fff;
                     font-weight: 700;
                     border: none;
-                    padding: 8px 12px;
+                    padding: 8px 12px
                 }
 
-                    .totals-table tfoot td.r {
-                        text-align: right
-                    }
+            /* ── Footer — pinned to the bottom of every page ─────────────────────────── */
+            .paper {
+                padding-bottom: 90px; /* reserve space so content never overlaps the pinned footer */
+            }
 
-            /* ── Footer ──────────────────────────────────────────────────────────────── */
             .report-footer {
-                margin-top: 36px;
+                position: absolute;
+                left: 40px;
+                right: 40px;
+                bottom: 34px;
+                margin-top: 0;
                 border-top: 2px solid #721a24;
-                padding-top: 10px;
+                padding-top: 14px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -371,320 +583,591 @@
                 color: #888;
             }
 
-                .report-footer strong {
+                .report-footer .footer-brand strong {
                     color: #721a24
                 }
 
-            /* ── Print ───────────────────────────────────────────────────────────────── */
+                .report-footer .footer-logo {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px
+                }
+
+                    .report-footer .footer-logo img {
+                        height: 32px;
+                        max-width: 140px;
+                        object-fit: contain
+                    }
+
             @@media print {
+                @@page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                html, body {
+                    background: #fff;
+                    width: 100%;
+                }
+
                 .toolbar {
                     display: none !important
                 }
 
                 .page {
+                    max-width: none;
                     margin: 0;
-                    padding: 16px
+                    padding: 0
                 }
 
-                .article-card, .newspaper-card {
-                    page-break-inside: avoid
+                /* Every .paper IS a physical page — exact 1:1 mapping between
+                   what's on screen and what prints, no scaling surprises.
+                   A4 = 297mm tall; page margin above takes 10mm off each
+                   side, so the printable area per page is 277mm. Height is
+                   fixed (not min-height: 0) so a short page's content
+                   doesn't make .paper collapse — that collapse is what made
+                   the footer's bottom-anchor sit at the end of the content
+                   instead of the end of the page. */
+                .paper {
+                    box-shadow: none;
+                    margin: 0;
+                    height: 277mm;
+                    min-height: 0;
+                    max-height: 277mm;
+                    width: 100%;
+                    padding-bottom: 26mm; /* reserves space above the pinned footer so content never sits under it */
+                    overflow: hidden;
+                    page-break-after: always;
+                    break-after: page;
+                }
+
+                    .paper:last-child {
+                        page-break-after: auto;
+                        break-after: auto;
+                    }
+
+                    .paper .page-number {
+                        display: none
+                    }
+
+                /* Never let a card, meta-row, content block, or image split
+                   across two printed pages mid-element. */
+                .media-card,
+                .media-meta-grid,
+                .content-block,
+                .inline-image,
+                .meta-grid,
+                .totals-table,
+                .category-divider,
+                .cover-page,
+                .image-page {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+
+                .report-footer {
+                    position: absolute;
+                    bottom: 8mm;
+                    left: 12mm;
+                    right: 12mm;
+                }
+
+                /* Avoid a section heading printing alone at the bottom of a page
+                   with its content pushed to the next one. */
+                .section-heading {
+                    page-break-after: avoid;
+                    break-after: avoid;
                 }
             }
     </style>
 </head>
 <body>
 
-    <!-- Toolbar -->
     <div class="toolbar no-print">
         <span class="toolbar-brand">EditorPR &mdash; Media Report Preview</span>
         <div class="toolbar-actions">
-            <button class="btn btn-print" onclick="window.print()">
-                &#x1F5A8; Print / Save PDF
-            </button>
-            <button class="btn btn-close-w" onclick="window.close()">
-                &#x2715; Close
-            </button>
+            <button id="btn-print" class="btn btn-print" onclick="window.print()" disabled>&#x23F3; Preparing…</button>
+            <button class="btn" onclick="window.close()">&#x2715; Close</button>
         </div>
     </div>
 
     <div class="page">
 
-        <!-- ── Report title ──────────────────────────────────────────────────── -->
-        <div class="report-title-block">
-            <h1>@Model.ReportName</h1>
-            <div class="report-meta-row">
-                <span><strong>Customer:</strong> @Model.CustomerName</span>
-                <span><strong>Date:</strong> @Model.ReportDate.ToString("dd-MM-yyyy")</span>
-                <span>
-                    @{
-                        var typeBadge = Model.ReportType switch
-                        {
-                            ReportType.Daily => "badge-daily",
-                            ReportType.Weekly => "badge-weekly",
-                            ReportType.Monthly => "badge-monthly",
-                            _ => "badge-draft"
-                        };
-                    }
-                    <span class="badge @typeBadge">@Model.ReportType</span>
-                </span>
-                @if (Model.Publish)
-                {
-                    <span class="badge badge-pub">Published</span>
-                }
-                else
-                {
-                    <span class="badge badge-draft">Draft</span>
-                }
-                <span><strong>Generated:</strong> @DateTime.Now.ToString("dd-MM-yyyy HH:mm")</span>
-            </div>
-        </div>
-
-        <!-- ── Report summary meta grid ──────────────────────────────────────── -->
-        <div class="meta-grid">
-            <div class="meta-cell">
-                <div class="meta-label">Customer</div>
-                <div class="meta-value">@Model.CustomerName</div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Report Date</div>
-                <div class="meta-value">@Model.ReportDate.ToString("dd-MM-yyyy")</div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Report Type</div>
-                <div class="meta-value">@Model.ReportType</div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Total Articles</div>
-                <div class="meta-value">@Model.ArticleCount</div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Total Newspapers</div>
-                <div class="meta-value">@Model.NewspaperCount</div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Status</div>
-                <div class="meta-value">@(Model.Publish ? "Published" : "Draft")</div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Grand PR Value</div>
-                <div class="meta-value"><strong>@grandPR.ToString("N2")</strong></div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Grand AD Value</div>
-                <div class="meta-value"><strong>@grandAD.ToString("N2")</strong></div>
-            </div>
-            <div class="meta-cell">
-                <div class="meta-label">Total Items</div>
-                <div class="meta-value"><strong>@grandItems</strong></div>
-            </div>
-        </div>
-
-        <!-- ════════════════════════════════════════════════════════════════════ -->
-        <!-- ONLINE ARTICLES                                                      -->
-        <!-- ════════════════════════════════════════════════════════════════════ -->
-        @if (Model.Articles.Any())
+        @* ════════════════════════════════════════════════════════════════════ *@
+        @* PAGE 1+ — CLIENT COVER PDF, rendered as flat page images (PDF.js)    *@
+        @* No iframe/object is used — those show the browser's PDF-viewer       *@
+        @* chrome (toolbar, zoom, sidebar). Canvas rendering looks like a       *@
+        @* normal page, identical in style to the rest of the report.          *@
+        @* ════════════════════════════════════════════════════════════════════ *@
+        @if (!string.IsNullOrEmpty(Model.CustomerReportCoverPdfUrl))
         {
-            <div class="section">
-                <div class="section-heading">
-                    <span>Online Articles</span>
-                    <span class="section-sub">
-                        @Model.ArticleCount item(s) &nbsp;&nbsp;
-                        PR Value: @Model.Articles.Sum(a => a.PRValue).ToString("N2") &nbsp;&nbsp;
-                        AD Value: @Model.Articles.Sum(a => a.ADValue).ToString("N2")
-                    </span>
+            <div id="cover-pdf-pages" data-pdf-url="@Model.CustomerReportCoverPdfUrl">
+                <div class="paper">
+                    <div class="cover-page">
+                        <div class="cover-loading">Loading cover page…</div>
+                    </div>
+                    <div class="page-number">Page 1</div>
                 </div>
+            </div>
+        }
+        else
+        {
+            <div class="paper">
+                <div class="cover-page">
+                    <div class="cover-fallback">
+                        <h2>@Model.CustomerName</h2>
+                        <p>No report cover has been uploaded for this client yet.</p>
+                        <p style="font-size:11px;margin-top:8px">
+                            Upload one from the client's page (Report Cover PDF) to replace this placeholder.
+                        </p>
+                    </div>
+                </div>
+                @{
+                    RenderFooter();
+                }
+                <div class="page-number"></div>
+            </div>
+        }
 
-                @foreach (var a in Model.Articles)
+        @* ════════════════════════════════════════════════════════════════════ *@
+        @* REPORT TITLE + SUMMARY                                               *@
+        @* ════════════════════════════════════════════════════════════════════ *@
+        <div class="paper">
+            <div class="report-title-block">
+                <h1>@Model.ReportType Report :  @Model.ReportName</h1>
+                <div class="report-meta-row">
+                    <span><strong>Customer:</strong> @Model.CustomerName</span>
+                    <span><strong>Date:</strong> @Model.ReportDate.ToString("dd-MM-yyyy")</span>
+                    <span>
+                        @{
+                            var typeBadge = Model.ReportType switch
+                            {
+                                ReportType.Daily => "badge-daily",
+                                ReportType.Weekly => "badge-weekly",
+                                ReportType.Monthly => "badge-monthly",
+                                _ => "badge-draft"
+                            };
+                        }
+                        <span class="badge @typeBadge">@Model.ReportType</span>
+                    </span>
+                    @if (Model.Publish)
+                    {
+                        <span class="badge badge-pub">Published</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-draft">Draft</span>
+                    }
+                    <span><strong>Generated:</strong> @DateTime.Now.ToString("dd-MM-yyyy HH:mm")</span>
+                </div>
+            </div>
+
+            <div class="meta-grid">
+                <div class="meta-cell"><div class="meta-label">Customer</div><div class="meta-value">@Model.CustomerName</div></div>
+                <div class="meta-cell"><div class="meta-label">Report Date</div><div class="meta-value">@Model.ReportDate.ToString("dd-MM-yyyy")</div></div>
+                <div class="meta-cell"><div class="meta-label">Report Type</div><div class="meta-value">@Model.ReportType</div></div>
+                <div class="meta-cell"><div class="meta-label">Total Articles</div><div class="meta-value">@Model.ArticleCount</div></div>
+                <div class="meta-cell"><div class="meta-label">Total Newspapers</div><div class="meta-value">@Model.NewspaperCount</div></div>
+                <div class="meta-cell"><div class="meta-label">Status</div><div class="meta-value">@(Model.Publish ? "Published" : "Draft")</div></div>
+                <div class="meta-cell"><div class="meta-label">Grand PR Value</div><div class="meta-value"><strong>@grandPR.ToString("N2")</strong></div></div>
+                <div class="meta-cell"><div class="meta-label">Grand AD Value</div><div class="meta-value"><strong>@grandAD.ToString("N2")</strong></div></div>
+                <div class="meta-cell"><div class="meta-label">Total Items</div><div class="meta-value"><strong>@grandItems</strong></div></div>
+            </div>
+            @* page number assigned by renumberPages() after full render *@
+            @{
+                RenderFooter();
+            }
+            <div class="page-number"></div>
+        </div>
+        @* ↑ closes .paper opened at "REPORT TITLE + SUMMARY" *@
+
+        @* ════════════════════════════════════════════════════════════════════ *@
+        @* CATEGORY-GROUPED CONTENT — one divider page per Category/SubCategory *@
+        @* ════════════════════════════════════════════════════════════════════ *@
+        @if (!Model.CategoryGroups.Any())
+        {
+            <div class="paper">
+                <div style="border:2px dashed #c0392b;border-radius:8px;padding:40px;text-align:center;color:#a93226">
+                    <h2 style="font-size:18px;margin-bottom:10px">No category groups found</h2>
+                    <p style="font-size:12px;line-height:1.7">
+                        This report has @Model.ArticleCount article(s) and @Model.NewspaperCount newspaper(s) linked,
+                        but none resolved to a Category. This usually means the linked ClientArticle / ClientNewsPaper
+                        rows have <code>CategoryId = 0</code> (never assigned a category), or this client has no
+                        Categories configured yet under Client &rarr; Categories.
+                    </p>
+                </div>
+                @{
+                    RenderFooter();
+                }
+            </div>
+        }
+
+        @foreach (var group in Model.CategoryGroups)
+        {
+            @*     <!-- ── Category divider page ───────────────────────────────────── --> *@
+            <div class="paper">
+                <div class="category-divider">
+                    <div class="cat-eyebrow">Category</div>
+                    <h1>@group.CategoryName</h1>
+                    @if (!string.IsNullOrEmpty(group.SubCategoryName))
+                    {
+                        <div class="cat-sub">@group.SubCategoryName</div>
+                    }
+                    <div class="cat-stats">
+                        <div>Items<strong>@group.ItemCount</strong></div>
+                        <div>PR Value<strong>@group.GroupPRValue.ToString("N2")</strong></div>
+                        <div>AD Value<strong>@group.GroupADValue.ToString("N2")</strong></div>
+                    </div>
+                </div>
+                @{
+                    RenderFooter();
+                }
+                <div class="page-number"></div>
+            </div>
+
+            @*   <!-- ── Articles in this group ──────────────────────────────────── --> *@
+            @if (group.Articles.Any())
+            {
+
+        
+                @foreach (var a in group.Articles)
                 {
-                    <div class="article-card">
-
-                        <!-- Title bar — mirrors reference image header -->
-                        <div class="article-card-title">
-                            @if (!string.IsNullOrEmpty(a.ArticleURL))
-                            {
-                                <a href="@a.ArticleURL" target="_blank" rel="noopener">@a.Title</a>
-                            }
-                            else
-                            {
-                                @a.Title
-                            }
-                        </div>
-
-                        <!-- 3-column label/value grid — mirrors reference exactly -->
-                        <div class="article-meta-grid">
-
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Date</div>
-                                <div class="article-meta-value">@a.Date.ToString("dd-MM-yyyy")</div>
+                    var isRtl = a.Language != null && a.Language.Equals("Arabic", StringComparison.OrdinalIgnoreCase);
+                    <div class="paper">
+                        <div class="section">
+                            <div class="section-heading">
+                                <span>Websites</span>
+                                <span class="section-sub">@group.Articles.Count item(s)</span>
                             </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Language</div>
-                                <div class="article-meta-value">@(a.Language ?? "—")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Media Tier</div>
-                                <div class="article-meta-value">—</div>
-                            </div>
-
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Website</div>
-                                <div class="article-meta-value">@(a.WebsiteName ?? "—")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Article Branding</div>
-                                <div class="article-meta-value">@(a.ArticleBranding ?? "—")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Media Type</div>
-                                <div class="article-meta-value">—</div>
-                            </div>
-
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Writer</div>
-                                <div class="article-meta-value">@(a.WriterName ?? "—")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">AD Value</div>
-                                <div class="article-meta-value">@a.ADValue.ToString("N2")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">PR Value</div>
-                                <div class="article-meta-value">@a.PRValue.ToString("N2")</div>
-                            </div>
-
-                            <div class="article-meta-cell" style="grid-column:span 3">
-                                <div class="article-meta-label">Article URL</div>
-                                <div class="article-meta-value">
+                            <div class="media-card">
+                                <div class="media-card-title @(isRtl ? "rtl-title" : "")">
                                     @if (!string.IsNullOrEmpty(a.ArticleURL))
                                     {
-                                        <a href="@a.ArticleURL" target="_blank" rel="noopener">@a.ArticleURL</a>
+                                        <a href="@a.ArticleURL" target="_blank" rel="noopener">@a.Title</a>
                                     }
                                     else
                                     {
-                                        <span>—</span>
+                                        @a.Title
                                     }
                                 </div>
+
+                                <div class="media-meta-grid">
+                                    <div class="mc"><div class="ml">Date</div><div class="mv">@a.Date.ToString("dd-MM-yyyy")</div></div>
+                                    <div class="mc"><div class="ml">Category</div><div class="mv">@(a.CategoryName ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Media Tier</div><div class="mv">@(a.MediaTier ?? "—")</div></div>
+
+                                    <div class="mc"><div class="ml">Website</div><div class="mv">@(a.WebsiteName ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Sub Category</div><div class="mv">@(a.SubCategoryName ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Media Type</div><div class="mv">@(a.MediaType ?? "—")</div></div>
+
+                                    <div class="mc"><div class="ml">Frequency</div><div class="mv">@(a.Frequency ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">AD Value</div><div class="mv">@a.ADValue.ToString("N2")</div></div>
+                                    <div class="mc"><div class="ml">Language</div><div class="mv">@(a.Language ?? "—")</div></div>
+
+                                    <div class="mc"><div class="ml">Impression</div><div class="mv">@a.Impression.ToString("N2")</div></div>
+                                    <div class="mc"><div class="ml">PR Value</div><div class="mv">@a.PRValue.ToString("N2")</div></div>
+                                    <div class="mc"><div class="ml">Writer</div><div class="mv">@(a.WriterName ?? "—")</div></div>
+
+                                    <div class="mc"><div class="ml">Reach</div><div class="mv">@a.Reach.ToString("N2")</div></div>
+                                    <div class="mc"><div class="ml">Tone</div><div class="mv">@(a.Toning ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Article Branding</div><div class="mv">@(a.ArticleBranding ?? "—")</div></div>
+
+                                    <div class="mc"><div class="ml">Headline Branding</div><div class="mv">@(a.HeadlineBranding ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Picture in article </div><div class="mv">@(a.PictureinArticle ?? "—")</div></div>
+                                    <div class="mc full">
+                                        <div class="ml">Article URL</div>
+                                        <div class="mv">
+                                            @if (!string.IsNullOrEmpty(a.ArticleURL))
+                                            {
+                                                <a href="@a.ArticleURL" target="_blank" rel="noopener">Link</a>
+                                            }
+                                            else
+                                            {
+                                                <span>—</span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="mc"><div class="ml">Generation</div><div class="mv">@(a.Generation ?? "—")</div></div>
+
+                                    
+                                </div>
+
+                                @* ── Content section ──────────────────────────────────── *@
+                                @if (!string.IsNullOrWhiteSpace(a.Content))
+                                {
+                                    <div class="content-block">
+                                        <div class="content-label">Content</div>
+                                        <div class="content-body">@Html.Raw(a.Content)</div>
+                                    </div>
+                                }
+
+                                @* ── First image renders inline in the card ───────────── *@
+                                @if (a.ImagePaths.Any())
+                                {
+                                    <div class="inline-image">
+                                        <img src="@a.ImagePaths[0]" alt="@a.Title" />
+                                    </div>
+                                }
                             </div>
-                            <div class="article-meta-cell">
-                                
+
+                            @* ── Every ADDITIONAL image gets its own full page ────────── *@
+                            @if (a.ImagePaths.Count > 1)
+                            {
+                                for (int i = 1; i < a.ImagePaths.Count; i++)
+                                {
+                                    <div class="paper">
+                                        <div class="image-page">
+                                            <div class="image-page-label">@a.Title &mdash; Image @(i + 1) of @a.ImagePaths.Count</div>
+                                            <img src="@a.ImagePaths[i]" alt="@a.Title image @(i + 1)" />
+                                        </div>
+                                      
+                                    </div>
+                                }
+                            }
                         </div>
-                        </div>
+                        @{
+                            RenderFooter();
+                        }
+                        <div class="page-number"></div>
                     </div>
                 }
-            </div>
-        }
 
-        <!-- ════════════════════════════════════════════════════════════════════ -->
-        <!-- PRINT NEWSPAPERS                                                     -->
-        <!-- ════════════════════════════════════════════════════════════════════ -->
-        @if (Model.Newspapers.Any())
-        {
-            <div class="section">
-                <div class="section-heading">
-                    <span>Print Newspapers</span>
-                    <span class="section-sub">
-                        @Model.NewspaperCount item(s) &nbsp;&nbsp;
-                        PR Value: @Model.TotalPRValue.ToString("N2") &nbsp;&nbsp;
-                        AD Value: @Model.TotalADValue.ToString("N2")
-                    </span>
-                </div>
+            }
 
-                @foreach (var n in Model.Newspapers)
+            @*      <!-- ── Newspapers in this group ────────────────────────────────── --> *@
+            @if (group.Newspapers.Any())
+            {
+
+           
+                @foreach (var n in group.Newspapers)
                 {
-                    <div class="newspaper-card">
+                    <div class="paper">
+                        <div class="section">
+                            <div class="section-heading">
+                                <span>Print Newspapers</span>
+                                <span class="section-sub">@group.Newspapers.Count item(s)</span>
+                            </div>
+                            <div class="media-card">
+                                <div class="media-card-title">@n.Title</div>
 
-                        <div class="newspaper-card-title">@n.Title</div>
+                                <div class="media-meta-grid">
+                                    <div class="mc"><div class="ml">Publication</div><div class="mv">@(n.PublicationName ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Date</div><div class="mv">@n.Date.ToString("dd-MM-yyyy")</div></div>
+                                    <div class="mc"><div class="ml">AD Value</div><div class="mv">@n.ADValue.ToString("N2")</div></div>
 
-                        <div class="article-meta-grid">
+                                    <div class="mc"><div class="ml"> Category Type</div><div class="mv">Regular</div></div>
+                                    <div class="mc"><div class="ml">Category</div><div class="mv">@(n.CategoryName ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">PR Value</div><div class="mv">@n.PRValue.ToString("N2")</div></div>
 
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Date</div>
-                                <div class="article-meta-value">@n.Date.ToString("dd-MM-yyyy")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Publication</div>
-                                <div class="article-meta-value">@(n.PublicationName ?? "—")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Toning</div>
-                                <div class="article-meta-value">@(n.Toning ?? "—")</div>
+                                    <div class="mc"><div class="ml">Media Type</div><div class="mv">@(n.MediaType ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Sub Category</div><div class="mv">@(n.SubCategoryName ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Circulation</div><div class="mv">@n.Circulation</div></div>
+
+                                    <div class="mc"><div class="ml">Frequency</div><div class="mv">@(n.Frequency ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Page Number</div><div class="mv">@n.PageNumber.ToString("N2")</div></div>
+                                    <div class="mc"><div class="ml">Reach</div><div class="mv">@n.Reach.ToString("N2")</div></div>
+
+                                    <div class="mc"><div class="ml">Media Tier</div><div class="mv">@(n.MediaTier ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Size  </div><div class="mv">@n.Height.ToString("N2") X  @n.Width.ToString("N2") </div></div>
+                                    <div class="mc"><div class="ml">Writer</div><div class="mv">@(n.WriterName ?? "—")</div></div>
+
+                                    <div class="mc"><div class="ml">Language</div><div class="mv">@(n.Language ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Toning</div><div class="mv">@(n.Toning ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Generation</div><div class="mv">@(n.Generation.ToString() ?? "—")</div></div>
+
+                                    <div class="mc"><div class="ml">Picture in article </div><div class="mv">@(n.PictureinArticle ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Headline Branding</div><div class="mv">@(n.HeadlineBranding ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Article Branding</div><div class="mv">@(n.ArticleBranding ?? "—")</div></div>
+
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(n.Content))
+                                {
+                                    <div class="content-block">
+                                        <div class="content-label">Content</div>
+                                        <div class="content-body">@Html.Raw(n.Content)</div>
+                                    </div>
+                                }
+
+                                @if (n.ImagePaths.Any())
+                                {
+                                    <div class="inline-image">
+                                        <img src="@n.ImagePaths[0]" alt="@n.Title" />
+                                    </div>
+                                }
                             </div>
 
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Article Branding</div>
-                                <div class="article-meta-value">@(n.ArticleBranding ?? "—")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">Headline Branding</div>
-                                <div class="article-meta-value">@(n.HeadlineBranding ?? "—")</div>
-                            </div>
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">AD Value</div>
-                                <div class="article-meta-value">@n.ADValue.ToString("N2")</div>
-                            </div>
-
-                            <div class="article-meta-cell">
-                                <div class="article-meta-label">PR Value</div>
-                                <div class="article-meta-value">@n.PRValue.ToString("N2")</div>
-                            </div>
-                            <div class="article-meta-cell" style="grid-column:span 2">
-                                <div class="article-meta-label" style="min-width:120px">Publication ID</div>
-                                <div class="article-meta-value">@n.PublicationId</div>
-                            </div>
-
+                            @if (n.ImagePaths.Count > 1)
+                            {
+                                for (int i = 1; i < n.ImagePaths.Count; i++)
+                                {
+                                    <div class="paper">
+                                        <div class="image-page">
+                                            <div class="image-page-label">@n.Title &mdash; Image @(i + 1) of @n.ImagePaths.Count</div>
+                                            <img src="@n.ImagePaths[i]" alt="@n.Title image @(i + 1)" />
+                                        </div>
+                                    
+                                    </div>
+                                }
+                            }
                         </div>
+                        @{
+                            RenderFooter();
+                        }
+                        <div class="page-number"></div>
                     </div>
                 }
-            </div>
+
+            }
         }
 
-        <!-- ════════════════════════════════════════════════════════════════════ -->
-        <!-- GRAND TOTAL                                                          -->
-        <!-- ════════════════════════════════════════════════════════════════════ -->
-        <div class="section">
-            <div class="section-heading">
-                <span>Grand Total</span>
+        @* ════════════════════════════════════════════════════════════════════ *@
+        @* GRAND TOTAL                                                          *@
+        @* ════════════════════════════════════════════════════════════════════ *@
+        <div class="paper">
+            <div class="section">
+                <div class="section-heading"><span>Grand Total</span></div>
+                <table class="totals-table">
+                    <thead>
+                        <tr><th>Category</th><th class="r">Items</th><th class="r">PR Value</th><th class="r">AD Value</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Online Articles</td>
+                            <td class="r">@Model.ArticleCount</td>
+                            <td class="r">@Model.Articles.Sum(a => a.PRValue).ToString("N2")</td>
+                            <td class="r">@Model.Articles.Sum(a => a.ADValue).ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td>Print Newspapers</td>
+                            <td class="r">@Model.NewspaperCount</td>
+                            <td class="r">@Model.TotalPRValue.ToString("N2")</td>
+                            <td class="r">@Model.TotalADValue.ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr><td>Total</td><td class="r">@grandItems</td><td class="r">@grandPR.ToString("N2")</td><td class="r">@grandAD.ToString("N2")</td></tr>
+                    </tfoot>
+                </table>
             </div>
-            <table class="totals-table">
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th class="r">Items</th>
-                        <th class="r">PR Value</th>
-                        <th class="r">AD Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Online Articles</td>
-                        <td class="r">@Model.ArticleCount</td>
-                        <td class="r">@Model.Articles.Sum(a => a.PRValue).ToString("N2")</td>
-                        <td class="r">@Model.Articles.Sum(a => a.ADValue).ToString("N2")</td>
-                    </tr>
-                    <tr>
-                        <td>Print Newspapers</td>
-                        <td class="r">@Model.NewspaperCount</td>
-                        <td class="r">@Model.TotalPRValue.ToString("N2")</td>
-                        <td class="r">@Model.TotalADValue.ToString("N2")</td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td>Total</td>
-                        <td class="r">@grandItems</td>
-                        <td class="r">@grandPR.ToString("N2")</td>
-                        <td class="r">@grandAD.ToString("N2")</td>
-                    </tr>
-                </tfoot>
-            </table>
+
+            @* ════════════════════════════════════════════════════════════════════ *@
+            @* FOOTER — client LOGO instead of name                                 *@
+            @* ════════════════════════════════════════════════════════════════════ *@
+            @{
+                RenderFooter();
+            }
+            <div class="page-number"></div>
         </div>
 
-        <!-- ── Footer ──────────────────────────────────────────────────────── -->
-        <div class="report-footer">
-            <span><strong>EditorPR</strong> — Media Monitoring &amp; PR Management</span>
-            <span>@Model.CustomerName &nbsp;|&nbsp; @Model.ReportDate.ToString("MMMM yyyy")</span>
-        </div>
+        @* ════════════════════════════════════════════════════════════════════ *@
+        @* Hidden footer template — JS clones this onto every PDF.js-rendered   *@
+        @* cover page, so RenderFooter() stays the single source of truth and   *@
+        @* the footer never has to be duplicated inside the <script> block.    *@
+        @* ════════════════════════════════════════════════════════════════════ *@
+        <template id="footer-template">
+            @{
+                RenderFooter();
+            }
+        </template>
 
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        function renumberPages() {
+        var papers = document.querySelectorAll('.paper');
+        papers.forEach(function (paper, index) {
+        var label = paper.querySelector('.page-number');
+        if (label) label.textContent = 'Page ' + (index + 1);
+        });
+
+        // Only now is every page (including the async-rendered PDF cover)
+        // guaranteed to be in the DOM — safe to allow printing.
+        var printBtn = document.getElementById('btn-print');
+        if (printBtn) {
+        printBtn.disabled = false;
+        printBtn.innerHTML = '&#x1F5A8; Print / Save PDF';
+        }
+        }
+
+        (function () {
+        var container = document.getElementById('cover-pdf-pages');
+        if (!container) { renumberPages(); return; } // no cover PDF — number everything now
+
+        var pdfUrl = container.getAttribute('data-pdf-url');
+        if (!window.pdfjsLib) { renumberPages(); return; }
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        pdfjsLib.getDocument(pdfUrl).promise.then(function (pdf) {
+        container.innerHTML = '';
+
+        var footerTemplate = document.getElementById('footer-template');
+
+        var renderPage = function (pageNum) {
+        return pdf.getPage(pageNum).then(function (page) {
+        var viewport = page.getViewport({ scale: 2 });
+
+        var paper = document.createElement('div');
+        paper.className = 'paper';
+
+        var coverPage = document.createElement('div');
+        coverPage.className = 'cover-page';
+
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = '100%';
+
+        var pageNumberLabel = document.createElement('div');
+        pageNumberLabel.className = 'page-number';
+
+        coverPage.appendChild(canvas);
+        paper.appendChild(coverPage);
+
+        // Clone the report footer onto this dynamically-generated page too,
+        // so every page — including PDF.js-rendered cover pages — has one.
+        if (footerTemplate && footerTemplate.content) {
+        paper.appendChild(footerTemplate.content.cloneNode(true));
+        }
+
+        paper.appendChild(pageNumberLabel);
+        container.appendChild(paper);
+
+        var ctx = canvas.getContext('2d');
+        return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        });
+        };
+
+        var chain = Promise.resolve();
+        for (var i = 1; i <= pdf.numPages; i++) {
+        (function (pageNum) {
+        chain = chain.then(function () { return renderPage(pageNum); });
+        })(i);
+        }
+        return chain;
+        }).then(function () {
+        renumberPages();
+        }).catch(function (err) {
+        container.innerHTML =
+        '<div class="paper"><div class="cover-page"><div class="cover-fallback">' +
+        '<h2>Cover PDF could not be loaded</h2>' +
+        '<p style="font-size:12px">' + (err && err.message ? err.message : 'Unknown error') + '</p>' +
+        '<a class="cover-link" href="' + pdfUrl + '" target="_blank" rel="noopener">Open cover PDF in new tab</a>' +
+        '</div></div><div class="page-number"></div></div>';
+
+        var fallbackPaper = container.querySelector('.paper');
+        var footerTemplateFallback = document.getElementById('footer-template');
+        if (fallbackPaper && footerTemplateFallback && footerTemplateFallback.content) {
+        fallbackPaper.appendChild(footerTemplateFallback.content.cloneNode(true));
+        }
+
+        renumberPages();
+        });
+        })();
+    </script>
 </body>
 </html>

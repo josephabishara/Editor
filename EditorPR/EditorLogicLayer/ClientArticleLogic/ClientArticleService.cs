@@ -418,6 +418,119 @@ namespace EditorLogicLayer.ClientArticleLogic
             CreatedAt = DateTime.UtcNow
         };
 
+        // ═══════════════════════════════════════════════════════════════════════
+        // SHARE: GeneralArticle → multiple ClientArticle rows
+        // ═══════════════════════════════════════════════════════════════════════
+
+        // ── Client checklist for the Share modal ────────────────────────────────
+        public async Task<List<EditorViewModelLayer.GeneralArticleViewModel.ShareClientOptionDTO>>
+            GetShareClientOptionsAsync(int generalArticleId)
+        {
+            var clients = await _clientRepo.GetActiveClientsAsync();
+            var sharedClientIds = (await _clientArticleRepo.GetClientIdsByArticleIdAsync(generalArticleId))
+                                   .ToHashSet();
+
+            return clients
+                .OrderBy(c => c.Name)
+                .Select(c => new EditorViewModelLayer.GeneralArticleViewModel.ShareClientOptionDTO
+                {
+                    ClientId = c.Id,
+                    ClientName = c.Name,
+                    AlreadyShared = sharedClientIds.Contains(c.Id)
+                })
+                .ToList();
+        }
+
+        // ── Create one ClientArticle per selected client, reusing the existing
+        //    GeneralArticle (ArticleId = generalArticleId). No new GeneralArticle
+        //    row is created — this mirrors the inverse of the normal Create flow,
+        //    where ClientArticleService.CreateAsync builds a *new* GeneralArticle.
+        public async Task<(bool Success, string Message, int CreatedCount)> ShareToClientsAsync(
+            EditorViewModelLayer.GeneralArticleViewModel.ShareArticleToClientsDTO model)
+        {
+            if (model == null || model.GeneralArticleId <= 0)
+                return (false, "Invalid article.", 0);
+
+            var general = await _generalArticleRepo.GetByIdAsync(model.GeneralArticleId);
+            if (general == null)
+                return (false, "General article not found.", 0);
+
+            var rows = model.Clients?.Where(c => c.ClientId > 0).ToList() ?? new();
+            if (!rows.Any())
+                return (false, "Please select at least one client.", 0);
+
+            // Prevent duplicate ClientArticle rows for a client+article pair
+            var alreadySharedIds = (await _clientArticleRepo.GetClientIdsByArticleIdAsync(model.GeneralArticleId))
+                                    .ToHashSet();
+
+            int created = 0;
+            var skipped = new List<string>();
+
+            // Sequential awaits — single shared DbContext, Task.WhenAll is unsafe here
+            foreach (var row in rows)
+            {
+                if (alreadySharedIds.Contains(row.ClientId))
+                {
+                    skipped.Add($"Client #{row.ClientId} (already shared)");
+                    continue;
+                }
+
+                if (row.CategoryId <= 0)
+                {
+                    skipped.Add($"Client #{row.ClientId} (no category selected)");
+                    continue;
+                }
+
+                // Per-client pricing/tier — same source the manual Create form uses
+                var fill = await GetWebsiteAutoFillAsync(general.WebsiteId, row.ClientId);
+
+                var entity = new ClientArticle
+                {
+                    ArticleId = general.Id,           // ← reuse, never a new GeneralArticle
+                    ClientId = row.ClientId,
+                    ParentId = null,
+                    Date = general.Date,
+                    WebsiteId = general.WebsiteId,
+                    CategoryId = row.CategoryId,
+                    SubCategoryId = row.SubCategoryId,
+                    WriterId = general.WriterId,
+                    Frequency = fill.Frequency,
+                    MediaType = fill.MediaType,
+                    Impression = fill.Impression,
+                    Reach = fill.Reach,
+                    ADValue = fill.AdValue,
+                    PRValue = fill.PrValue,
+                    Toning = "Neutral",
+                    MediaTier = fill.MediaTier,
+                    Language = general.Language,
+                    ArticleBranding = general.ArticleBranding,
+                    HeadlineBranding = general.HeadlineBranding,
+                    PictureinArticle = general.PictureinArticle,
+                    Generation = general.Generation,
+                    ArticleURL = general.ArticleURL,
+                    Title = general.Title,
+                    Content = general.Content,
+                    Images = general.Images,
+                    IsActive = true,
+                    Deleted = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _clientArticleRepo.AddAsync(entity);
+                alreadySharedIds.Add(row.ClientId);   // guard against dupes within the same request
+                created++;
+            }
+
+            if (created == 0)
+                return (false, skipped.Any() ? string.Join(" | ", skipped) : "No articles were shared.", 0);
+
+            var message = $"Article shared to {created} client(s).";
+            if (skipped.Any())
+                message += $" Skipped: {string.Join(", ", skipped)}.";
+
+            return (true, message, created);
+        }
+
         // ── Build GeneralArticle for a child  ──────────────────────────────────
         // Inherits: Title, Content, Images, Branding, Toning, Generation
         // Overrides: Date, WebsiteId, WriterId, ArticleURL, Language (from child website)

@@ -3,6 +3,7 @@ using EditorRepositoryLayer.IRepositories;
 using EditorViewModelLayer.General;
 using EditorViewModelLayer.NewsViewModel;
 using EditorViewModelLayer.ReportViewModel;
+using System.Text.Json;
 
 namespace EditorLogicLayer.Reports
 {
@@ -11,32 +12,29 @@ namespace EditorLogicLayer.Reports
         private readonly IReportRepository _reportRepo;
         private readonly IReportArticleRepository _reportArticleRepo;
         private readonly IReportNewspaperRepository _reportNewspaperRepo;
-        private readonly IGeneralArticleRepository _articleRepo;
-        private readonly INewsPaperRepository _newspaperRepo;
         private readonly IClientRepository _clientRepo;
         private readonly IClientArticleRepository _clientArticleRepo;
         private readonly IClientNewsPaperRepository _clientNewsPaperRepo;
+        private readonly IClientCategoryRepository _categoryRepo;
         private readonly IPublicationRepository _publicationRepo;
 
         public ReportService(
             IReportRepository reportRepo,
             IReportArticleRepository reportArticleRepo,
             IReportNewspaperRepository reportNewspaperRepo,
-            IGeneralArticleRepository articleRepo,
-            INewsPaperRepository newspaperRepo,
             IClientRepository clientRepo,
             IClientArticleRepository clientArticleRepo,
             IClientNewsPaperRepository clientNewsPaperRepo,
+            IClientCategoryRepository categoryRepo,
             IPublicationRepository publicationRepo)
         {
             _reportRepo = reportRepo;
             _reportArticleRepo = reportArticleRepo;
             _reportNewspaperRepo = reportNewspaperRepo;
-            _articleRepo = articleRepo;
-            _newspaperRepo = newspaperRepo;
             _clientRepo = clientRepo;
             _clientArticleRepo = clientArticleRepo;
             _clientNewsPaperRepo = clientNewsPaperRepo;
+            _categoryRepo = categoryRepo;
             _publicationRepo = publicationRepo;
         }
 
@@ -142,35 +140,29 @@ namespace EditorLogicLayer.Reports
             return (true, "Report unpublished successfully.");
         }
 
-        // ── Wizard Step 2: Articles ─────────────────────────────────────────────
+        // ── Wizard Step 2: Articles — filtered to the report's client ───────────
 
         public async Task<List<ReportArticlePickerDTO>> GetArticlePickerAsync(
             int reportId, DateTime? from, DateTime? to)
         {
-            var all = await _articleRepo.GetActiveAsync();
+            var report = await _reportRepo.GetByIdAsync(reportId);
+            if (report == null) return new List<ReportArticlePickerDTO>();
 
-            IEnumerable<EditorEntitiesLayer.Entities.GeneralArticle> filtered = all;
-            if (from.HasValue)
-                filtered = filtered.Where(a => a.Date >= from.Value);
-            if (to.HasValue)
-                filtered = filtered.Where(a => a.Date <= to.Value.AddDays(1).AddTicks(-1));
+            // ── Source: ClientArticle filtered to THIS client (not GeneralArticle) ──
+            var clientArticles = await _clientArticleRepo.GetByClientIdAsync(report.CustomerId, from, to);
 
-            var existing = (await _reportArticleRepo.GetByReportIdAsync(reportId))
-                           .Select(ra => ra.ArticleId)
-                           .ToHashSet();
+            var categoryMap = await BuildCategoryMapAsync(report.CustomerId);
 
-            return filtered.Select(a => new ReportArticlePickerDTO
-            {
-                ArticleId = a.Id,
-                Date = a.Date,
-                Title = a.Title,
-                ArticleURL = a.ArticleURL,
-                WebsiteName = a.Website?.WebsiteName,
-                WriterName = a.Writer?.WriterName,
-                Language = a.Language,
-                ArticleBranding = a.ArticleBranding,
-                Selected = existing.Contains(a.Id)
-            }).ToList();
+            var existingLinks = (await _reportArticleRepo.GetByReportIdAsync(reportId))
+                                 .Select(ra => ra.ArticleId)
+                                 .ToHashSet();
+
+            return clientArticles
+                .Select(ca => MapClientArticleToPicker(ca, categoryMap, existingLinks))
+                .OrderBy(a => a.CategoryOrder).ThenBy(a => a.CategoryName)
+                .ThenBy(a => a.SubCategoryOrder).ThenBy(a => a.SubCategoryName)
+                .ThenByDescending(a => a.Date)
+                .ToList();
         }
 
         public async Task<(bool Success, string Message)> SaveArticlesAsync(
@@ -197,36 +189,32 @@ namespace EditorLogicLayer.Reports
             return (true, "Articles saved successfully.");
         }
 
-        // ── Wizard Step 3: Newspapers ───────────────────────────────────────────
+        // ── Wizard Step 3: Newspapers — filtered to the report's client ─────────
 
         public async Task<List<ReportNewspaperPickerDTO>> GetNewspaperPickerAsync(
             int reportId, DateTime? from, DateTime? to)
         {
-            var all = await _newspaperRepo.GetActiveAsync();
+            var report = await _reportRepo.GetByIdAsync(reportId);
+            if (report == null) return new List<ReportNewspaperPickerDTO>();
 
-            IEnumerable<NewsPaper> filtered = all;
-            if (from.HasValue)
-                filtered = filtered.Where(n => n.Date >= from.Value);
-            if (to.HasValue)
-                filtered = filtered.Where(n => n.Date <= to.Value.AddDays(1).AddTicks(-1));
+            // ── Source: ClientNewsPaper filtered to THIS client (not NewsPaper) ─────
+            var clientNewsPapers = await _clientNewsPaperRepo.GetByClientIdAsync(report.CustomerId, from, to);
 
-            var existing = (await _reportNewspaperRepo.GetByReportIdAsync(reportId))
-                           .Select(rn => rn.NewspaperId)
-                           .ToHashSet();
+            var categoryMap = await BuildCategoryMapAsync(report.CustomerId);
 
-            return filtered.Select(n => new ReportNewspaperPickerDTO
-            {
-                NewspaperId = n.Id,
-                Date = n.Date,
-                Title = n.Title,
-                PublicationId = n.PublicationId,
-                PRValue = n.PRValue,
-                ADValue = n.ADValue,
-                ArticleBranding = n.ArticleBranding,
-                HeadlineBranding = n.HeadlineBranding,
-                Toning = n.Toning,
-                Selected = existing.Contains(n.Id)
-            }).ToList();
+            var publications = (await _publicationRepo.GetActivePublicationsAsync())
+                                .ToDictionary(p => p.Id, p => p.PublicationName);
+
+            var existingLinks = (await _reportNewspaperRepo.GetByReportIdAsync(reportId))
+                                 .Select(rn => rn.NewspaperId)
+                                 .ToHashSet();
+
+            return clientNewsPapers
+                .Select(cn => MapClientNewsPaperToPicker(cn, categoryMap, publications, existingLinks))
+                .OrderBy(n => n.CategoryOrder).ThenBy(n => n.CategoryName)
+                .ThenBy(n => n.SubCategoryOrder).ThenBy(n => n.SubCategoryName)
+                .ThenByDescending(n => n.Date)
+                .ToList();
         }
 
         public async Task<(bool Success, string Message)> SaveNewspapersAsync(
@@ -281,80 +269,218 @@ namespace EditorLogicLayer.Reports
         };
 
         /// <summary>
-        /// Async mapper: resolves PR/AD values from ClientArticle and ClientNewsPaper
-        /// using the report's CustomerId as the join key.
+        /// Resolves Category/SubCategory names + sort order for a client in one query,
+        /// keyed by ClientCategories.Id. Reused for both Articles and Newspapers.
+        /// </summary>
+        private async Task<Dictionary<int, ClientCategories>> BuildCategoryMapAsync(int clientId)
+        {
+            var categories = await _categoryRepo.GetByClientAsync(clientId);
+            return categories.ToDictionary(c => c.Id);
+        }
+
+        private static ReportArticlePickerDTO MapClientArticleToPicker(
+            ClientArticle ca,
+            Dictionary<int, ClientCategories> categoryMap,
+            HashSet<int> existingLinks)
+        {
+            categoryMap.TryGetValue(ca.CategoryId, out var category);
+            categoryMap.TryGetValue(ca.SubCategoryId, out var subCategory);
+
+            return new ReportArticlePickerDTO
+            {
+                ArticleId = ca.Id,
+                Date = ca.Date,
+                Title = ca.Title,
+                ArticleURL = ca.ArticleURL,
+                WriterName = ca.Writer,
+                Language = ca.Language,
+                ArticleBranding = ca.ArticleBranding,
+                HeadlineBranding = ca.HeadlineBranding,
+                MediaTier = ca.MediaTier,
+                MediaType = ca.MediaType,
+                CategoryId = ca.CategoryId,
+                CategoryName = category?.CategoryName ?? "Uncategorized",
+                CategoryOrder = category?.Order ?? int.MaxValue,
+                SubCategoryId = ca.SubCategoryId,
+                SubCategoryName = subCategory?.CategoryName,
+                SubCategoryOrder = subCategory?.Order ?? int.MaxValue,
+                Content = ca.Content,
+                ImagePaths = ParseImages(ca.Images),
+                PRValue = ca.PRValue ?? 0m,
+                ADValue = ca.ADValue ?? 0m,
+                Selected = existingLinks.Contains(ca.Id),
+                Frequency = ca.Frequency,
+                Impression = ca.Impression,
+                Reach = ca.Reach,
+                Toning = ca.Toning,
+                PictureinArticle = ca.PictureinArticle,
+                Generation = ca.Generation.ToString(),
+            };
+        }
+
+        private static ReportNewspaperPickerDTO MapClientNewsPaperToPicker(
+            ClientNewsPaper cn,
+            Dictionary<int, ClientCategories> categoryMap,
+            Dictionary<int, string?> publications,
+            HashSet<int> existingLinks)
+        {
+            categoryMap.TryGetValue(cn.CategoryId, out var category);
+            categoryMap.TryGetValue(cn.SubCategoryId, out var subCategory);
+            publications.TryGetValue(cn.PublicationId, out var pubName);
+
+            return new ReportNewspaperPickerDTO
+            {
+                NewspaperId = cn.Id,
+                Date = cn.Date,
+                Title = cn.Title,
+                PublicationId = cn.PublicationId,
+                PublicationName = pubName,
+                WriterName = cn.Writer?.WriterName,
+                CategoryId = cn.CategoryId,
+                CategoryName = category?.CategoryName ?? "Uncategorized",
+                CategoryOrder = category?.Order ?? int.MaxValue,
+                SubCategoryId = cn.SubCategoryId,
+                SubCategoryName = subCategory?.CategoryName,
+                SubCategoryOrder = subCategory?.Order ?? int.MaxValue,
+                Content = cn.Content,
+                ImagePaths = ParseImages(cn.Images),   // ClientNewsPaper.Images — same JSON-array convention as ClientArticle.Images
+                PRValue = cn.PRValue ?? 0m,
+                ADValue = cn.ADValue ?? 0m,
+                ArticleBranding = cn.ArticleBranding,
+                HeadlineBranding = cn.HeadlineBranding,
+                Toning = cn.Toning,
+                MediaType = cn.MediaType,
+                MediaTier = cn.MediaTier,
+                Frequency = cn.Frequency,
+                Circulation = cn.Circulation,
+                Reach = cn.Reach,
+                PictureinArticle = cn.pictureInArticle.ToString(),
+                PageNumber = cn.Pages,
+                Generation = cn.Generation ,
+                Selected = existingLinks.Contains(cn.Id),
+                Height = cn.Height,
+                Width = cn.Width,
+                Language = cn.Language
+            };
+        }
+
+        /// <summary>
+        /// ClientArticle.Images is stored as a JSON-serialized List&lt;string&gt; of relative
+        /// paths (see ClientArticleController.SaveImagesAsync). Deserializes defensively.
+        /// </summary>
+        private static List<string> ParseImages(string? imagesJson)
+        {
+            if (string.IsNullOrWhiteSpace(imagesJson)) return new List<string>();
+            try
+            {
+                return JsonSerializer.Deserialize<List<string>>(imagesJson) ?? new List<string>();
+            }
+            catch
+            {
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Async mapper for the Details/Preview pages: resolves Category/SubCategory names,
+        /// PR/AD values, Content and Images from ClientArticle/ClientNewsPaper, then groups
+        /// and sorts everything by Category → SubCategory → Date for the printable report.
         /// </summary>
         private async Task<ReportDetailsDTO> MapToDetailsDTOAsync(Report r)
         {
-            // ── Pull client-specific records once — keyed by source id ──────────
-            var clientArticles = (await _clientArticleRepo.GetByClientIdAsync(r.CustomerId))
-                                  .ToDictionary(ca => ca.ArticleId);
+            var categoryMap = await BuildCategoryMapAsync(r.CustomerId);
 
-            var clientNewsPapers = (await _clientNewsPaperRepo.GetByClientIdAsync(r.CustomerId))
-                                    .ToDictionary(cn => cn.NewsPaperId);
+            var clientArticles = (await _clientArticleRepo.GetByClientIdAsync(r.CustomerId, null, null))
+                                    .ToDictionary(ca => ca.Id);
 
-            // ── Publication name lookup — NewsPaper has no nav property ──────────
+            var clientNewsPapers = (await _clientNewsPaperRepo.GetByClientIdAsync(r.CustomerId, null, null))
+                                    .ToDictionary(cn => cn.Id);
+
             var publications = (await _publicationRepo.GetActivePublicationsAsync())
                                 .ToDictionary(p => p.Id, p => p.PublicationName);
 
-            // ── Build DTO ────────────────────────────────────────────────────────
+            // ── Client cover/logo for the Preview page ───────────────────────────
+            var client = r.Customer ?? await _clientRepo.GetByIdAsync(r.CustomerId);
+
             var dto = new ReportDetailsDTO
             {
                 Id = r.Id,
                 CustomerId = r.CustomerId,
-                CustomerName = r.Customer?.Name,
+                CustomerName = client?.Name,
+                CustomerLogoUrl = client?.Photo,
+                CustomerReportCoverPdfUrl = client?.ReportCoverPdf,
                 ReportName = r.ReportName,
                 ReportDate = r.ReportDate,
                 Publish = r.Publish,
                 ReportType = r.ReportType
             };
 
-            // Articles — PR/AD come from ClientArticle (ArticleId + CustomerId)
-            dto.Articles = r.ReportArticles.Select(ra =>
-            {
-                clientArticles.TryGetValue(ra.ArticleId, out var ca);
+            // ── Articles — ReportArticle.ArticleId stores ClientArticle.Id (the row's own
+            //    primary key), NOT the original GeneralArticle/source ArticleId column.
+            //    This must stay consistent with MapClientArticleToPicker, which sets
+            //    ArticleId = ca.Id for the same reason. ──────────────────────────────
+            var existingArticleLinks = r.ReportArticles.Select(ra => ra.ArticleId).ToHashSet();
 
-                return new ReportArticlePickerDTO
-                {
-                    ArticleId = ra.ArticleId,
-                    Date = ra.Article?.Date ?? default,
-                    Title = ra.Article?.Title,
-                    ArticleURL = ra.Article?.ArticleURL,
-                    WebsiteName = ra.Article?.Website?.WebsiteName,
-                    WriterName = ra.Article?.Writer?.WriterName,
-                    Language = ra.Article?.Language,
-                    ArticleBranding = ra.Article?.ArticleBranding,
-                    PRValue = ca?.PRValue ?? 0m,
-                    ADValue = ca?.ADValue ?? 0m,
-                    Selected = true
-                };
-            }).ToList();
+            dto.Articles = r.ReportArticles
+                .Where(ra => clientArticles.ContainsKey(ra.ArticleId))
+                .Select(ra => MapClientArticleToPicker(clientArticles[ra.ArticleId], categoryMap, existingArticleLinks))
+                .ToList();
 
-            // Newspapers — PR/AD come from ClientNewsPaper (NewsPaperId + ClientId)
-            dto.Newspapers = r.ReportNewspapers.Select(rn =>
-            {
-                clientNewsPapers.TryGetValue(rn.NewspaperId, out var cn);
+            // ── Newspapers — same convention: ReportNewspaper.NewspaperId stores
+            //    ClientNewsPaper.Id, not NewsPaper.Id. ─────────────────────────────────
+            var existingNewsLinks = r.ReportNewspapers.Select(rn => rn.NewspaperId).ToHashSet();
 
-                return new ReportNewspaperPickerDTO
-                {
-                    NewspaperId = rn.NewspaperId,
-                    Date = rn.NewsPaper?.Date ?? default,
-                    Title = cn?.Title ?? rn.NewsPaper?.Title,
-                    PublicationId = rn.NewsPaper?.PublicationId ?? 0,
-                    PublicationName = rn.NewsPaper != null && publications.TryGetValue(rn.NewsPaper.PublicationId, out var pubName) ? pubName : null,
-                    PRValue = cn?.PRValue ?? 0m,
-                    ADValue = cn?.ADValue ?? 0m,
-                    ArticleBranding = cn?.ArticleBranding ?? rn.NewsPaper?.ArticleBranding,
-                    HeadlineBranding = cn?.HeadlineBranding ?? rn.NewsPaper?.HeadlineBranding,
-                    Toning = cn?.Toning ?? rn.NewsPaper?.Toning,
-                    Selected = true
-                };
-            }).ToList();
+            dto.Newspapers = r.ReportNewspapers
+                .Where(rn => clientNewsPapers.ContainsKey(rn.NewspaperId))
+                .Select(rn => MapClientNewsPaperToPicker(clientNewsPapers[rn.NewspaperId], categoryMap, publications, existingNewsLinks))
+                .ToList();
 
             dto.ArticleCount = dto.Articles.Count;
             dto.NewspaperCount = dto.Newspapers.Count;
 
+            // ── Group by Category → SubCategory, sorted, for the Preview page ────
+            dto.CategoryGroups = BuildCategoryGroups(dto.Articles, dto.Newspapers);
+
             return dto;
+        }
+
+        /// <summary>
+        /// Groups articles + newspapers by (CategoryName, SubCategoryName), ordered by
+        /// ClientCategories.Order then by name. One group = one page-break section
+        /// with a Category heading in the Preview view.
+        /// </summary>
+        private static List<ReportCategoryGroupDTO> BuildCategoryGroups(
+            List<ReportArticlePickerDTO> articles,
+            List<ReportNewspaperPickerDTO> newspapers)
+        {
+            var groupKeys = articles
+                .Select(a => (a.CategoryName, a.SubCategoryName, a.CategoryOrder, a.SubCategoryOrder))
+                .Concat(newspapers.Select(n => (n.CategoryName, n.SubCategoryName, n.CategoryOrder, n.SubCategoryOrder)))
+                .Distinct()
+                .OrderBy(k => k.CategoryOrder).ThenBy(k => k.CategoryName)
+                .ThenBy(k => k.SubCategoryOrder).ThenBy(k => k.SubCategoryName)
+                .ToList();
+
+            var groups = new List<ReportCategoryGroupDTO>();
+
+            foreach (var key in groupKeys)
+            {
+                groups.Add(new ReportCategoryGroupDTO
+                {
+                    CategoryName = key.CategoryName ?? "Uncategorized",
+                    SubCategoryName = key.SubCategoryName,
+                    Articles = articles
+                        .Where(a => a.CategoryName == key.CategoryName && a.SubCategoryName == key.SubCategoryName)
+                        .OrderByDescending(a => a.Date)
+                        .ToList(),
+                    Newspapers = newspapers
+                        .Where(n => n.CategoryName == key.CategoryName && n.SubCategoryName == key.SubCategoryName)
+                        .OrderByDescending(n => n.Date)
+                        .ToList()
+                });
+            }
+
+            return groups;
         }
     }
 }
