@@ -10,13 +10,10 @@ namespace EditorRepositoryLayer.Repositories
         public ReportArticleRepository(ApplicationDbContext context) : base(context) { }
 
         public async Task<IEnumerable<ReportArticle>> GetByReportIdAsync(int reportId)
-            => await _dbSet
-                .Include(ra => ra.Article)
-                    .ThenInclude(a => a!.Website)
-                .Include(ra => ra.Article)
-                    .ThenInclude(a => a!.Writer)
-                .Where(ra => ra.ReportId == reportId)
-                .ToListAsync();
+     => await _dbSet
+         .Include(ra => ra.Article)
+         .Where(ra => ra.ReportId == reportId)
+         .ToListAsync();
 
         public async Task DeleteByReportIdAsync(int reportId)
         {

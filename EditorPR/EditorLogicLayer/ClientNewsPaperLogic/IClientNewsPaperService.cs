@@ -1,4 +1,5 @@
-﻿using EditorViewModelLayer.MediaViewModel;
+﻿using EditorViewModelLayer.GeneralNewspaperViewModel;
+using EditorViewModelLayer.MediaViewModel;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -24,6 +25,10 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
         // AJAX: auto-fill publication fields by publicationId + clientId
         Task<PublicationAutoFillDTO> GetPublicationAutoFillAsync(int publicationId, int clientId);
         Task<(bool Success, string Message, int NewId)> DuplicateAsync(int id);
+
+        Task<List<ShareNewspaperClientOptionDTO>> GetShareClientOptionsAsync(int generalNewspaperId);
+        Task<(bool Success, string Message, int CreatedCount)> ShareToClientsAsync(ShareNewspaperToClientsDTO model);
+
 
 
 

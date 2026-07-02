@@ -2,6 +2,7 @@
 using EditorEntitiesLayer.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace EditorDataLayer.Data
 {
@@ -9,7 +10,7 @@ namespace EditorDataLayer.Data
     {
         private readonly ICurrentUserService _currentUser;
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options , ICurrentUserService currentUser)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUserService currentUser)
        : base(options)
         {
             _currentUser = currentUser;
@@ -34,6 +35,7 @@ namespace EditorDataLayer.Data
         // ═══════════════════════════════════════════════════════════════════════════
         public DbSet<NewsPaper> NewsPapers { get; set; }
         public DbSet<ClientNewsPaper> ClientNewsPapers { get; set; }
+        public DbSet<GeneralNewspaper> GeneralNewspapers { get; set; }
         public DbSet<GeneralArticle> GeneralArticles { get; set; }
         public DbSet<ClientArticle> ClientArticles { get; set; }
         public DbSet<GeneralVideos> GeneralVideos { get; set; }
@@ -134,6 +136,20 @@ namespace EditorDataLayer.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<ReportArticle>()
+                .HasOne(ra => ra.Article)
+                .WithMany()
+                .HasForeignKey(ra => ra.ArticleId)
+                .OnDelete(DeleteBehavior.Restrict);   // or NoAction
+
+            builder.Entity<ReportNewspaper>()
+                .HasOne(rn => rn.NewsPaper)
+                .WithMany()
+                .HasForeignKey(rn => rn.NewspaperId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+           
 
             // Rename default Identity tables
             builder.Entity<ApplicationUser>().ToTable("Users");
@@ -312,19 +328,7 @@ namespace EditorDataLayer.Data
                 entity.Property(e => e.Title).HasMaxLength(500);
             });
 
-            builder.Entity<ClientArticle>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Title).HasMaxLength(500);
-                entity.Property(e => e.ADValue).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.PRValue).HasColumnType("decimal(18,2)");
-
-                // ArticleId is a reference (not FK) — no constraint
-                entity.HasOne<Client>()
-                      .WithMany()
-                      .HasForeignKey(e => e.ClientId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
+            
 
             builder.Entity<GeneralVideos>(entity =>
             {
@@ -354,11 +358,20 @@ namespace EditorDataLayer.Data
             builder.Entity<ClientArticle>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).HasMaxLength(500);
+                entity.Property(e => e.ADValue).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PRValue).HasColumnType("decimal(18,2)");
+
+                // ArticleId is a reference (not FK) — no constraint
+                entity.HasOne<Client>()
+                      .WithMany()
+                      .HasForeignKey(e => e.ClientId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.Parent)
                       .WithMany(e => e.Children)
                       .HasForeignKey(e => e.ParentId)
-                      .OnDelete(DeleteBehavior.Restrict);  // prevent cascade on self-ref
+                      .OnDelete(DeleteBehavior.Restrict);   // prevent cascade on self-ref
             });
 
             builder.Entity<ClientNewsPaper>(entity =>

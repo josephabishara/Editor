@@ -9,6 +9,7 @@ using EditorLogicLayer.ClientNewsPaperLogic;
 using EditorLogicLayer.ClientVideoLogic;
 using EditorLogicLayer.Dashboard;
 using EditorLogicLayer.GeneralArticle;
+using EditorLogicLayer.GeneralNewspaper;
 using EditorLogicLayer.Helpers;
 using EditorLogicLayer.News;
 using EditorLogicLayer.Publication;
@@ -79,6 +80,7 @@ builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportArticleRepository, ReportArticleRepository>();
 builder.Services.AddScoped<IReportNewspaperRepository, ReportNewspaperRepository>();
 builder.Services.AddScoped<IUserLogRepository, UserLogRepository>();
+builder.Services.AddScoped<IGeneralNewspaperRepository, GeneralNewspaperRepository>();
 
 
 // ──    Services Injection    ───────────────────────────────────────────────────
@@ -98,7 +100,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IGeneralArticleService, GeneralArticleService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ITheClientResolverService, TheClientResolverService>();
-
+builder.Services.AddScoped<IGeneralNewspaperService, GeneralNewspaperService>();
 
 
 

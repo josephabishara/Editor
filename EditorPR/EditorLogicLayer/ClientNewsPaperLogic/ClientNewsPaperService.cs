@@ -1,6 +1,7 @@
 ﻿using EditorDataLayer.Data;
 using EditorEntitiesLayer.Entities;
 using EditorRepositoryLayer.IRepositories;
+using EditorViewModelLayer.GeneralNewspaperViewModel;
 using EditorViewModelLayer.MediaViewModel;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -13,6 +14,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
     public class ClientNewsPaperService : IClientNewsPaperService
     {
         private readonly IClientNewsPaperRepository _clientNewsPaperRepo;
+        private readonly IGeneralNewspaperRepository _generalNewspaperRepo;
         private readonly INewsPaperRepository _newsPaperRepo;
         private readonly IPublicationRepository _publicationRepo;
         private readonly IWriterRepository _writerRepo;
@@ -22,6 +24,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
         public ClientNewsPaperService(
             IClientNewsPaperRepository clientNewsPaperRepo,
             INewsPaperRepository newsPaperRepo,
+            IGeneralNewspaperRepository generalNewspaperRepo,
             IPublicationRepository publicationRepo,
             IWriterRepository writerRepo,
             IClientRepository clientRepo,
@@ -29,6 +32,7 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
         {
             _clientNewsPaperRepo = clientNewsPaperRepo;
             _newsPaperRepo = newsPaperRepo;
+            _generalNewspaperRepo = generalNewspaperRepo; 
             _publicationRepo = publicationRepo;
             _writerRepo = writerRepo;
             _clientRepo = clientRepo;
@@ -348,6 +352,125 @@ namespace EditorLogicLayer.ClientNewsPaperLogic
                 Reach = circulation * 4
             };
         }
+
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // SHARE: GeneralNewspaper → multiple ClientNewsPaper rows
+        // ═══════════════════════════════════════════════════════════════════════
+
+        // ── Client checklist for the Share modal ────────────────────────────────
+        public async Task<List<ShareNewspaperClientOptionDTO>> GetShareClientOptionsAsync(int generalNewspaperId)
+        {
+            var clients = await _clientRepo.GetActiveClientsAsync();
+            var sharedClientIds = (await _clientNewsPaperRepo.GetByNewsPaperIdAsync(generalNewspaperId))
+                                   .Select(c => c.ClientId)
+                                   .ToHashSet();
+
+            return clients
+                .OrderBy(c => c.Name)
+                .Select(c => new ShareNewspaperClientOptionDTO
+                {
+                    ClientId = c.Id,
+                    ClientName = c.Name,
+                    AlreadyShared = sharedClientIds.Contains(c.Id)
+                })
+                .ToList();
+        }
+
+        // ── Create one ClientNewsPaper per selected client, reusing the existing
+        //    GeneralNewspaper (NewsPaperId = generalNewspaperId). No new master
+        //    row is created — mirrors the GeneralArticle → ClientArticle share flow.
+        public async Task<(bool Success, string Message, int CreatedCount)> ShareToClientsAsync(
+            ShareNewspaperToClientsDTO model)
+        {
+            if (model == null || model.GeneralNewspaperId <= 0)
+                return (false, "Invalid newspaper.", 0);
+
+            var general = await _generalNewspaperRepo.GetByIdAsync(model.GeneralNewspaperId);
+            if (general == null)
+                return (false, "General newspaper not found.", 0);
+
+            var rows = model.Clients?.Where(c => c.ClientId > 0).ToList() ?? new();
+            if (!rows.Any())
+                return (false, "Please select at least one client.", 0);
+
+            // Prevent duplicate ClientNewsPaper rows for a client+newspaper pair
+            var alreadySharedIds = (await _clientNewsPaperRepo.GetByNewsPaperIdAsync(model.GeneralNewspaperId))
+                                    .Select(c => c.ClientId)
+                                    .ToHashSet();
+
+            int created = 0;
+            var skipped = new List<string>();
+
+            // Sequential awaits — single shared DbContext, Task.WhenAll is unsafe here
+            foreach (var row in rows)
+            {
+                if (alreadySharedIds.Contains(row.ClientId))
+                {
+                    skipped.Add($"Client #{row.ClientId} (already shared)");
+                    continue;
+                }
+
+                if (row.CategoryId <= 0)
+                {
+                    skipped.Add($"Client #{row.ClientId} (no category selected)");
+                    continue;
+                }
+
+                // Per-client pricing/tier — same source the manual Create form uses
+                var fill = await GetPublicationAutoFillAsync(general.PublicationId, row.ClientId);
+
+                var entity = new ClientNewsPaper
+                {
+                    NewsPaperId = general.Id,          // ← reuse, never a new master row
+                    ClientId = row.ClientId,
+                    ParentId = null,
+                    PublicationId = general.PublicationId,
+                    CategoryId = row.CategoryId,
+                    SubCategoryId = row.SubCategoryId,
+                    WriterId = general.WriterId,
+                    Date = general.Date,
+                    Title = general.Title,
+                    Pages = general.Pages,
+                    Height = general.Height,
+                    Width = general.Width,
+                    ADValue = fill.AdValue,
+                    PRValue = fill.PrValue,
+                    ArticleBranding = general.ArticleBranding,
+                    HeadlineBranding = general.HeadlineBranding,
+                    pictureInArticle = general.PictureinArticle == "Yes",
+                    Generation = general.Generation ?? false,
+                    Toning = general.Toning,
+                    Content = general.Content,
+                    Images = general.Images,
+                    MediaType = fill.MediaType,
+                    MediaTier = fill.MediaTier,
+                    Frequency = fill.Frequency,
+                    Language = fill.Language,
+                    Circulation = fill.Circulation,
+                    Reach = fill.Reach,
+                    Publish = false,
+                    IsActive = true,
+                    Deleted = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _clientNewsPaperRepo.AddAsync(entity);
+                alreadySharedIds.Add(row.ClientId);   // guard against dupes within the same request
+                created++;
+            }
+
+            if (created == 0)
+                return (false, skipped.Any() ? string.Join(" | ", skipped) : "No newspapers were shared.", 0);
+
+            var message = $"Newspaper shared to {created} client(s).";
+            if (skipped.Any())
+                message += $" Skipped: {string.Join(", ", skipped)}.";
+
+            return (true, message, created);
+        }
+
+
 
         // ═══════════════════════════════════════════════════════════════════════
         // PRIVATE BUILDERS

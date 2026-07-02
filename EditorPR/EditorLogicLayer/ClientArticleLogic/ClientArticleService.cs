@@ -383,9 +383,10 @@ namespace EditorLogicLayer.ClientArticleLogic
 
             return new WebsiteAutoFillDTO
             {
+                
                 AdValue = adValue,
                 PrValue = Math.Round(adValue * 3.5m, 2),
-                MediaType = null,
+                MediaType = null,  // not used in the form
                 MediaTier = wcc?.MediaTier ?? site.MediaTier,
                 Frequency = site.Frequency,
                 Language = site.Language,
@@ -401,6 +402,7 @@ namespace EditorLogicLayer.ClientArticleLogic
         // ── Build GeneralArticle from parent DTO ───────────────────────────────
         private static EditorEntitiesLayer.Entities.GeneralArticle BuildGeneralArticle(ClientArticleDTO m) => new()
         {
+
             Date = m.Date,
             WebsiteId = m.WebsiteId,
             WriterId = m.WriterId,
@@ -408,7 +410,12 @@ namespace EditorLogicLayer.ClientArticleLogic
             ArticleBranding = m.ArticleBranding,
             HeadlineBranding = m.HeadlineBranding,
             PictureinArticle = m.PictureinArticle,
-            Generation = m.Generation == "Generated",
+            Generation = m.Generation switch
+            {
+                "Generated" => true,
+                "Not Generated" => false,
+                _ => null
+            },
             ArticleURL = m.ArticleURL,
             Title = m.Title,
             Content = m.Content,

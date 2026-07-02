@@ -1,0 +1,58 @@
+@* ─── Import.cshtml ──────────────────────────────────────────────────────── *@
+@{
+    ViewData["Title"] = "Import Newspapers";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-upload me-2"></i>Import Newspapers from Excel</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <p class="text-muted">
+            Upload an <code>.xlsx</code> or <code>.xls</code> file with one newspaper per row.
+            The column layout must match the
+            <a asp-action="DownloadTemplate">import template</a> —
+            <strong>Date, Publication, Writer, Pages, Height, Width, Article Branding,
+            Headline Branding, Picture in Article, AI Generated, Toning, Title</strong>.
+            Publication and Writer must match existing names exactly (case-insensitive).
+        </p>
+
+        <div class="mb-3">
+            <a asp-action="DownloadTemplate" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i> Download Template
+            </a>
+        </div>
+
+        <form asp-action="Import" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label for="file" class="form-label">Excel File <span class="text-danger">*</span></label>
+                <input type="file" name="file" id="file" class="form-control" accept=".xlsx,.xls" required />
+                <span class="text-danger small">@ViewData.ModelState["file"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-upload me-1"></i> Import
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>

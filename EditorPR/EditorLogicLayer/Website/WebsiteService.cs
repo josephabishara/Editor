@@ -3,6 +3,7 @@ using EditorEntitiesLayer.Entities;
 using EditorRepositoryLayer.IRepositories;
 using EditorViewModelLayer.WebsiteViewModel;
 using Microsoft.AspNetCore.Http;
+using System.Linq.Expressions;
 
 namespace EditorLogicLayer.Website
 {
@@ -52,6 +53,7 @@ namespace EditorLogicLayer.Website
             existing.URL = model.URL;
             existing.MediaTier = model.MediaTier;
             existing.Frequency = model.Frequency;
+            existing.Impression = int.TryParse(model.Impression, out var imp) ? imp : 0;
             existing.Distribution = model.Distribution;
             existing.Language = model.Language;
             existing.UnitPrice = model.UnitPrice;
@@ -74,7 +76,7 @@ namespace EditorLogicLayer.Website
         {
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Websites");
-            var headers = new[] { "Id", "Website Name", "URL", "Media Tier", "Frequency",  "Distribution", "Language", "Unit Price" };
+            var headers = new[] { "Id", "Website Name", "URL", "Media Tier", "Frequency", "Impression", "Distribution", "Language", "Unit Price" };
 
             for (int i = 0; i < headers.Length; i++)
             {
@@ -95,7 +97,8 @@ namespace EditorLogicLayer.Website
                 ws.Cell(row, 3).Value = w.URL;
                 ws.Cell(row, 4).Value = w.MediaTier ?? "";
                 ws.Cell(row, 5).Value = w.Frequency ?? "";
-                ws.Cell(row, 7).Value = w.Distribution ?? "";
+                ws.Cell(row, 6).Value = w.Impression;                // ADD (was missing → shift)
+                ws.Cell(row, 7).Value = w.Distribution ?? "";     // was Cell(row,7) for nothing before, now correct
                 ws.Cell(row, 8).Value = w.Language ?? "";
                 ws.Cell(row, 9).Value = w.UnitPrice;
                 ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
@@ -138,6 +141,7 @@ namespace EditorLogicLayer.Website
                 if (string.IsNullOrWhiteSpace(url)) { errors.Add($"Row {rowNum}: URL is required."); rowNum++; continue; }
 
                 decimal.TryParse(row.Cell(9).GetString().Trim(), out decimal price);
+                int.TryParse(row.Cell(6).GetString().Trim(), out int impression);
 
                 toImport.Add(new Websites
                 {
@@ -145,8 +149,9 @@ namespace EditorLogicLayer.Website
                     URL = url,
                     MediaTier = row.Cell(4).GetString().Trim().NullIfEmpty(),
                     Frequency = row.Cell(5).GetString().Trim().NullIfEmpty(),
-                    Distribution = row.Cell(6).GetString().Trim().NullIfEmpty(),
-                    Language = row.Cell(7).GetString().Trim().NullIfEmpty(),
+                    Impression = impression,  // ADD
+                    Distribution = row.Cell(7).GetString().Trim().NullIfEmpty(),   // was Cell(6)
+                    Language = row.Cell(8).GetString().Trim().NullIfEmpty(),       // was Cell(7)
                     UnitPrice = price,
                     IsActive = true,
                     Deleted = 0,
@@ -196,6 +201,7 @@ namespace EditorLogicLayer.Website
             URL = w.URL,
             MediaTier = w.MediaTier,
             Frequency = w.Frequency,
+            Impression = w.Impression.ToString(),
             Distribution = w.Distribution,
             Language = w.Language,
             UnitPrice = w.UnitPrice
@@ -208,6 +214,7 @@ namespace EditorLogicLayer.Website
             URL = vm.URL,
             MediaTier = vm.MediaTier,
             Frequency = vm.Frequency,
+            Impression = int.TryParse(vm.Impression, out var imp) ? imp : 0,
             Distribution = vm.Distribution,
             Language = vm.Language,
             UnitPrice = vm.UnitPrice

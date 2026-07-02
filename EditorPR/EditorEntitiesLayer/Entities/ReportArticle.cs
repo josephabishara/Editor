@@ -15,6 +15,6 @@ namespace EditorEntitiesLayer.Entities
         public Report? Report { get; set; }
 
         [ForeignKey(nameof(ArticleId))]
-        public GeneralArticle? Article { get; set; }
+        public ClientArticle? Article { get; set; }
     }
 }

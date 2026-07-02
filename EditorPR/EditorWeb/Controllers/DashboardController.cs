@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EditorWeb.Controllers
 {
-    [Authorize(Roles = "Admin,Manager,Auditor")]
+    [Authorize(Roles = "Admin,Manager,Auditor,EditorWeb")]
 
     public class DashboardController : Controller
     {
@@ -27,7 +27,7 @@ namespace EditorWeb.Controllers
 
         // GET: /Client
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Auditor")]
+        [Authorize(Roles = "Admin,Manager,Auditor,EditorWeb")]
         public async Task<IActionResult> Index()
         {
             var clients = await _clientService.GetAllAsync();
@@ -36,7 +36,7 @@ namespace EditorWeb.Controllers
 
         // ClientDashboard
         //[HttpGet]
-        //[Authorize(Roles = "Admin,Manager,Auditor")]
+        //[Authorize(Roles = "Admin,Manager,Auditor,EditorWeb")]
         
         //public async Task<IActionResult> ClientDashboard(int id)
         //{
@@ -54,7 +54,7 @@ namespace EditorWeb.Controllers
 
         // GET: /Dashboard/ClientDashboard/5?from=2025-01-01&to=2025-12-31
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Auditor")]
+        [Authorize(Roles = "Admin,Manager,Auditor,EditorWeb")]
         public async Task<IActionResult> ClientDashboard(
             int id, DateTime? from, DateTime? to)
         {

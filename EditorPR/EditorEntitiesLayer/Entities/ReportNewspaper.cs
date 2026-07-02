@@ -15,6 +15,6 @@ namespace EditorEntitiesLayer.Entities
         public Report? Report { get; set; }
 
         [ForeignKey(nameof(NewspaperId))]
-        public NewsPaper? NewsPaper { get; set; }
+        public ClientNewsPaper? NewsPaper { get; set; }
     }
 }

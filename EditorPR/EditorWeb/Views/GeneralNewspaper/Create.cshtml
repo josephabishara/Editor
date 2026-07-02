@@ -1,0 +1,138 @@
+@* ─── Create.cshtml ──────────────────────────────────────────────────────── *@
+@model EditorViewModelLayer.GeneralNewspaperViewModel.GeneralNewspaperDTO
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Add Newspaper";
+
+    List<SelectListItem> ToSL(List<EditorViewModelLayer.MediaViewModel.MediaSelectOption> src)
+        => src.Select(o => new SelectListItem(o.Text, o.Value, o.Selected)).ToList();
+
+    var pubSL = ToSL(Model.PublicationOptions);
+    var writerSL = ToSL(Model.WriterOptions);
+    var brandSL = ToSL(Model.BrandingOptions);
+    var toningSL = ToSL(Model.ToningOptions);
+    var yesNoSL = ToSL(Model.YesNoOptions);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-plus-circle me-2"></i>Add Newspaper</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <strong>Please fix the errors below:</strong>
+        <ul class="mb-0">
+            @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@e.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label asp-for="Date" class="form-label">Date <span class="text-danger">*</span></label>
+                    <input asp-for="Date" type="date" class="form-control" required />
+                    <span asp-validation-for="Date" class="text-danger small"></span>
+                </div>
+                <div class="col-md-5">
+                    <label asp-for="PublicationId" class="form-label">Publication <span class="text-danger">*</span></label>
+                    <select asp-for="PublicationId" asp-items="pubSL" id="publicationSelect" class="form-select" required>
+                        <option value="">— Select Publication —</option>
+                    </select>
+                    <span asp-validation-for="PublicationId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="WriterId" class="form-label">Writer</label>
+                    <select asp-for="WriterId" asp-items="writerSL" id="writerSelect" class="form-select">
+                        <option value="0">— None —</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Pages" class="form-label">Pages</label>
+                    <input asp-for="Pages" type="number" min="0" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Height" class="form-label">Height (cm)</label>
+                    <input asp-for="Height" type="number" step="0.01" min="0" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Width" class="form-label">Width (cm)</label>
+                    <input asp-for="Width" type="number" step="0.01" min="0" class="form-control" />
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="ArticleBranding" class="form-label">Article Branding</label>
+                    <select asp-for="ArticleBranding" asp-items="brandSL" class="form-select">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="HeadlineBranding" class="form-label">Headline Branding</label>
+                    <select asp-for="HeadlineBranding" asp-items="brandSL" class="form-select">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="PictureinArticle" class="form-label">Picture in Article</label>
+                    <select asp-for="PictureinArticle" asp-items="yesNoSL" class="form-select">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Toning" class="form-label">Toning</label>
+                    <select asp-for="Toning" asp-items="toningSL" class="form-select">
+                        <option value="">— None —</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-center">
+                    <div class="form-check form-switch mt-4">
+                        <input asp-for="Generation" class="form-check-input" type="checkbox" role="switch" />
+                        <label asp-for="Generation" class="form-check-label">AI Generated</label>
+                    </div>
+                </div>
+
+                <div class="col-md-12">
+                    <label asp-for="Title" class="form-label">Title <span class="text-danger">*</span></label>
+                    <input asp-for="Title" class="form-control" placeholder="Enter newspaper headline…" required />
+                    <span asp-validation-for="Title" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-12">
+                    <label asp-for="Content" class="form-label">Content</label>
+                    <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i> Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+    <script>
+        $(function () {
+            $('#publicationSelect, #writerSelect').select2({ width: '100%' });
+        });
+    </script>
+}

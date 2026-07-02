@@ -20,17 +20,13 @@ namespace EditorRepositoryLayer.Repositories
                 .ToListAsync();
 
         public async Task<Report?> GetByIdWithNavAsync(int id)
-            => await _dbSet
-                .Include(r => r.Customer)
-                .Include(r => r.ReportArticles)
-                    .ThenInclude(ra => ra.Article)
-                        .ThenInclude(a => a!.Website)
-                .Include(r => r.ReportArticles)
-                    .ThenInclude(ra => ra.Article)
-                        .ThenInclude(a => a!.Writer)
-                .Include(r => r.ReportNewspapers)
-                    .ThenInclude(rn => rn.NewsPaper)
-                .FirstOrDefaultAsync(r => r.Id == id && r.IsActive && r.Deleted == 0);
+     => await _dbSet
+         .Include(r => r.Customer)
+         .Include(r => r.ReportArticles)
+             .ThenInclude(ra => ra.Article)
+         .Include(r => r.ReportNewspapers)
+             .ThenInclude(rn => rn.NewsPaper)
+         .FirstOrDefaultAsync(r => r.Id == id && r.IsActive && r.Deleted == 0);
 
         public async Task<IEnumerable<Report>> GetByClientIdAsync(int clientId)
             => await _dbSet

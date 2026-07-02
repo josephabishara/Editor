@@ -34,651 +34,648 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>@Model.ReportName — Media Report</title>
     <style>
-            *, *::before, *::after {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        /* Without this, Chrome/Edge strip background colors when printing —
+                       the #1 reason a printed/PDF page looks different from the on-screen
+                       preview. Forces every maroon header, badge, and table row to print
+                       exactly as it appears on screen. */
+        * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            color-adjust: exact;
+        }
+
+        html {
+            font-size: 13px
+        }
+
+        body {
+            font-family: 'Segoe UI',Arial,sans-serif;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 0
+        }
+
+        /* ── Toolbar (screen only) ───────────────────────────────────────────────── */
+        .toolbar {
+            background: #721a24;
+            color: #fff;
+            padding: 10px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .toolbar-brand {
+            font-size: 12px;
+            opacity: .7;
+            letter-spacing: .5px;
+            text-transform: uppercase
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 8px
+        }
+
+        .btn {
+            padding: 6px 16px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,.25);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            background: rgba(255,255,255,.1);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-print {
+            background: #1a1a2e;
+            border-color: #1a1a2e
+        }
+
+            .btn-print:disabled {
+                opacity: .5;
+                cursor: not-allowed;
             }
 
-            /* Without this, Chrome/Edge strip background colors when printing —
-               the #1 reason a printed/PDF page looks different from the on-screen
-               preview. Forces every maroon header, badge, and table row to print
-               exactly as it appears on screen. */
-            * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                color-adjust: exact;
+        /* ── Page wrapper ────────────────────────────────────────────────────────── */
+        body {
+            background: #e9e9ec
+        }
+
+        .page {
+            max-width: 900px;
+            margin: 32px auto;
+            padding: 0
+        }
+
+        /* On-screen "paper" treatment — every logical page gets a visible white sheet
+                                   with shadow + page number, so the document looks paginated even when just
+                                   scrolling in the browser (page-break-* CSS only takes effect when printing). */
+        .paper {
+            background: #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,.15), 0 0 0 1px rgba(0,0,0,.05);
+            margin-bottom: 28px;
+            padding: 36px 40px 44px;
+            position: relative;
+            min-height: 1040px;
+        }
+
+            .paper .page-number {
+                position: absolute;
+                top: 14px;
+                right: 24px;
+                font-size: 9px;
+                color: #bbb;
+                z-index: 1;
             }
 
-            html {
-                font-size: 13px
+        /* ── Cover page (page 1) ─────────────────────────────────────────────────── */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+        }
+
+            .cover-page iframe {
+                width: 100%;
+                max-width: 760px;
+                height: 950px;
+                border: 1px solid #ddd;
+                background: #fff
             }
 
-            body {
-                font-family: 'Segoe UI',Arial,sans-serif;
-                color: #1a1a1a;
-                background: #fff;
-                padding: 0
+        .cover-fallback {
+            border: 2px dashed #ccc;
+            padding: 60px 40px;
+            border-radius: 8px;
+            color: #888;
+            max-width: 600px;
+        }
+
+            .cover-fallback h2 {
+                font-size: 22px;
+                color: #721a24;
+                margin-bottom: 10px
             }
 
-            /* ── Toolbar (screen only) ───────────────────────────────────────────────── */
-            .toolbar {
+            .cover-fallback a.cover-link {
+                display: inline-block;
+                margin-top: 14px;
+                padding: 8px 18px;
+                border-radius: 5px;
                 background: #721a24;
                 color: #fff;
-                padding: 10px 32px;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 12px;
-                position: sticky;
-                top: 0;
-                z-index: 100;
-            }
-
-            .toolbar-brand {
-                font-size: 12px;
-                opacity: .7;
-                letter-spacing: .5px;
-                text-transform: uppercase
-            }
-
-            .toolbar-actions {
-                display: flex;
-                gap: 8px
-            }
-
-            .btn {
-                padding: 6px 16px;
-                border-radius: 5px;
-                border: 1px solid rgba(255,255,255,.25);
+                text-decoration: none;
                 font-size: 12px;
                 font-weight: 500;
-                cursor: pointer;
-                background: rgba(255,255,255,.1);
-                color: #fff;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                text-decoration: none;
             }
 
-            .btn-print {
-                background: #1a1a2e;
-                border-color: #1a1a2e
-            }
+        .cover-loading {
+            font-size: 13px;
+            color: #999
+        }
 
-                .btn-print:disabled {
-                    opacity: .5;
-                    cursor: not-allowed;
-                }
+        .cover-page canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 0 0 1px #eee
+        }
 
-            /* ── Page wrapper ────────────────────────────────────────────────────────── */
-            body {
-                background: #e9e9ec
-            }
+        /* ── Category divider page ───────────────────────────────────────────────── */
+        .category-divider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-top: 250px;
+            height: 100%;
+            border-bottom: 6px solid #721a24;
+            padding-bottom: 50px;
+        }
 
-            .page {
-                max-width: 900px;
-                margin: 32px auto;
-                padding: 0
-            }
-
-            /* On-screen "paper" treatment — every logical page gets a visible white sheet
-                           with shadow + page number, so the document looks paginated even when just
-                           scrolling in the browser (page-break-* CSS only takes effect when printing). */
-            .paper {
-                background: #fff;
-                box-shadow: 0 1px 4px rgba(0,0,0,.15), 0 0 0 1px rgba(0,0,0,.05);
-                margin-bottom: 28px;
-                padding: 36px 40px 44px;
-                position: relative;
-                min-height: 1040px;
-            }
-
-                .paper .page-number {
-                    position: absolute;
-                    top: 14px;
-                    right: 24px;
-                    font-size: 9px;
-                    color: #bbb;
-                    z-index: 1;
-                }
-
-            /* ── Cover page (page 1) ─────────────────────────────────────────────────── */
-            .cover-page {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                height: 100%;
-            }
-
-                .cover-page iframe {
-                    width: 100%;
-                    max-width: 760px;
-                    height: 950px;
-                    border: 1px solid #ddd;
-                    background: #fff
-                }
-
-            .cover-fallback {
-                border: 2px dashed #ccc;
-                padding: 60px 40px;
-                border-radius: 8px;
-                color: #888;
-                max-width: 600px;
-            }
-
-                .cover-fallback h2 {
-                    font-size: 22px;
-                    color: #721a24;
-                    margin-bottom: 10px
-                }
-
-                .cover-fallback a.cover-link {
-                    display: inline-block;
-                    margin-top: 14px;
-                    padding: 8px 18px;
-                    border-radius: 5px;
-                    background: #721a24;
-                    color: #fff;
-                    text-decoration: none;
-                    font-size: 12px;
-                    font-weight: 500;
-                }
-
-            .cover-loading {
+            .category-divider .cat-eyebrow {
                 font-size: 13px;
-                color: #999
+                letter-spacing: 3px;
+                text-transform: uppercase;
+                color: #c0392b;
+                margin-bottom: 18px;
+                font-weight: 700;
             }
 
-            .cover-page canvas {
-                max-width: 100%;
-                height: auto;
-                display: block;
-                margin: 0 auto;
-                box-shadow: 0 0 0 1px #eee
+            .category-divider h1 {
+                font-size: 40px;
+                font-weight: 700;
+                color: #721a24;
+                margin-bottom: 12px
             }
 
-            /* ── Category divider page ───────────────────────────────────────────────── */
-            .category-divider {
+            .category-divider .cat-sub {
+                font-size: 17px;
+                color: #555;
+                margin-bottom: 30px
+            }
+
+            .category-divider .cat-stats {
                 display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                margin-top: 250px;
-                height: 100%;
-                border-bottom: 6px solid #721a24;
-                padding-bottom: 50px;
-            }
-
-                .category-divider .cat-eyebrow {
-                    font-size: 13px;
-                    letter-spacing: 3px;
-                    text-transform: uppercase;
-                    color: #c0392b;
-                    margin-bottom: 18px;
-                    font-weight: 700;
-                }
-
-                .category-divider h1 {
-                    font-size: 40px;
-                    font-weight: 700;
-                    color: #721a24;
-                    margin-bottom: 12px
-                }
-
-                .category-divider .cat-sub {
-                    font-size: 17px;
-                    color: #555;
-                    margin-bottom: 30px
-                }
-
-                .category-divider .cat-stats {
-                    display: flex;
-                    gap: 36px;
-                    font-size: 13px;
-                    color: #555
-                }
-
-                    .category-divider .cat-stats strong {
-                        color: #721a24;
-                        font-size: 22px;
-                        display: block;
-                        margin-bottom: 2px
-                    }
-
-            /* ── Report title block ──────────────────────────────────────────────────── */
-            .report-title-block {
-                border-bottom: 2px solid #721a24;
-                padding-bottom: 14px;
-                margin-bottom: 20px
-            }
-
-                .report-title-block h1 {
-                    font-size: 30px;
-                    font-weight: 700;
-                    line-height: 1.4;
-                    color: #721a24;
-                    margin-bottom: 8px
-                }
-
-            .report-meta-row {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                flex-wrap: wrap;
-                font-size: 11.5px;
+                gap: 36px;
+                font-size: 13px;
                 color: #555
             }
 
-                .report-meta-row strong {
-                    color: #721a24
-                }
-
-            .badge {
-                display: inline-block;
-                padding: 2px 10px;
-                border-radius: 20px;
-                font-size: 11px;
-                font-weight: 600
-            }
-
-            .badge-daily {
-                background: #d1ecf1;
-                color: #0c5460
-            }
-
-            .badge-weekly {
-                background: #cce5ff;
-                color: #004085
-            }
-
-            .badge-monthly {
-                background: #fff3cd;
-                color: #856404
-            }
-
-            .badge-pub {
-                background: #d4edda;
-                color: #155724
-            }
-
-            .badge-draft {
-                background: #fff3cd;
-                color: #856404
-            }
-
-            /* ── Meta grid ────────────────────────────────────────────────────────────── */
-            .meta-grid {
-                display: grid;
-                grid-template-columns: repeat(3,1fr);
-                border: 1px solid #ddd;
-                margin-bottom: 24px
-            }
-
-            .meta-cell {
-                display: flex;
-                border-right: 1px solid #e8e8e8;
-                border-bottom: 1px solid #e8e8e8
-            }
-
-                .meta-cell:nth-child(3n) {
-                    border-right: none
-                }
-
-            .meta-label {
-                background: #721a24;
-                color: #fff;
-                padding: 7px 12px;
-                font-size: 12px;
-                font-weight: 500;
-                min-width: 130px;
-                white-space: nowrap
-            }
-
-            .meta-value {
-                background: #fff;
-                color: #721a24;
-                padding: 7px 12px;
-                font-size: 12px;
-                flex: 1
-            }
-
-            /* ── Section heading ─────────────────────────────────────────────────────── */
-            .section {
-                margin-bottom: 28px
-            }
-
-            .section-heading {
-                background: #721a24;
-                color: #fff;
-                padding: 7px 14px;
-                font-size: 12px;
-                font-weight: 600;
-                letter-spacing: .4px;
-                text-transform: uppercase;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-                .section-heading .section-sub {
-                    font-size: 11px;
-                    font-weight: 400;
-                    opacity: .8;
-                    text-transform: none;
-                    letter-spacing: 0
-                }
-
-            /* ── Article / Newspaper card ────────────────────────────────────────────── */
-            .media-card {
-                border: 1px solid #ddd;
-                margin-bottom: 20px;
-                page-break-inside: avoid
-            }
-
-            .media-card-title {
-                background: #f7f7f7;
-                border-bottom: 1px solid #ddd;
-                padding: 10px 14px;
-                font-size: 13.5px;
-                font-weight: 700;
-                line-height: 1.45;
-                color: #721a24;
-            }
-
-                .media-card-title.rtl-title {
-                    direction: rtl;
-                    text-align: center;
-                }
-
-                .media-card-title a {
+                .category-divider .cat-stats strong {
                     color: #721a24;
-                    text-decoration: none
+                    font-size: 22px;
+                    display: block;
+                    margin-bottom: 2px
                 }
 
-                    .media-card-title a:hover {
-                        color: #c0392b;
-                        text-decoration: underline
-                    }
+        /* ── Report title block ──────────────────────────────────────────────────── */
+        .report-title-block {
+            border-bottom: 2px solid #721a24;
+            padding-bottom: 14px;
+            margin-bottom: 20px
+        }
 
-            .media-meta-grid {
-                display: grid;
-                grid-template-columns: repeat(3,1fr)
-            }
-
-            .mc {
-                display: flex;
-                border-right: 1px solid #e8e8e8;
-                border-bottom: 1px solid #e8e8e8
-            }
-
-                .mc:nth-child(3n) {
-                    border-right: none
-                }
-
-                .mc.full {
-                    grid-column: span 3;
-                    border-right: none
-                }
-
-            .ml {
-                background: #721a24;
-                color: #fff;
-                padding: 6px 10px;
-                font-size: 11.5px;
-                font-weight: 500;
-                min-width: 120px;
-                white-space: nowrap
-            }
-
-            .mv {
-                background: #fff;
+            .report-title-block h1 {
+                font-size: 30px;
+                font-weight: 700;
+                line-height: 1.4;
                 color: #721a24;
-                padding: 6px 10px;
-                font-size: 11.5px;
-                flex: 1
-            }
-
-                .mv a {
-                    color: #c0392b;
-                    text-decoration: none;
-                    word-break: break-all
-                }
-
-            /* ── Content section ─────────────────────────────────────────────────────── */
-            .content-block {
-                border-top: 1px solid #ddd
-            }
-
-                .content-block .content-label {
-                    background: #721a24;
-                    color: #fff;
-                    padding: 6px 10px;
-                    font-size: 11.5px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: .4px;
-                }
-
-                .content-block .content-body {
-                    padding: 14px 16px;
-                    font-size: 12.5px;
-                    line-height: 1.8;
-                    color: #1a1a1a
-                }
-
-            .content-body p {
                 margin-bottom: 8px
             }
 
-            .content-body img {
-                max-width: 100%
+        .report-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 11.5px;
+            color: #555
+        }
+
+            .report-meta-row strong {
+                color: #721a24
             }
 
-            /* ── Multi-image pages — each extra image gets its own page ─────────────── */
-            .image-page {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                padding: 24px;
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600
+        }
+
+        .badge-daily {
+            background: #d1ecf1;
+            color: #0c5460
+        }
+
+        .badge-weekly {
+            background: #cce5ff;
+            color: #004085
+        }
+
+        .badge-monthly {
+            background: #fff3cd;
+            color: #856404
+        }
+
+        .badge-pub {
+            background: #d4edda;
+            color: #155724
+        }
+
+        .badge-draft {
+            background: #fff3cd;
+            color: #856404
+        }
+
+        /* ── Meta grid ────────────────────────────────────────────────────────────── */
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            border: 1px solid #ddd;
+            margin-bottom: 24px
+        }
+
+        .meta-cell {
+            display: flex;
+            border-right: 1px solid #e8e8e8;
+            border-bottom: 1px solid #e8e8e8
+        }
+
+            .meta-cell:nth-child(3n) {
+                border-right: none
             }
 
-                .image-page .image-page-label {
-                    font-size: 11px;
-                    color: #888;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    margin-bottom: 14px
+        .meta-label {
+            background: #721a24;
+            color: #fff;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 130px;
+            white-space: nowrap
+        }
+
+        .meta-value {
+            background: #fff;
+            color: #721a24;
+            padding: 7px 12px;
+            font-size: 12px;
+            flex: 1
+        }
+
+        /* ── Section heading ─────────────────────────────────────────────────────── */
+        .section {
+            margin-bottom: 28px
+        }
+
+        .section-heading {
+            background: #721a24;
+            color: #fff;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .4px;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .section-heading .section-sub {
+                font-size: 11px;
+                font-weight: 400;
+                opacity: .8;
+                text-transform: none;
+                letter-spacing: 0
+            }
+
+        /* ── Article / Newspaper card ────────────────────────────────────────────── */
+        .media-card {
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            page-break-inside: avoid
+        }
+
+        .media-card-title {
+            background: #f7f7f7;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 14px;
+            font-size: 13.5px;
+            font-weight: 700;
+            line-height: 1.45;
+            color: #721a24;
+        }
+
+            .media-card-title.rtl-title {
+                direction: rtl;
+                text-align: center;
+            }
+
+            .media-card-title a {
+                color: #721a24;
+                text-decoration: none
+            }
+
+                .media-card-title a:hover {
+                    color: #c0392b;
+                    text-decoration: underline
                 }
 
-                .image-page img {
-                    max-width: 100%;
-                    max-height: 780px;
-                    border: 1px solid #ddd;
+        .media-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr)
+        }
+
+        .mc {
+            display: flex;
+            border-right: 1px solid #e8e8e8;
+            border-bottom: 1px solid #e8e8e8
+        }
+
+            .mc:nth-child(3n) {
+                border-right: none
+            }
+
+            .mc.full {
+                grid-column: span 3;
+                border-right: none
+            }
+
+        .ml {
+            background: #721a24;
+            color: #fff;
+            padding: 6px 10px;
+            font-size: 11.5px;
+            font-weight: 500;
+            min-width: 120px;
+            white-space: nowrap
+        }
+
+        .mv {
+            background: #fff;
+            color: #721a24;
+            padding: 6px 10px;
+            font-size: 11.5px;
+            flex: 1
+        }
+
+            .mv a {
+                color: #c0392b;
+                text-decoration: none;
+                word-break: break-all
+            }
+
+        /* ── Content section ─────────────────────────────────────────────────────── */
+        .content-block {
+            border-top: 1px solid #ddd
+        }
+
+            .content-block .content-label {
+                background: #721a24;
+                color: #fff;
+                padding: 6px 10px;
+                font-size: 11.5px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: .4px;
+            }
+
+            .content-block .content-body {
+                padding: 14px 16px;
+                font-size: 12.5px;
+                line-height: 1.8;
+                color: #1a1a1a
+            }
+
+        .content-body p {
+            margin-bottom: 8px
+        }
+
+        .content-body img {
+            max-width: 100%
+        }
+
+        /* ── Multi-image pages — each extra image gets its own page ─────────────── */
+        .image-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 24px;
+        }
+
+            .image-page .image-page-label {
+                font-size: 11px;
+                color: #888;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 14px
+            }
+
+            .image-page img {
+                max-width: 100%;
+                max-height: 780px;
+                border: 1px solid #ddd;
+                object-fit: contain
+            }
+
+            .image-page .image-page-caption {
+                font-size: 12px;
+                color: #555;
+                margin-top: 14px;
+                text-align: center;
+                max-width: 600px
+            }
+
+        /* first image of a multi-image article renders inline in the card, not as a separate page */
+        .inline-image {
+            padding: 14px 16px;
+            border-top: 1px solid #ddd
+        }
+
+            .inline-image img {
+                max-width: 100%;
+                max-height: 360px;
+                border: 1px solid #ddd;
+                display: block;
+                margin: 0 auto
+            }
+
+        /* ── Grand total table ───────────────────────────────────────────────────── */
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px
+        }
+
+            .totals-table th {
+                background: #721a24;
+                color: #fff;
+                padding: 7px 12px;
+                text-align: left;
+                font-weight: 600
+            }
+
+                .totals-table th.r, .totals-table td.r {
+                    text-align: right
+                }
+
+            .totals-table td {
+                padding: 7px 12px;
+                border-bottom: 1px solid #e8e8e8;
+                color: #721a24
+            }
+
+            .totals-table tr:nth-child(even) td {
+                background: #f9f9f9
+            }
+
+            .totals-table tfoot td {
+                background: #721a24;
+                color: #fff;
+                font-weight: 700;
+                border: none;
+                padding: 8px 12px
+            }
+
+        /* ── Footer — pinned to the bottom of every page ─────────────────────────── */
+        .paper {
+            padding-bottom: 90px; /* reserve space so content never overlaps the pinned footer */
+        }
+
+        .report-footer {
+            position: absolute;
+            left: 40px;
+            right: 40px;
+            bottom: 34px;
+            margin-top: 0;
+            border-top: 2px solid #721a24;
+            padding-top: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #888;
+        }
+
+            .report-footer .footer-brand strong {
+                color: #721a24
+            }
+
+            .report-footer .footer-logo {
+                display: flex;
+                align-items: center;
+                gap: 8px
+            }
+
+                .report-footer .footer-logo img {
+                    height: 32px;
+                    max-width: 140px;
                     object-fit: contain
                 }
 
-                .image-page .image-page-caption {
-                    font-size: 12px;
-                    color: #555;
-                    margin-top: 14px;
-                    text-align: center;
-                    max-width: 600px
-                }
-
-            /* first image of a multi-image article renders inline in the card, not as a separate page */
-            .inline-image {
-                padding: 14px 16px;
-                border-top: 1px solid #ddd
+        @@media print {
+            @@page {
+                size: A4;
+                margin: 10mm;
             }
 
-                .inline-image img {
-                    max-width: 100%;
-                    max-height: 360px;
-                    border: 1px solid #ddd;
-                    display: block;
-                    margin: 0 auto
-                }
-
-            /* ── Grand total table ───────────────────────────────────────────────────── */
-            .totals-table {
+            html, body {
+                background: #fff;
                 width: 100%;
-                border-collapse: collapse;
-                font-size: 12px
             }
 
-                .totals-table th {
-                    background: #721a24;
-                    color: #fff;
-                    padding: 7px 12px;
-                    text-align: left;
-                    font-weight: 600
-                }
+            .toolbar {
+                display: none !important
+            }
 
-                    .totals-table th.r, .totals-table td.r {
-                        text-align: right
-                    }
-
-                .totals-table td {
-                    padding: 7px 12px;
-                    border-bottom: 1px solid #e8e8e8;
-                    color: #721a24
-                }
-
-                .totals-table tr:nth-child(even) td {
-                    background: #f9f9f9
-                }
-
-                .totals-table tfoot td {
-                    background: #721a24;
-                    color: #fff;
-                    font-weight: 700;
-                    border: none;
-                    padding: 8px 12px
-                }
-
-            /* ── Footer — pinned to the bottom of every page ─────────────────────────── */
+            .page {
+                max-width: none;
+                margin: 0;
+                padding: 0
+            }
+            /* Every .paper IS a physical page — exact 1:1 mapping between
+                           what's on screen and what prints, no scaling surprises.
+                           A4 = 297mm tall; page margin above takes 10mm off each
+                           side, so the printable area per page is 277mm. Height is
+                           fixed (not min-height: 0) so a short page's content
+                           doesn't make .paper collapse — that collapse is what made
+                           the footer's bottom-anchor sit at the end of the content
+                           instead of the end of the page. */
             .paper {
-                padding-bottom: 90px; /* reserve space so content never overlaps the pinned footer */
+                box-shadow: none;
+                margin: 0;
+                height: 277mm;
+                min-height: 0;
+                max-height: 277mm;
+                width: 100%;
+                padding-bottom: 26mm; /* reserves space above the pinned footer so content never sits under it */
+                overflow: hidden;
+                page-break-after: always;
+                break-after: page;
+            }
+
+                .paper:last-child {
+                    page-break-after: auto;
+                    break-after: auto;
+                }
+
+                .paper .page-number {
+                    display: none
+                }
+            /* Never let a card, meta-row, content block, or image split
+                           across two printed pages mid-element. */
+            .media-card,
+            .media-meta-grid,
+            .content-block,
+            .inline-image,
+            .meta-grid,
+            .totals-table,
+            .category-divider,
+            .cover-page,
+            .image-page {
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
 
             .report-footer {
                 position: absolute;
-                left: 40px;
-                right: 40px;
-                bottom: 34px;
-                margin-top: 0;
-                border-top: 2px solid #721a24;
-                padding-top: 14px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 11px;
-                color: #888;
+                bottom: 8mm;
+                left: 12mm;
+                right: 12mm;
             }
-
-                .report-footer .footer-brand strong {
-                    color: #721a24
-                }
-
-                .report-footer .footer-logo {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px
-                }
-
-                    .report-footer .footer-logo img {
-                        height: 32px;
-                        max-width: 140px;
-                        object-fit: contain
-                    }
-
-            @@media print {
-                @@page {
-                    size: A4;
-                    margin: 10mm;
-                }
-
-                html, body {
-                    background: #fff;
-                    width: 100%;
-                }
-
-                .toolbar {
-                    display: none !important
-                }
-
-                .page {
-                    max-width: none;
-                    margin: 0;
-                    padding: 0
-                }
-
-                /* Every .paper IS a physical page — exact 1:1 mapping between
-                   what's on screen and what prints, no scaling surprises.
-                   A4 = 297mm tall; page margin above takes 10mm off each
-                   side, so the printable area per page is 277mm. Height is
-                   fixed (not min-height: 0) so a short page's content
-                   doesn't make .paper collapse — that collapse is what made
-                   the footer's bottom-anchor sit at the end of the content
-                   instead of the end of the page. */
-                .paper {
-                    box-shadow: none;
-                    margin: 0;
-                    height: 277mm;
-                    min-height: 0;
-                    max-height: 277mm;
-                    width: 100%;
-                    padding-bottom: 26mm; /* reserves space above the pinned footer so content never sits under it */
-                    overflow: hidden;
-                    page-break-after: always;
-                    break-after: page;
-                }
-
-                    .paper:last-child {
-                        page-break-after: auto;
-                        break-after: auto;
-                    }
-
-                    .paper .page-number {
-                        display: none
-                    }
-
-                /* Never let a card, meta-row, content block, or image split
-                   across two printed pages mid-element. */
-                .media-card,
-                .media-meta-grid,
-                .content-block,
-                .inline-image,
-                .meta-grid,
-                .totals-table,
-                .category-divider,
-                .cover-page,
-                .image-page {
-                    page-break-inside: avoid;
-                    break-inside: avoid;
-                }
-
-                .report-footer {
-                    position: absolute;
-                    bottom: 8mm;
-                    left: 12mm;
-                    right: 12mm;
-                }
-
-                /* Avoid a section heading printing alone at the bottom of a page
-                   with its content pushed to the next one. */
-                .section-heading {
-                    page-break-after: avoid;
-                    break-after: avoid;
-                }
+            /* Avoid a section heading printing alone at the bottom of a page
+                           with its content pushed to the next one. */
+            .section-heading {
+                page-break-after: avoid;
+                break-after: avoid;
             }
+        }
     </style>
 </head>
 <body>
@@ -829,7 +826,7 @@
             @if (group.Articles.Any())
             {
 
-        
+
                 @foreach (var a in group.Articles)
                 {
                     var isRtl = a.Language != null && a.Language.Equals("Arabic", StringComparison.OrdinalIgnoreCase);
@@ -858,7 +855,7 @@
 
                                     <div class="mc"><div class="ml">Website</div><div class="mv">@(a.WebsiteName ?? "—")</div></div>
                                     <div class="mc"><div class="ml">Sub Category</div><div class="mv">@(a.SubCategoryName ?? "—")</div></div>
-                                    <div class="mc"><div class="ml">Media Type</div><div class="mv">@(a.MediaType ?? "—")</div></div>
+                                 @*    <div class="mc"><div class="ml">Media Type</div><div class="mv">@(a.MediaType ?? "—")</div></div> *@
 
                                     <div class="mc"><div class="ml">Frequency</div><div class="mv">@(a.Frequency ?? "—")</div></div>
                                     <div class="mc"><div class="ml">AD Value</div><div class="mv">@a.ADValue.ToString("N2")</div></div>
@@ -873,13 +870,15 @@
                                     <div class="mc"><div class="ml">Article Branding</div><div class="mv">@(a.ArticleBranding ?? "—")</div></div>
 
                                     <div class="mc"><div class="ml">Headline Branding</div><div class="mv">@(a.HeadlineBranding ?? "—")</div></div>
-                                    <div class="mc"><div class="ml">Picture in article </div><div class="mv">@(a.PictureinArticle ?? "—")</div></div>
-                                    <div class="mc full">
+                                    <div class="mc"><div class="ml">Picture in article</div><div class="mv">@(a.PictureinArticle ?? "—")</div></div>
+                                    <div class="mc"><div class="ml">Generation</div><div class="mv">@(a.Generation ?? "—")</div></div>
+
+                                    <div class="mc">
                                         <div class="ml">Article URL</div>
                                         <div class="mv">
                                             @if (!string.IsNullOrEmpty(a.ArticleURL))
                                             {
-                                                <a href="@a.ArticleURL" target="_blank" rel="noopener">Link</a>
+                                                <a href="@a.ArticleURL" target="_blank" rel="noopener">Article URL</a>
                                             }
                                             else
                                             {
@@ -887,10 +886,6 @@
                                             }
                                         </div>
                                     </div>
-
-                                    <div class="mc"><div class="ml">Generation</div><div class="mv">@(a.Generation ?? "—")</div></div>
-
-                                    
                                 </div>
 
                                 @* ── Content section ──────────────────────────────────── *@
@@ -921,7 +916,7 @@
                                             <div class="image-page-label">@a.Title &mdash; Image @(i + 1) of @a.ImagePaths.Count</div>
                                             <img src="@a.ImagePaths[i]" alt="@a.Title image @(i + 1)" />
                                         </div>
-                                      
+
                                     </div>
                                 }
                             }
@@ -939,7 +934,7 @@
             @if (group.Newspapers.Any())
             {
 
-           
+
                 @foreach (var n in group.Newspapers)
                 {
                     <div class="paper">
@@ -1007,7 +1002,7 @@
                                             <div class="image-page-label">@n.Title &mdash; Image @(i + 1) of @n.ImagePaths.Count</div>
                                             <img src="@n.ImagePaths[i]" alt="@n.Title image @(i + 1)" />
                                         </div>
-                                    
+
                                     </div>
                                 }
                             }

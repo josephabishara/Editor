@@ -11,7 +11,6 @@
     var fTo = ViewBag.FilterDateTo as string ?? "";
     var fCat = (int)(ViewBag.FilterCategoryId ?? 0);
     var fSub = (int)(ViewBag.FilterSubId ?? 0);
-    // var fWriter = (int)(ViewBag.FilterWriterId ?? 0);
     var fPub = (int)(ViewBag.FilterPubId ?? 0);
     var fCreatedFrom = ViewBag.FilterCreatedFrom as string ?? "";
     var fCreatedTo = ViewBag.FilterCreatedTo as string ?? "";
@@ -172,12 +171,10 @@
             <div class="fg"><label>Publication</label><select name="publicationId" asp-items="pubSL"><option value="0">All</option></select></div>
             <div class="fg"><label>Created From</label><input type="date" name="createdFrom" value="@fCreatedFrom" /></div>
             <div class="fg"><label>Created To</label><input type="date" name="createdTo" value="@fCreatedTo" /></div>
-       
             <div class="fg" style="display:flex;gap:.4rem;">
                 <button type="submit" class="btn-filter">Search</button>
             </div>
             <div class="fg" style="display:flex;gap:.4rem;">
-           
                 <a href="@Url.Action("Index", new { clientId })" class="btn-reset">Reset</a>
             </div>
         </div>
@@ -248,16 +245,12 @@
                     <th>Publication</th>
                     <th>Category</th>
                     <th>Sub-Category</th>
-                    
                     <th>Created By</th>
                     <th>Created At</th>
                     <th class="text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @{
-                    int rowNum = 1;
-                }
                 @foreach (var item in Model.Items)
                 {
                     var firstImg = FirstImage(item.Images);
@@ -300,7 +293,7 @@
                                    value="@item.Id" onchange="onRowCheck()" />
                         </td>
                         <td class="text-muted small">@item.Id</td>
-                        <td class="small">@(item.ParentId)</td>
+                        <td class="small">@(item.ParentId?.ToString() ?? "—")</td>
                         <td class="small text-nowrap">@item.Date.ToString("dd MMM yyyy")</td>
                         <td>
                             <a asp-action="Details" asp-route-id="@item.Id"
@@ -316,9 +309,6 @@
                         <td class="small">@(item.PublicationName ?? "—")</td>
                         <td class="small">@(item.CategoryName ?? "—")</td>
                         <td class="small">@(item.SubCategoryName ?? "—")</td>
-                        @*    <td class="small">@(item.WriterName ?? "—")</td>
-                        <td class="text-end small">@item.ADValue.ToString("N0")</td>
-                        <td class="text-end small fw-semibold text-success">@item.PRValue.ToString("N0")</td> *@
                         <td class="small text-muted">@(item.CreatedByUserName ?? "—")</td>
                         <td class="small text-nowrap text-muted">
                             @item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
@@ -360,14 +350,13 @@
                             }
                         </td>
                     </tr>
-                    rowNum++;
                 }
             </tbody>
         </table>
     }
 </div>
- 
-<script src="/js/clientnewspaper-print-view.js" ></script>
+
+<script src="/js/clientnewspaper-print-view.js"></script>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -376,428 +365,372 @@
     <script>
         const clientName = "@Model.ClientName";
 
-        // ── Checkbox helpers ──────────────────────────────────────────────────────────
+        // ── Checkbox helpers ─────────────────────────────────────────────────────
         function toggleAll(cb) {
-        document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
-        onRowCheck();
+            document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+            onRowCheck();
         }
         function deselectAll() {
-        document.querySelectorAll('.row-check, #cbAll').forEach(c => { c.checked = false; c.indeterminate = false; });
-        onRowCheck();
+            document.querySelectorAll('.row-check, #cbAll').forEach(c => { c.checked = false; c.indeterminate = false; });
+            onRowCheck();
         }
         function onRowCheck() {
-        const checked = document.querySelectorAll('.row-check:checked');
-        const count   = checked.length;
-        const all     = document.querySelectorAll('.row-check');
-        document.getElementById('selCount').textContent = count;
-        document.getElementById('selToolbar').classList.toggle('visible', count > 0);
-        const cbAll = document.getElementById('cbAll');
-        cbAll.indeterminate = count > 0 && count < all.length;
-        cbAll.checked       = count === all.length && all.length > 0;
-        const btnDup = document.getElementById('btnDuplicate');
-        const hdnId  = document.getElementById('hdnSelectedId');
-        if (count === 1) {
-        hdnId.value = checked[0].value;
-        btnDup.disabled = false;
-        btnDup.style.opacity = '1';
-        } else {
-        hdnId.value = '0';
-        btnDup.disabled = true;
-        btnDup.style.opacity = '.5';
-        }
+            const checked = document.querySelectorAll('.row-check:checked');
+            const count   = checked.length;
+            const all     = document.querySelectorAll('.row-check');
+            document.getElementById('selCount').textContent = count;
+            document.getElementById('selToolbar').classList.toggle('visible', count > 0);
+            const cbAll = document.getElementById('cbAll');
+            cbAll.indeterminate = count > 0 && count < all.length;
+            cbAll.checked       = count === all.length && all.length > 0;
+            const btnDup = document.getElementById('btnDuplicate');
+            const hdnId  = document.getElementById('hdnSelectedId');
+            if (count === 1) {
+                hdnId.value = checked[0].value;
+                btnDup.disabled = false;
+                btnDup.style.opacity = '1';
+            } else {
+                hdnId.value = '0';
+                btnDup.disabled = true;
+                btnDup.style.opacity = '.5';
+            }
         }
         function getSelectedRows() {
-        const rows = [];
-        document.querySelectorAll('.row-check:checked').forEach(cb => rows.push(cb.closest('tr').dataset));
-        return rows;
+            const rows = [];
+            document.querySelectorAll('.row-check:checked').forEach(cb => rows.push(cb.closest('tr').dataset));
+            return rows;
         }
         function confirmDuplicate() {
-        const hdnId = document.getElementById('hdnSelectedId');
-        if (!hdnId.value || hdnId.value === '0') return false;
-        return confirm('Duplicate this record and all its children?');
+            const hdnId = document.getElementById('hdnSelectedId');
+            if (!hdnId.value || hdnId.value === '0') return false;
+            return confirm('Duplicate this record and all its children?');
         }
-
         function confirmBulkDelete(label) {
-        const checked = document.querySelectorAll('.row-check:checked');
-        if (!checked.length) { alert(`Please select at least one ${label}.`); return; }
-        if (!confirm(`Delete ${checked.length} selected ${label}(s)? This cannot be undone.`)) return;
+            const checked = document.querySelectorAll('.row-check:checked');
+            if (!checked.length) { alert(`Please select at least one ${label}.`); return; }
+            if (!confirm(`Delete ${checked.length} selected ${label}(s)? This cannot be undone.`)) return;
 
-        const container = document.getElementById('bulkDeleteIdsContainer');
-        container.innerHTML = '';
-        checked.forEach(cb => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'ids';
-        input.value = cb.value;
-        container.appendChild(input);
-        });
-        document.getElementById('bulkDeleteForm').submit();
+            const container = document.getElementById('bulkDeleteIdsContainer');
+            container.innerHTML = '';
+            checked.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ids';
+                input.value = cb.value;
+                container.appendChild(input);
+            });
+            document.getElementById('bulkDeleteForm').submit();
         }
 
-      
-        // ── Sub-category cascade ──────────────────────────────────────────────────────
+        // ── Sub-category cascade ─────────────────────────────────────────────────
         async function loadSubs(parentId, targetId, url) {
-        const sel = document.getElementById(targetId);
-        sel.innerHTML = '<option value="0">Loading…</option>';
-        if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">All</option>'; return; }
-        const data = await (await fetch(`${url}?parentId=${parentId}`)).json();
-        sel.innerHTML = '<option value="0">All</option>';
-        data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
+            const sel = document.getElementById(targetId);
+            sel.innerHTML = '<option value="0">Loading…</option>';
+            if (!parentId || parentId == '0') { sel.innerHTML = '<option value="0">All</option>'; return; }
+            const data = await (await fetch(`${url}?parentId=${parentId}`)).json();
+            sel.innerHTML = '<option value="0">All</option>';
+            data.forEach(s => sel.innerHTML += `<option value="${s.value}">${s.text}</option>`);
         }
 
-        // ── Excel ─────────────────────────────────────────────────────────────────────
+        // ── Excel ─────────────────────────────────────────────────────────────────
         function exportExcel() {
-        const rows = getSelectedRows();
-        if (!rows.length) { alert('Please select at least one newspaper.'); return; }
-        const headers = ['Id', 'Parent ID','Date','Title','Publication','Category','Sub-Category','Writer',
-        'Media Type','Media Tier','Frequency','Language',
-        'Circulation','Reach','AD Value','PR Value',
-        'Toning','Article Branding','Headline Branding',
-        'Picture in Article','Generation','Pages','Height','Width'];
-        const data = rows.map(d => [
-        d.id ,d.parentid || '—',d.date, d.title, d.publication, d.category, d.subcategory, d.writer,
-        d.mediatype, d.mediatier, d.frequency, d.language,
-        d.circulation, d.reach, d.ad, d.pr,
-        d.toning, d.articlebrand, d.headlinebrand,
-        d.picture, d.generation, d.pages, d.height, d.width
-        ]);
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-        ws['!cols'] = headers.map((_, i) => ({ wch: i === 1 ? 40 : i === 2 ? 22 : 15 }));
-        XLSX.utils.book_append_sheet(wb, ws, 'Newspapers');
-        XLSX.writeFile(wb, `${clientName}_Newspapers_${new Date().toISOString().slice(0,10)}.xlsx`);
+            const rows = getSelectedRows();
+            if (!rows.length) { alert('Please select at least one newspaper.'); return; }
+            const headers = [
+                'Id', 'Parent ID', 'Date', 'Title', 'Publication', 'Category', 'Sub-Category', 'Writer',
+                'Media Type', 'Media Tier', 'Frequency', 'Language',
+                'Circulation', 'Reach', 'AD Value', 'PR Value',
+                'Toning', 'Article Branding', 'Headline Branding',
+                'Picture in Article', 'Generation', 'Pages', 'Height', 'Width'
+            ];
+            const data = rows.map(d => [
+                d.id, d.parentid || '—', d.date, d.title, d.publication, d.category, d.subcategory, d.writer,
+                d.mediatype, d.mediatier, d.frequency, d.language,
+                d.circulation, d.reach, d.ad, d.pr,
+                d.toning, d.articlebrand, d.headlinebrand,
+                d.picture, d.generation, d.pages, d.height, d.width
+            ]);
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+            ws['!cols'] = headers.map((_, i) => ({ wch: i === 3 ? 40 : i === 4 ? 22 : 15 }));
+            XLSX.utils.book_append_sheet(wb, ws, 'Newspapers');
+            XLSX.writeFile(wb, `${clientName}_Newspapers_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // ══════════════════════════════════════════════════════════════════════════════
-        // PDF EXPORT — reference design
-        // ══════════════════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════════
+        // PDF EXPORT — EditorPR brand (#721a24 maroon), Arabic-aware
+        // ══════════════════════════════════════════════════════════════════════
 
-        // ── Arabic font loader (Cairo from jsDelivr) ──────────────────────────────────
-        // Loads the font once and caches it; subsequent calls return immediately.
         let _arabicFontLoaded = false;
         const ARABIC_FONT_NAME = 'Cairo';
 
         async function ensureArabicFont(doc) {
-        if (_arabicFontLoaded) return;
-        try {
-        // Cairo Regular — Arabic + Latin — from jsDelivr (Google Fonts mirror)
-        const url = 'https://cdn.jsdelivr.net/fontsource/fonts/cairo@latest/arabic-400-normal.ttf';
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error('font fetch failed');
-        const buf  = await resp.arrayBuffer();
-        // Convert ArrayBuffer → base64
-        const bytes = new Uint8Array(buf);
-        let binary  = '';
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        const b64 = btoa(binary);
-        doc.addFileToVFS('Cairo-Regular.ttf', b64);
-        doc.addFont('Cairo-Regular.ttf', ARABIC_FONT_NAME, 'normal');
-        _arabicFontLoaded = true;
-        } catch (e) {
-        console.warn('Arabic font load failed, falling back to helvetica:', e);
-        }
+            if (_arabicFontLoaded) return;
+            try {
+                const url = 'https://cdn.jsdelivr.net/fontsource/fonts/cairo@latest/arabic-400-normal.ttf';
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('font fetch failed');
+                const buf  = await resp.arrayBuffer();
+                const bytes = new Uint8Array(buf);
+                let binary  = '';
+                for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+                const b64 = btoa(binary);
+                doc.addFileToVFS('Cairo-Regular.ttf', b64);
+                doc.addFont('Cairo-Regular.ttf', ARABIC_FONT_NAME, 'normal');
+                _arabicFontLoaded = true;
+            } catch (e) {
+                console.warn('Arabic font load failed, falling back to helvetica:', e);
+            }
         }
 
         function useArabicFont(doc, size, style) {
-        const name = _arabicFontLoaded ? ARABIC_FONT_NAME : 'helvetica';
-        doc.setFont(name, style || 'normal');
-        doc.setFontSize(size);
+            const name = _arabicFontLoaded ? ARABIC_FONT_NAME : 'helvetica';
+            doc.setFont(name, style || 'normal');
+            doc.setFontSize(size);
         }
 
-        // ── Detect if a string contains Arabic characters ─────────────────────────────
         function isArabic(str) {
-        return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
+            return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
         }
 
-        // ── Reverse Arabic word order so jsPDF LTR engine reads RTL correctly ─────────
-        // jsPDF renders text left-to-right. For Arabic we reverse the word order
-        // so the visual result reads right-to-left.
         function fixArabic(str) {
-        if (!str || !isArabic(str)) return str;
-        return str.split(' ').reverse().join(' ');
+            if (!str || !isArabic(str)) return str;
+            return str.split(' ').reverse().join(' ');
         }
 
-        // ── HTML entity decoder + tag stripper ───────────────────────────────────────
         function decodeContent(raw) {
-        if (!raw) return '';
-        try {
-        const ta  = document.createElement('textarea');
-        ta.innerHTML = raw;
-        const div = document.createElement('div');
-        div.innerHTML = ta.value;
-        return (div.textContent || div.innerText || '').replace(/\s+/g,' ').trim();
-        } catch { return ''; }
+            if (!raw) return '';
+            try {
+                const ta  = document.createElement('textarea');
+                ta.innerHTML = raw;
+                const div = document.createElement('div');
+                div.innerHTML = ta.value;
+                return (div.textContent || div.innerText || '').replace(/\s+/g,' ').trim();
+            } catch { return ''; }
         }
 
-        // ── Image helpers ─────────────────────────────────────────────────────────────
         function imgFormat(dataUri) {
-        if (!dataUri) return 'JPEG';
-        if (dataUri.startsWith('data:image/png'))  return 'PNG';
-        if (dataUri.startsWith('data:image/webp')) return 'WEBP';
-        if (dataUri.startsWith('data:image/gif'))  return 'GIF';
-        return 'JPEG';
+            if (!dataUri) return 'JPEG';
+            if (dataUri.startsWith('data:image/png'))  return 'PNG';
+            if (dataUri.startsWith('data:image/webp')) return 'WEBP';
+            if (dataUri.startsWith('data:image/gif'))  return 'GIF';
+            return 'JPEG';
         }
         async function loadImgB64(url) {
-        if (!url) return null;
-        try {
-        const resp = await fetch(url);
-        if (!resp.ok) return null;
-        const blob = await resp.blob();
-        return new Promise(res => {
-        const r = new FileReader();
-        r.onload  = () => res(r.result);
-        r.onerror = () => res(null);
-        r.readAsDataURL(blob);
-        });
-        } catch { return null; }
+            if (!url) return null;
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) return null;
+                const blob = await resp.blob();
+                return new Promise(res => {
+                    const r = new FileReader();
+                    r.onload  = () => res(r.result);
+                    r.onerror = () => res(null);
+                    r.readAsDataURL(blob);
+                });
+            } catch { return null; }
         }
 
-        // ── Main export function ──────────────────────────────────────────────────────
         async function exportPDF() {
-        const rows = getSelectedRows();
-        if (!rows.length) { alert('Please select at least one newspaper.'); return; }
+            const rows = getSelectedRows();
+            if (!rows.length) { alert('Please select at least one newspaper.'); return; }
 
-        const { jsPDF } = window.jspdf;
+            const { jsPDF } = window.jspdf;
 
-        // ── Colours ───────────────────────────────────────────────────────────────
-        const DARK_RED  = [139,  0,  0];
-        const WHITE     = [255,255,255];
-        const LIGHT_GRY = [245,245,245];
-        const BORDER    = [200,200,200];
-        const INK       = [ 30, 30, 30];
-        const SLATE     = [ 90,106,122];
+            // ── EditorPR brand colours (matches Preview.cshtml / View-as-HTML) ──────
+            const MAROON    = [114, 26, 36];   // #721a24
+            const WHITE     = [255, 255, 255];
+            const LIGHT_GRY = [247, 247, 247]; // matches .media-card-title bg
+            const BORDER    = [221, 221, 221]; // matches #ddd
+            const INK       = [26, 26, 26];    // matches #1a1a1a
+            const SLATE     = [136, 136, 136]; // matches #888
 
-        // ── Page / grid layout ────────────────────────────────────────────────────
-        const PW = 210, PH = 297, ML = 14, MR = 14, MT = 14;
-        const CW = PW - ML - MR;   // 182 mm
+            const PW = 210, PH = 297, ML = 14, MR = 14, MT = 14;
+            const CW = PW - ML - MR;
 
-        // 3 columns × (C_LW label + C_VW value) + 2 × GAP = 182
-        // 3 × 60 + 2 × 1 = 182 ✓
-        const C_LW = 28, C_VW = 32, GAP = 1, ROW_H = 7.5;
+            const C_LW = 28, C_VW = 32, GAP = 1, ROW_H = 7.5;
 
-        const col1X = ML;
-        const col2X = ML + C_LW + C_VW + GAP;
-        const col3X = col2X + C_LW + C_VW + GAP;
+            const col1X = ML;
+            const col2X = ML + C_LW + C_VW + GAP;
+            const col3X = col2X + C_LW + C_VW + GAP;
 
-        // ── Initialise jsPDF and load Arabic font ─────────────────────────────────
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        await ensureArabicFont(doc);
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            await ensureArabicFont(doc);
 
-        // ── Draw one label + value cell ───────────────────────────────────────────
-        function drawCell(doc, x, y, label, value, shade) {
-        // label background (dark red)
-        doc.setFillColor(...DARK_RED);
-        doc.rect(x, y, C_LW, ROW_H, 'F');
-        // value background (white / light grey alternating)
-        doc.setFillColor(...(shade ? LIGHT_GRY : WHITE));
-        doc.rect(x + C_LW, y, C_VW, ROW_H, 'F');
-        // cell border
-        doc.setDrawColor(...BORDER);
-        doc.setLineWidth(0.25);
-        doc.rect(x, y, C_LW + C_VW, ROW_H, 'S');
+            function drawCell(doc, x, y, label, value, shade) {
+                doc.setFillColor(...MAROON);
+                doc.rect(x, y, C_LW, ROW_H, 'F');
+                doc.setFillColor(...(shade ? LIGHT_GRY : WHITE));
+                doc.rect(x + C_LW, y, C_VW, ROW_H, 'F');
+                doc.setDrawColor(...BORDER);
+                doc.setLineWidth(0.25);
+                doc.rect(x, y, C_LW + C_VW, ROW_H, 'S');
 
-        // Label text — always Latin, no Arabic expected in labels
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6.5);
-        doc.setTextColor(...WHITE);
-        const lblStr = String(label || '');
-        doc.text(lblStr, x + 2, y + 5);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(6.5);
+                doc.setTextColor(...WHITE);
+                doc.text(String(label || ''), x + 2, y + 5);
 
-        // Value text — use Arabic font + fixArabic if needed
-        const valStr = String(value || '—');
-        const arabic = isArabic(valStr);
-        if (arabic) {
-        useArabicFont(doc, 7.5, 'normal');
-        doc.setTextColor(...INK);
-        // Right-align Arabic value inside the cell
-        const fixedVal = fixArabic(valStr);
-        const maxW = C_VW - 4;
-        const lines = doc.splitTextToSize(fixedVal, maxW);
-        doc.text(lines[0], x + C_LW + C_VW - 2, y + 5, { align: 'right' });
-        } else {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...INK);
-        const maxW = C_VW - 4;
-        const lines = doc.splitTextToSize(valStr, maxW);
-        doc.text(lines[0], x + C_LW + 2, y + 5);
-        }
-        }
+                const valStr = String(value || '—');
+                const arabic = isArabic(valStr);
+                if (arabic) {
+                    useArabicFont(doc, 7.5, 'normal');
+                    doc.setTextColor(...INK);
+                    const fixedVal = fixArabic(valStr);
+                    const lines = doc.splitTextToSize(fixedVal, C_VW - 4);
+                    doc.text(lines[0], x + C_LW + C_VW - 2, y + 5, { align: 'right' });
+                } else {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7.5);
+                    doc.setTextColor(...INK);
+                    const lines = doc.splitTextToSize(valStr, C_VW - 4);
+                    doc.text(lines[0], x + C_LW + 2, y + 5);
+                }
+            }
 
-        // ── Pre-load images ───────────────────────────────────────────────────────
-        const imgCache = {};
-        for (const d of rows) {
-        const src = d.screenshot || '';
-        if (src && !imgCache[src]) imgCache[src] = await loadImgB64(src);
-        }
+            const imgCache = {};
+            for (const d of rows) {
+                const src = d.screenshot || '';
+                if (src && !imgCache[src]) imgCache[src] = await loadImgB64(src);
+            }
 
-        // ── Per-row page render ───────────────────────────────────────────────────
-        for (let idx = 0; idx < rows.length; idx++) {
-        const d = rows[idx];
-        if (idx > 0) doc.addPage();
+            for (let idx = 0; idx < rows.length; idx++) {
+                const d = rows[idx];
+                if (idx > 0) doc.addPage();
 
-        doc.setFillColor(255,255,255);
-        doc.rect(0, 0, PW, PH, 'F');
+                doc.setFillColor(255, 255, 255);
+                doc.rect(0, 0, PW, PH, 'F');
 
-        let y = MT;
+                let y = MT;
 
-        // ── TITLE BLOCK ───────────────────────────────────────────────────────
-        // Client name — top right, small
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(...SLATE);
-        doc.text(clientName, PW - MR, y + 3, { align: 'right' });
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(...SLATE);
+                doc.text(clientName, PW - MR, y + 3, { align: 'right' });
 
-        // Article title — bold, right-aligned, Arabic-aware
-        const titleRaw = decodeContent(d.title || 'Untitled');
-        const titleArabic = isArabic(titleRaw);
-        if (titleArabic) {
-        useArabicFont(doc, 11, 'normal');
-        } else {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        }
-        doc.setTextColor(...INK);
-        const titleFixed = titleArabic ? fixArabic(titleRaw) : titleRaw;
-        const titleLines = doc.splitTextToSize(titleFixed, CW);
-        titleLines.forEach((line, li) => {
-        doc.text(line, PW - MR, y + 3 + (li + 1) * 6.5, { align: 'right' });
-        });
-        y += 4 + titleLines.length * 6.5 + 2;
+                const titleRaw = decodeContent(d.title || 'Untitled');
+                const titleArabic = isArabic(titleRaw);
+                if (titleArabic) { useArabicFont(doc, 11, 'normal'); }
+                else { doc.setFont('helvetica', 'bold'); doc.setFontSize(11); }
+                doc.setTextColor(...INK);
+                const titleFixed = titleArabic ? fixArabic(titleRaw) : titleRaw;
+                const titleLines = doc.splitTextToSize(titleFixed, CW);
+                titleLines.forEach((line, li) => {
+                    doc.text(line, PW - MR, y + 3 + (li + 1) * 6.5, { align: 'right' });
+                });
+                y += 4 + titleLines.length * 6.5 + 2;
 
-        // Separator rule
-        doc.setDrawColor(...BORDER);
-        doc.setLineWidth(0.5);
-        doc.line(ML, y, PW - MR, y);
-        y += 4;
+                doc.setDrawColor(...BORDER);
+                doc.setLineWidth(0.5);
+                doc.line(ML, y, PW - MR, y);
+                y += 4;
 
-        // ── 3-COLUMN DATA GRID ─────────────────────────────────────────────────
-        // Matches reference layout exactly:
-        // Col1: Publication, Category Type, Media Type, Frequency, Media Tier, Language, Picture in article, Article Branding
-        // Col2: Date, Category, Sub Category, Page Number, Size, Tone, Headline Branding
-        // Col3: Ad Value, PR Value, Circulation, Reach, Writer, Generation
-        const gridDef = [
-        [ ['Publication',      d.publication],  ['Date',              d.date],          ['Ad Value',    d.ad]          ],
-        [ ['Category Type',    d.categorytype], ['Category',          d.category],      ['PR Value',    d.pr]          ],
-        [ ['Media Type',       d.mediatype],    ['Sub Category',      d.subcategory],   ['Circulation', d.circulation] ],
-        [ ['Frequency',        d.frequency],    ['Page Number',       d.pages],         ['Reach',       d.reach]       ],
-        [ ['Media Tier',       d.mediatier],    ['Size',              d.size],          ['Writer',      d.writer]      ],
-        [ ['Language',         d.language],     ['Tone',              d.toning],        ['Generation',  d.generation]  ],
-        [ ['Picture In Article', d.picture],    ['Headline Branding', d.headlinebrand], ['',            '']            ],
-        [ ['Article Branding', d.articlebrand], ['Parent ID',        d.parentid || '—'],['',            '']            ],
-        ];
+                // 9-row grid — Created By / Created At now included
+                const gridDef = [
+                    [ ['Publication',        d.publication],   ['Date',              d.date],            ['Ad Value',    d.ad]          ],
+                    [ ['Category Type',      d.categorytype],  ['Category',          d.category],        ['PR Value',    d.pr]          ],
+                    [ ['Media Type',         d.mediatype],     ['Sub Category',      d.subcategory],     ['Circulation', d.circulation] ],
+                    [ ['Frequency',          d.frequency],     ['Page Number',       d.pages],           ['Reach',       d.reach]       ],
+                    [ ['Media Tier',         d.mediatier],     ['Size',              d.size],            ['Writer',      d.writer]      ],
+                    [ ['Language',           d.language],      ['Tone',              d.toning],          ['Generation',  d.generation]  ],
+                    [ ['Picture In Article', d.picture],       ['Headline Branding', d.headlinebrand],   ['Article Branding', d.articlebrand] ],
+                    [ ['Parent ID',          d.parentid || '—'], ['Created By',      d.createdby],       ['Created At',  d.createdat]    ],
+                ];
 
-        gridDef.forEach((rowCells, ri) => {
-        const shade = ri % 2 === 1;
-        const gy    = y + ri * ROW_H;
-        drawCell(doc, col1X, gy, rowCells[0][0], rowCells[0][1], shade);
-        drawCell(doc, col2X, gy, rowCells[1][0], rowCells[1][1], shade);
-        drawCell(doc, col3X, gy, rowCells[2][0], rowCells[2][1], shade);
-        });
+                gridDef.forEach((rowCells, ri) => {
+                    const shade = ri % 2 === 1;
+                    const gy    = y + ri * ROW_H;
+                    drawCell(doc, col1X, gy, rowCells[0][0], rowCells[0][1], shade);
+                    drawCell(doc, col2X, gy, rowCells[1][0], rowCells[1][1], shade);
+                    drawCell(doc, col3X, gy, rowCells[2][0], rowCells[2][1], shade);
+                });
 
-        y += gridDef.length * ROW_H + 8;
+                y += gridDef.length * ROW_H + 8;
 
-        // ── ARTICLE TITLE (large, bold, centred below grid) ───────────────────
-        // Reference shows the title large in the body area too
-        const bodyTitleFixed = titleArabic ? fixArabic(titleRaw) : titleRaw;
-        if (titleArabic) { useArabicFont(doc, 14, 'normal'); }
-        else { doc.setFont('helvetica', 'bold'); doc.setFontSize(14); }
-        doc.setTextColor(...INK);
-        const bodyTitleLines = doc.splitTextToSize(bodyTitleFixed, CW);
-        bodyTitleLines.forEach((line, li) => {
-        doc.text(line, PW - MR, y + (li + 1) * 8, { align: 'right' });
-        });
-        y += bodyTitleLines.length * 8 + 5;
+                const bodyTitleFixed = titleArabic ? fixArabic(titleRaw) : titleRaw;
+                if (titleArabic) { useArabicFont(doc, 14, 'normal'); }
+                else { doc.setFont('helvetica', 'bold'); doc.setFontSize(14); }
+                doc.setTextColor(...INK);
+                const bodyTitleLines = doc.splitTextToSize(bodyTitleFixed, CW);
+                bodyTitleLines.forEach((line, li) => {
+                    doc.text(line, PW - MR, y + (li + 1) * 8, { align: 'right' });
+                });
+                y += bodyTitleLines.length * 8 + 5;
 
-        // ── ARTICLE IMAGE (centred) ────────────────────────────────────────────
-        const imgSrc  = d.screenshot || '';
-        const imgData = imgSrc ? imgCache[imgSrc] : null;
-        if (imgData) {
-        const imgW = 90, imgH = 60;
-        const imgX = (PW - imgW) / 2;
-        try {
-        doc.addImage(imgData, imgFormat(imgData), imgX, y, imgW, imgH, undefined, 'FAST');
-        y += imgH + 5;
-        } catch (e) { console.warn('Image add failed:', e); }
-        }
+                const imgSrc  = d.screenshot || '';
+                const imgData = imgSrc ? imgCache[imgSrc] : null;
+                if (imgData) {
+                    const imgW = 90, imgH = 60;
+                    const imgX = (PW - imgW) / 2;
+                    try {
+                        doc.addImage(imgData, imgFormat(imgData), imgX, y, imgW, imgH, undefined, 'FAST');
+                        y += imgH + 5;
+                    } catch (e) { console.warn('Image add failed:', e); }
+                }
 
-        // ── ARTICLE CONTENT ────────────────────────────────────────────────────
-        const contentRaw = decodeContent(d.content || '');
-        if (contentRaw) {
-        const footerReserve = 28;
-        const arabicContent = isArabic(contentRaw);
-        if (arabicContent) { useArabicFont(doc, 9, 'normal'); }
-        else { doc.setFont('helvetica', 'normal'); doc.setFontSize(9); }
-        doc.setTextColor(...INK);
+                const contentRaw = decodeContent(d.content || '');
+                if (contentRaw) {
+                    const footerReserve = 28;
+                    const arabicContent = isArabic(contentRaw);
+                    if (arabicContent) { useArabicFont(doc, 9, 'normal'); }
+                    else { doc.setFont('helvetica', 'normal'); doc.setFontSize(9); }
+                    doc.setTextColor(...INK);
 
-        const fixedContent = arabicContent ? fixArabic(contentRaw) : contentRaw;
-        const contentLines = doc.splitTextToSize(fixedContent, CW);
+                    const fixedContent = arabicContent ? fixArabic(contentRaw) : contentRaw;
+                    const contentLines = doc.splitTextToSize(fixedContent, CW);
 
-        // Split into two newspaper-style columns (matching reference layout)
-        const colW     = (CW - 4) / 2;
-        const leftX    = ML;
-        const rightX   = ML + colW + 4;
-        const lineH    = 4.5;
-        const maxLines = Math.floor((PH - y - footerReserve - 5) / lineH);
+                    const colW     = (CW - 4) / 2;
+                    const leftX    = ML;
+                    const rightX   = ML + colW + 4;
+                    const lineH    = 4.5;
+                    const maxLines = Math.floor((PH - y - footerReserve - 5) / lineH);
 
-        let lY = y + 4;
-        const half = Math.ceil(Math.min(contentLines.length, maxLines) / 2);
+                    let lY = y + 4;
+                    const half = Math.ceil(Math.min(contentLines.length, maxLines) / 2);
 
-        contentLines.slice(0, half).forEach(line => {
-        if (lY + lineH > PH - footerReserve) return;
-        if (arabicContent) {
-        doc.text(line, leftX + colW, lY, { align: 'right' });
-        } else {
-        doc.text(line, leftX, lY);
-        }
-        lY += lineH;
-        });
+                    contentLines.slice(0, half).forEach(line => {
+                        if (lY + lineH > PH - footerReserve) return;
+                        if (arabicContent) doc.text(line, leftX + colW, lY, { align: 'right' });
+                        else doc.text(line, leftX, lY);
+                        lY += lineH;
+                    });
 
-        lY = y + 4;
-        contentLines.slice(half, maxLines).forEach(line => {
-        if (lY + lineH > PH - footerReserve) return;
-        if (arabicContent) {
-        doc.text(line, rightX + colW, lY, { align: 'right' });
-        } else {
-        doc.text(line, rightX, lY);
-        }
-        lY += lineH;
-        });
-        }
+                    lY = y + 4;
+                    contentLines.slice(half, maxLines).forEach(line => {
+                        if (lY + lineH > PH - footerReserve) return;
+                        if (arabicContent) doc.text(line, rightX + colW, lY, { align: 'right' });
+                        else doc.text(line, rightX, lY);
+                        lY += lineH;
+                    });
+                }
 
-        // ── FOOTER ─────────────────────────────────────────────────────────────
-        const fY = PH - 20;
-        doc.setDrawColor(...BORDER);
-        doc.setLineWidth(0.5);
-        doc.line(ML, fY, PW - MR, fY);
+                // ── FOOTER — EditorPR brand (matches Preview.cshtml report-footer) ──
+                const fY = PH - 20;
+                doc.setDrawColor(...BORDER);
+                doc.setLineWidth(0.5);
+                doc.line(ML, fY, PW - MR, fY);
 
-        // Left — Ahl Masr (Arabic label + English sub)
-        useArabicFont(doc, 11, 'normal');
-        doc.setTextColor(...DARK_RED);
-        doc.text(fixArabic('EDITOR'), ML + 28, fY + 7, { align: 'right' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(6);
-        doc.setTextColor(...SLATE);
-        doc.text('AHL MASR FOUNDATION', ML, fY + 11);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(...MAROON);
+                doc.text('EditorPR', ML, fY + 7);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(6);
+                doc.setTextColor(...SLATE);
+                doc.text('MEDIA MONITORING & PR MANAGEMENT', ML, fY + 11);
 
-        // Right — EDITOR
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(...DARK_RED);
-        doc.text('EDITOR', PW - MR, fY + 7, { align: 'right' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(6);
-        doc.setTextColor(...SLATE);
-        doc.text('PR & COMMUNICATIONS', PW - MR, fY + 11, { align: 'right' });
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(...MAROON);
+                doc.text(clientName, PW - MR, fY + 7, { align: 'right' });
 
-        // Centre — page number
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(...SLATE);
-        doc.text(`${idx + 1} / ${rows.length}`, PW / 2, fY + 9, { align: 'center' });
-        }
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+                doc.setTextColor(...SLATE);
+                doc.text(`${idx + 1} / ${rows.length}`, PW / 2, fY + 9, { align: 'center' });
+            }
 
-        doc.save(`${clientName}_Newspapers_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+            doc.save(`${clientName}_Newspapers_Report_${new Date().toISOString().slice(0,10)}.pdf`);
         }
     </script>
 }

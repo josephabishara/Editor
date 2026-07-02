@@ -4,6 +4,7 @@ using EditorDataLayer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EditorDataLayer.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260629175733_AddGeneralNewspaper")]
+    partial class AddGeneralNewspaper
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2152,10 +2155,10 @@ namespace EditorDataLayer.Migrations
 
             modelBuilder.Entity("EditorEntitiesLayer.Entities.ReportArticle", b =>
                 {
-                    b.HasOne("EditorEntitiesLayer.Entities.ClientArticle", "Article")
+                    b.HasOne("EditorEntitiesLayer.Entities.GeneralArticle", "Article")
                         .WithMany()
                         .HasForeignKey("ArticleId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("EditorEntitiesLayer.Entities.Report", "Report")
@@ -2171,10 +2174,10 @@ namespace EditorDataLayer.Migrations
 
             modelBuilder.Entity("EditorEntitiesLayer.Entities.ReportNewspaper", b =>
                 {
-                    b.HasOne("EditorEntitiesLayer.Entities.ClientNewsPaper", "NewsPaper")
+                    b.HasOne("EditorEntitiesLayer.Entities.NewsPaper", "NewsPaper")
                         .WithMany()
                         .HasForeignKey("NewspaperId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("EditorEntitiesLayer.Entities.Report", "Report")

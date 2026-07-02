@@ -9,7 +9,7 @@ using static System.Net.WebRequestMethods;
 
 namespace EditorWeb.Controllers
 {
-    [Authorize(Roles = "Admin,Manager,EditorWeb")]
+    [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
     public class ClientArticleController : Controller
     {
         private readonly IClientArticleRepository _clientArticleRepo;
@@ -94,6 +94,7 @@ namespace EditorWeb.Controllers
 
             return View(list);
         }
+       
         [HttpGet]
         [Authorize(Roles = "Admin,Manager,EditorWeb,Auditor")]
         public async Task<IActionResult> Details(int id)

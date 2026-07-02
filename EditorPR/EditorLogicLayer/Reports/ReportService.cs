@@ -17,6 +17,8 @@ namespace EditorLogicLayer.Reports
         private readonly IClientNewsPaperRepository _clientNewsPaperRepo;
         private readonly IClientCategoryRepository _categoryRepo;
         private readonly IPublicationRepository _publicationRepo;
+        private readonly IWebsiteRepository _websiteRepo;
+        private readonly IWriterRepository _writerRepo;
 
         public ReportService(
             IReportRepository reportRepo,
@@ -26,7 +28,9 @@ namespace EditorLogicLayer.Reports
             IClientArticleRepository clientArticleRepo,
             IClientNewsPaperRepository clientNewsPaperRepo,
             IClientCategoryRepository categoryRepo,
-            IPublicationRepository publicationRepo)
+            IPublicationRepository publicationRepo,
+            IWebsiteRepository websiteRepo,
+            IWriterRepository writerRepo)
         {
             _reportRepo = reportRepo;
             _reportArticleRepo = reportArticleRepo;
@@ -36,6 +40,8 @@ namespace EditorLogicLayer.Reports
             _clientNewsPaperRepo = clientNewsPaperRepo;
             _categoryRepo = categoryRepo;
             _publicationRepo = publicationRepo;
+            _websiteRepo = websiteRepo;
+            _writerRepo = writerRepo;
         }
 
         // ── List ────────────────────────────────────────────────────────────────
@@ -153,12 +159,19 @@ namespace EditorLogicLayer.Reports
 
             var categoryMap = await BuildCategoryMapAsync(report.CustomerId);
 
+            // Bulk lookups — same pattern as publication/category maps, avoids N+1 queries
+            var websiteMap = (await _websiteRepo.GetActiveWebsitesAsync())
+                              .ToDictionary(w => w.Id, w => w.WebsiteName);
+
+            var writerMap = (await _writerRepo.GetActiveWritersAsync())
+                             .ToDictionary(w => w.Id, w => w.WriterName);
+
             var existingLinks = (await _reportArticleRepo.GetByReportIdAsync(reportId))
                                  .Select(ra => ra.ArticleId)
                                  .ToHashSet();
 
             return clientArticles
-                .Select(ca => MapClientArticleToPicker(ca, categoryMap, existingLinks))
+                .Select(ca => MapClientArticleToPicker(ca, categoryMap, websiteMap, writerMap, existingLinks))
                 .OrderBy(a => a.CategoryOrder).ThenBy(a => a.CategoryName)
                 .ThenBy(a => a.SubCategoryOrder).ThenBy(a => a.SubCategoryName)
                 .ThenByDescending(a => a.Date)
@@ -281,10 +294,14 @@ namespace EditorLogicLayer.Reports
         private static ReportArticlePickerDTO MapClientArticleToPicker(
             ClientArticle ca,
             Dictionary<int, ClientCategories> categoryMap,
+            Dictionary<int, string> websiteMap,
+            Dictionary<int, string> writerMap,
             HashSet<int> existingLinks)
         {
             categoryMap.TryGetValue(ca.CategoryId, out var category);
             categoryMap.TryGetValue(ca.SubCategoryId, out var subCategory);
+            websiteMap.TryGetValue(ca.WebsiteId, out var websiteName);  // resolve via FK, not a nav property
+            writerMap.TryGetValue(ca.WriterId, out var writerName);      // ca.Writer scalar is always null; resolve via WriterId FK
 
             return new ReportArticlePickerDTO
             {
@@ -292,7 +309,8 @@ namespace EditorLogicLayer.Reports
                 Date = ca.Date,
                 Title = ca.Title,
                 ArticleURL = ca.ArticleURL,
-                WriterName = ca.Writer,
+                WebsiteName = websiteName,
+                WriterName = writerName,
                 Language = ca.Language,
                 ArticleBranding = ca.ArticleBranding,
                 HeadlineBranding = ca.HeadlineBranding,
@@ -356,7 +374,7 @@ namespace EditorLogicLayer.Reports
                 Reach = cn.Reach,
                 PictureinArticle = cn.pictureInArticle.ToString(),
                 PageNumber = cn.Pages,
-                Generation = cn.Generation ,
+                Generation = cn.Generation,
                 Selected = existingLinks.Contains(cn.Id),
                 Height = cn.Height,
                 Width = cn.Width,
@@ -399,6 +417,13 @@ namespace EditorLogicLayer.Reports
             var publications = (await _publicationRepo.GetActivePublicationsAsync())
                                 .ToDictionary(p => p.Id, p => p.PublicationName);
 
+            // Bulk lookups for article WebsiteName and WriterName — same pattern as publications
+            var websiteMap = (await _websiteRepo.GetActiveWebsitesAsync())
+                              .ToDictionary(w => w.Id, w => w.WebsiteName);
+
+            var writerMap = (await _writerRepo.GetActiveWritersAsync())
+                             .ToDictionary(w => w.Id, w => w.WriterName);
+
             // ── Client cover/logo for the Preview page ───────────────────────────
             var client = r.Customer ?? await _clientRepo.GetByIdAsync(r.CustomerId);
 
@@ -423,7 +448,7 @@ namespace EditorLogicLayer.Reports
 
             dto.Articles = r.ReportArticles
                 .Where(ra => clientArticles.ContainsKey(ra.ArticleId))
-                .Select(ra => MapClientArticleToPicker(clientArticles[ra.ArticleId], categoryMap, existingArticleLinks))
+                .Select(ra => MapClientArticleToPicker(clientArticles[ra.ArticleId], categoryMap, websiteMap, writerMap, existingArticleLinks))
                 .ToList();
 
             // ── Newspapers — same convention: ReportNewspaper.NewspaperId stores
